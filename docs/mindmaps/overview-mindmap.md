@@ -1,8 +1,14 @@
 # This overview of DBMS Mindmap
 
+```mermaid
 graph LR
-    classDef root fill:#ff9999,stroke:#333,stroke-width:2px,font-weight:bold;
-    classDef layer1 fill:#99ccff,stroke:#333,stroke-width:1.5px,font-weight:bold;
+    %% Styles cho nền tối (GitHub Dark Mode)
+    classDef default fill:#2d2d2d,stroke:#888,stroke-width:1px,color:#fff;
+    classDef root fill:#ff8888,stroke:#ff5555,stroke-width:2px,font-weight:bold,color:#000;
+    classDef layer1 fill:#99ccff,stroke:#5ba3e3,stroke-width:1.5px,font-weight:bold,color:#000;
+
+    %% Tăng độ tương phản cho đường nối liên kết giữa các node
+    linkStyle default stroke:#ffffff,stroke-width:1.5px;
 
     db((DBMS)):::root
     
@@ -14,14 +20,20 @@ graph LR
     db --- om[6. Database Object Management]:::layer1
     db --- sa[7. Security & Access Control]:::layer1
     db --- am[8. Administration & Monitoring]:::layer1
+```
 
 ## Query Processor
 
+```mermaid
 graph LR
-    classDef default fill:#f9f9f9,stroke:#333,stroke-width:1px;
-    classDef layer1 fill:#99ccff,stroke:#333,stroke-width:1.5px,font-weight:bold;
-    classDef layer2 fill:#ccffcc,stroke:#333,stroke-width:1px,font-weight:bold;
-    classDef layer3 fill:#fff,stroke:#666,stroke-width:1px,stroke-dasharray: 2 2,font-size:11px;
+    %% Styles cho nền tối (GitHub Dark Mode)
+    classDef default fill:#2d2d2d,stroke:#888,stroke-width:1px,color:#fff;
+    classDef root fill:#ff8888,stroke:#ff5555,stroke-width:2px,font-weight:bold,color:#000;
+    classDef layer2 fill:#5fbb97,stroke:#3a9672,stroke-width:1.5px,font-weight:bold,color:#000;
+    classDef layer3 fill:#1e1e1e,stroke:#aaaaaa,stroke-width:1px,stroke-dasharray: 3 3,color:#e0e0e0;
+
+    %% Tăng độ tương phản cho đường nối liên kết giữa các node
+    linkStyle default stroke:#ffffff,stroke-width:1.5px;
 
     %% Root
     qp[1. Query Processor]:::layer1
@@ -54,14 +66,20 @@ graph LR
     qp_rp --- qp_rp1[Formatter & Serializer]:::layer3
     qp_rp --- qp_rp2[Cursor & Pagination Manager]:::layer3
     qp_rp --- qp_rp3[Output Buffer]:::layer3
+```
 
 ## Storage Engine
 
+```mermaid
 graph LR
-    classDef default fill:#f9f9f9,stroke:#333,stroke-width:1px;
-    classDef layer1 fill:#99ccff,stroke:#333,stroke-width:1.5px,font-weight:bold;
-    classDef layer2 fill:#ccffcc,stroke:#333,stroke-width:1px,font-weight:bold;
-    classDef layer3 fill:#fff,stroke:#666,stroke-width:1px,stroke-dasharray: 2 2,font-size:11px;
+    %% Styles cho nền tối (GitHub Dark Mode)
+    classDef default fill:#2d2d2d,stroke:#888,stroke-width:1px,color:#fff;
+    classDef root fill:#ff8888,stroke:#ff5555,stroke-width:2px,font-weight:bold,color:#000;
+    classDef layer2 fill:#5fbb97,stroke:#3a9672,stroke-width:1.5px,font-weight:bold,color:#000;
+    classDef layer3 fill:#1e1e1e,stroke:#aaaaaa,stroke-width:1px,stroke-dasharray: 3 3,color:#e0e0e0;
+
+    %% Tăng độ tương phản cho đường nối liên kết giữa các node
+    linkStyle default stroke:#ffffff,stroke-width:1.5px;
 
     %% Root
     se[2. Storage Engine]:::layer1
@@ -123,14 +141,20 @@ graph LR
     se_lf --- se_lf3[LSN Generator]:::layer3
     se_lf --- se_lf4[Log Segment Manager]:::layer3
     se_lf --- se_lf5[Log Commit Checker]:::layer3
+```
 
 ## Transaction & Concurrency
 
+```mermaid
 graph LR
-    classDef default fill:#f9f9f9,stroke:#333,stroke-width:1px;
-    classDef layer1 fill:#99ccff,stroke:#333,stroke-width:1.5px,font-weight:bold;
-    classDef layer2 fill:#ccffcc,stroke:#333,stroke-width:1px,font-weight:bold;
-    classDef layer3 fill:#fff,stroke:#666,stroke-width:1px,stroke-dasharray: 2 2,font-size:11px;
+    %% Styles cho nền tối (GitHub Dark Mode)
+    classDef default fill:#2d2d2d,stroke:#888,stroke-width:1px,color:#fff;
+    classDef root fill:#ff8888,stroke:#ff5555,stroke-width:2px,font-weight:bold,color:#000;
+    classDef layer2 fill:#5fbb97,stroke:#3a9672,stroke-width:1.5px,font-weight:bold,color:#000;
+    classDef layer3 fill:#1e1e1e,stroke:#aaaaaa,stroke-width:1px,stroke-dasharray: 3 3,color:#e0e0e0;
+
+    %% Tăng độ tương phản cho đường nối liên kết giữa các node
+    linkStyle default stroke:#ffffff,stroke-width:1.5px;
 
     %% Root
     tx[3. Transaction & Concurrency]:::layer1
@@ -162,14 +186,20 @@ graph LR
     tx_im --- tx_im1[Read Committed Snapshotting]:::layer3
     tx_im --- tx_im2[Repeatable Read Snapshotting]:::layer3
     tx_im --- tx_im3[Serializable Snapshot Isolation]:::layer3
+```
 
 ## Backup & Durability
 
+```mermaid
 graph LR
-    classDef default fill:#f9f9f9,stroke:#333,stroke-width:1px;
-    classDef layer1 fill:#99ccff,stroke:#333,stroke-width:1.5px,font-weight:bold;
-    classDef layer2 fill:#ccffcc,stroke:#333,stroke-width:1px,font-weight:bold;
-    classDef layer3 fill:#fff,stroke:#666,stroke-width:1px,stroke-dasharray: 2 2,font-size:11px;
+    %% Styles cho nền tối (GitHub Dark Mode)
+    classDef default fill:#2d2d2d,stroke:#888,stroke-width:1px,color:#fff;
+    classDef root fill:#ff8888,stroke:#ff5555,stroke-width:2px,font-weight:bold,color:#000;
+    classDef layer2 fill:#5fbb97,stroke:#3a9672,stroke-width:1.5px,font-weight:bold,color:#000;
+    classDef layer3 fill:#1e1e1e,stroke:#aaaaaa,stroke-width:1px,stroke-dasharray: 3 3,color:#e0e0e0;
+
+    %% Tăng độ tương phản cho đường nối liên kết giữa các node
+    linkStyle default stroke:#ffffff,stroke-width:1.5px;
 
     %% Root
     bd[4. Backup & Durability]:::layer1
@@ -213,14 +243,20 @@ graph LR
     bd_rp --- bd_rp3[Replication Log Applier]:::layer3
     bd_rp --- bd_rp4[Replication Coordinator]:::layer3
     bd_rp --- bd_rp5[Synchronization Manager]:::layer3
+```
 
 ## Performance & Memory
 
+```mermaid
 graph LR
-    classDef default fill:#f9f9f9,stroke:#333,stroke-width:1px;
-    classDef layer1 fill:#99ccff,stroke:#333,stroke-width:1.5px,font-weight:bold;
-    classDef layer2 fill:#ccffcc,stroke:#333,stroke-width:1px,font-weight:bold;
-    classDef layer3 fill:#fff,stroke:#666,stroke-width:1px,stroke-dasharray: 2 2,font-size:11px;
+    %% Styles cho nền tối (GitHub Dark Mode)
+    classDef default fill:#2d2d2d,stroke:#888,stroke-width:1px,color:#fff;
+    classDef root fill:#ff8888,stroke:#ff5555,stroke-width:2px,font-weight:bold,color:#000;
+    classDef layer2 fill:#5fbb97,stroke:#3a9672,stroke-width:1.5px,font-weight:bold,color:#000;
+    classDef layer3 fill:#1e1e1e,stroke:#aaaaaa,stroke-width:1px,stroke-dasharray: 3 3,color:#e0e0e0;
+
+    %% Tăng độ tương phản cho đường nối liên kết giữa các node
+    linkStyle default stroke:#ffffff,stroke-width:1.5px;
 
     %% Root
     pf[5. Performance & Memory]:::layer1
@@ -261,14 +297,20 @@ graph LR
     pf_ct --- pf_ct3[Thread Pool Manager]:::layer3
     pf_ct --- pf_ct4[Parallel Worker Scheduler]:::layer3
     pf_ct --- pf_ct5[Worker Lifecycle Manager]:::layer3
+```
 
 ## Database Object Management
 
+```mermaid
 graph LR
-    classDef default fill:#f9f9f9,stroke:#333,stroke-width:1px;
-    classDef layer1 fill:#99ccff,stroke:#333,stroke-width:1.5px,font-weight:bold;
-    classDef layer2 fill:#ccffcc,stroke:#333,stroke-width:1px,font-weight:bold;
-    classDef layer3 fill:#fff,stroke:#666,stroke-width:1px,stroke-dasharray: 2 2,font-size:11px;
+    %% Styles cho nền tối (GitHub Dark Mode)
+    classDef default fill:#2d2d2d,stroke:#888,stroke-width:1px,color:#fff;
+    classDef root fill:#ff8888,stroke:#ff5555,stroke-width:2px,font-weight:bold,color:#000;
+    classDef layer2 fill:#5fbb97,stroke:#3a9672,stroke-width:1.5px,font-weight:bold,color:#000;
+    classDef layer3 fill:#1e1e1e,stroke:#aaaaaa,stroke-width:1px,stroke-dasharray: 3 3,color:#e0e0e0;
+
+    %% Tăng độ tương phản cho đường nối liên kết giữa các node
+    linkStyle default stroke:#ffffff,stroke-width:1.5px;
 
     %% Root
     om[6. Object Management]:::layer1
@@ -343,14 +385,20 @@ graph LR
     om_mm --- om_mm3[Object Registry]:::layer3
     om_mm --- om_mm4[Dependency Manager]:::layer3
     om_mm --- om_mm5[DDL Transaction Manager]:::layer3
+```
 
 ## Security & Access Control
 
+```mermaid
 graph LR
-    classDef default fill:#f9f9f9,stroke:#333,stroke-width:1px;
-    classDef layer1 fill:#99ccff,stroke:#333,stroke-width:1.5px,font-weight:bold;
-    classDef layer2 fill:#ccffcc,stroke:#333,stroke-width:1px,font-weight:bold;
-    classDef layer3 fill:#fff,stroke:#666,stroke-width:1px,stroke-dasharray: 2 2,font-size:11px;
+    %% Styles cho nền tối (GitHub Dark Mode)
+    classDef default fill:#2d2d2d,stroke:#888,stroke-width:1px,color:#fff;
+    classDef root fill:#ff8888,stroke:#ff5555,stroke-width:2px,font-weight:bold,color:#000;
+    classDef layer2 fill:#5fbb97,stroke:#3a9672,stroke-width:1.5px,font-weight:bold,color:#000;
+    classDef layer3 fill:#1e1e1e,stroke:#aaaaaa,stroke-width:1px,stroke-dasharray: 3 3,color:#e0e0e0;
+
+    %% Tăng độ tương phản cho đường nối liên kết giữa các node
+    linkStyle default stroke:#ffffff,stroke-width:1.5px;
 
     %% Root
     sa[7. Security & Access Control]:::layer1
@@ -389,17 +437,23 @@ graph LR
     sa --- sa_ad[Auditing]:::layer2
     sa_ad --- sa_ad1[Audit Log Writer]:::layer3
     sa_ad --- sa_ad2[Audit Rule Engine]:::layer3
+```
 
 ## Administration & Monitoring
 
+```mermaid
 graph LR
-    classDef default fill:#f9f9f9,stroke:#333,stroke-width:1px;
-    classDef layer1 fill:#99ccff,stroke:#333,stroke-width:1.5px,font-weight:bold;
-    classDef layer2 fill:#ccffcc,stroke:#333,stroke-width:1px,font-weight:bold;
-    classDef layer3 fill:#fff,stroke:#666,stroke-width:1px,stroke-dasharray: 2 2,font-size:11px;
+    %% Styles cho nền tối (GitHub Dark Mode)
+    classDef default fill:#2d2d2d,stroke:#888,stroke-width:1px,color:#fff;
+    classDef root fill:#ff8888,stroke:#ff5555,stroke-width:2px,font-weight:bold,color:#000;
+    classDef layer2 fill:#5fbb97,stroke:#3a9672,stroke-width:1.5px,font-weight:bold,color:#000;
+    classDef layer3 fill:#1e1e1e,stroke:#aaaaaa,stroke-width:1px,stroke-dasharray: 3 3,color:#e0e0e0;
 
-    %% Root
-    am[8. Admin & Monitoring]:::layer1
+    %% Tăng độ tương phản cho đường nối liên kết giữa các node
+    linkStyle default stroke:#ffffff,stroke-width:1.5px;
+
+    %% Nút gốc (Center)
+    am[8. Admin & Monitoring]:::root
 
     %% NỬA BÊN TRÁI
     am_bs[Background Strategy]:::layer2 --- am
@@ -426,3 +480,4 @@ graph LR
     am_ie --- am_ie4[Logical Dump Utility]:::layer3
     am_ie --- am_ie5[Restore Utility]:::layer3
     am_ie --- am_ie6[Data Export Manager]:::layer3
+```
