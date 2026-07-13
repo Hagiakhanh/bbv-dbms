@@ -1,0 +1,274 @@
+DBMS
+├── Query Processor
+│   ├── SQL Parser
+│   │   ├── Lexical Analyzer
+│   │   ├── Syntax Analyzer
+│   │   └── AST Builder
+│   ├── Query Optimizer
+│   │   ├── Cost-Based Optimizer
+│   │   ├── Rule-Based Optimizer
+│   │   ├── Logical Plan Generator
+│   │   └── Physical Plan Generator
+│   ├── Query Execution
+│   │   ├── Execution Engine
+│   │   ├── Operator Scheduler
+│   │   └── Resource Manager
+│   ├── Query Validation
+│   │   ├── Catalog & Metadata Lookup
+│   │   ├── Privilege Checker
+│   │   ├── Semantic Validator
+│   │   └── Constraint Validator
+│   └── Result Processing
+│       ├── Formatter & Serializer
+│       ├── Cursor & Pagination Manager
+│       └── Output Buffer
+
+├── Storage Engine
+│   ├── Data File Manager
+│   │   ├── Tablespace Manager
+│   │   ├── OS File API Wrapper
+│   │   ├── Data File Registry
+│   │   ├── File Descriptor Manager
+│   │   └── File I/O Coordinator
+│   ├── Page Manager
+│   │   ├── Page Formatter
+│   │   ├── Page Header Manager
+│   │   ├── Slot Directory Manager
+│   │   ├── Free Space Manager
+│   │   └── Page I/O Interface
+│   ├── Buffer Pool + Cache
+│   │   ├── Buffer Pool Manager
+│   │   ├── Page Replacement Algorithms
+│   │   ├── Dirty Page Writer
+│   │   ├── Buffer Frame Manager
+│   │   └── Prefetch Manager
+│   ├── Record Management
+│   │   ├── Record Layout Manager
+│   │   ├── Tuple Header Manager
+│   │   ├── RID Generator
+│   │   ├── Variable-Length Data Manager
+│   │   └── Large Object Manager
+│   ├── Index Management
+│   │   ├── B+Tree Manager
+│   │   ├── Hash Index Manager
+│   │   ├── LSM Tree Manager
+│   │   ├── Index Metadata Manager
+│   │   └── Index Maintenance
+│   ├── Access Methods
+│   │   ├── Sequential Scan
+│   │   ├── Index Scan
+│   │   ├── Bitmap Scan
+│   │   ├── Range Scan
+│   │   └── Table Scan Coordinator
+│   ├── Storage Allocation
+│   │   ├── Extent Manager
+│   │   ├── Segment Manager
+│   │   ├── Free Space Manager
+│   │   ├── Bitmap Manager
+│   │   └── Space Reclamation
+│   └── Log File
+│       ├── WAL Buffer
+│       ├── WAL Writer
+│       ├── LSN Generator
+│       ├── Log Segment Manager
+│       └── Log Commit Checker
+
+├── Performance
+│   ├── Query Performance Analyzer
+│   │   ├── Index Usage Advisor
+│   │   ├── Statistics Advisor
+│   │   ├── Cost Analysis Engine
+│   │   ├── Execution Plan Analyzer
+│   │   └── Query Rewrite Advisor
+│   ├── Caching
+│   │   ├── Prepared Statement Cache
+│   │   ├── Execution Plan Cache
+│   │   ├── Metadata Cache
+│   │   ├── Statistics Cache
+│   │   └── Cache Eviction Manager
+│   ├── Memory Management
+│   │   ├── Shared Memory Allocator
+│   │   ├── Local Work Memory Allocator
+│   │   ├── Memory Pool Manager
+│   │   ├── Memory Usage Monitor
+│   │   └── Memory Reclamation Manager
+│   ├── Data Distribution
+│   │   ├── Partition Router
+│   │   ├── Partition Pruner
+│   │   ├── Distributed Query Coordinator
+│   │   ├── Data Sharding Manager
+│   │   └── Remote Execution Manager
+│   └── Connection & Thread Management
+│       ├── Connection Pooler
+│       ├── Session Manager
+│       ├── Thread Pool Manager
+│       ├── Parallel Worker Scheduler
+│       └── Worker Lifecycle Manager
+
+├── Backup & Durability
+│   ├── Backup Management
+│   │   ├── Physical Hot Backup Manager
+│   │   ├── Incremental Backup Engine
+│   │   ├── Full Backup Manager
+│   │   ├── Backup Metadata Catalog
+│   │   └── Backup Verification
+│   ├── Restore Management
+│   │   ├── Restore Validator
+│   │   ├── File Restorer
+│   │   ├── Restore Planner
+│   │   ├── Restore Verification
+│   │   └── Restore Cleanup
+│   ├── Transaction Logging
+│   │   ├── Log Archive Manager
+│   │   └── Log Integrity Checker
+│   ├── Recovery
+│   │   ├── REDO Log Applier
+│   │   ├── UNDO Log Applier
+│   │   ├── Crash Recovery Manager
+│   │   ├── Point-in-Time Recovery Engine
+│   │   └── Recovery Coordinator
+│   ├── Checkpoint
+│   │   ├── Checkpointer Daemon
+│   │   ├── Fuzzy Checkpoint Controller
+│   │   ├── Dirty Page Flush Coordinator
+│   │   └── Checkpoint Metadata Manager
+│   └── Replication
+│       ├── Replication Log Sender
+│       ├── Replication Log Receiver
+│       ├── Replication Log Applier
+│       ├── Replication Coordinator
+│       └── Synchronization Manager
+
+├── Transaction
+│   ├── Concurrency Control
+│   │   ├── Version Chain Builder
+│   │   ├── Read View / Snapshot Generator
+│   │   └── Vacuum / Garbage Collector
+│   ├── Deadlock
+│   │   ├── Deadlock Detector
+│   │   ├── Victim Selection Strategy
+│   │   └── Deadlock Prevention
+│   ├── Transaction Manager
+│   │   ├── Transaction State Machine
+│   │   ├── Transaction Table
+│   │   └── Begin/Commit/Abort API
+│   ├── Lock Manager
+│   │   ├── Lock Hash Table
+│   │   ├── Lock Modes
+│   │   ├── Lock Granularity Manager
+│   │   └── Two-Phase Locking (2PL) Protocol
+│   └── Isolation Management
+│   │   ├── Read Committed Snapshotting
+│   │   ├── Repeatable Read Snapshotting
+│   │   └── Serializable Snapshot Isolation
+
+├── Database Object Management
+│   ├── Database Management
+│   │   ├── Create / Drop Database
+│   │   ├── Database Catalog Manager
+│   │   ├── Database Option Manager
+│   │   ├── Tablespace Assignment
+│   │   └── Database Configuration
+│   ├── Schema Management
+│   │   ├── Schema Creator
+│   │   ├── Schema Resolver
+│   │   ├── Namespace Manager
+│   │   └── Search Path Manager
+│   ├── Table Management
+│   │   ├── Table Creator
+│   │   ├── Table Alteration Engine
+│   │   ├── Physical File Registration
+│   │   └── Storage Allocation Coordinator
+│   ├── View Management
+│   │   ├── View Definition Manager
+│   │   ├── View Expander
+│   │   └── View Catalog
+│   ├── Relationship Management
+│   │   ├── Foreign Key Manager
+│   │   ├── Referential Integrity Validator
+│   │   ├── Cascade Action Manager
+│   │   └── Dependency Graph Manager
+│   ├── Index Management
+│   │   ├── Index Definition Manager
+│   │   ├── Index Catalog Registry
+│   │   ├── Index Dependency Manager
+│   │   ├── Reindex Coordinator
+│   │   └── Index Constraint Coordinator
+│   ├── Constraint Management
+│   │   ├── Primary Key Validator
+│   │   ├── Unique Constraint Manager
+│   │   ├── Check Constraint Evaluator
+│   │   ├── NOT NULL Validator
+│   │   └── Constraint Metadata Manager
+│   ├── Column Management
+│   │   ├── Column Definition Manager
+│   │   ├── Default Value Manager
+│   │   ├── Identity Manager
+│   │   └── Column Metadata Manager
+│   ├── Programmable Objects
+│   │   ├── Stored Procedure Engine
+│   │   ├── Trigger Manager
+│   │   ├── UDF Manager
+│   │   └── Routine Catalog
+│   ├── Data Type
+│   │   ├── Type System
+│   │   ├── Type Conversion Manager
+│   │   ├── Domain Type Manager
+│   │   └── Composite Type Manager
+│   └── Metadata Management
+│       ├── System Catalog
+│       ├── Metadata Cache
+│       ├── Object Registry
+│       ├── Dependency Manager
+│       └── DDL Transaction Manager
+
+├── Security & Access Control
+│   ├── Authentication
+│   │   ├── Connection & Session Authenticator
+│   │   ├── Hashing & Salting Engine
+│   │   └── External Identity Hooks
+│   ├── Authorization
+│   │   ├── Permission Resolver
+│   │   ├── Grant / Revoke Manager
+│   │   ├── Privilege Evaluator
+│   │   └── Policy Decision Engine
+│   ├── Access Control
+│   │   ├── RBAC Policy Evaluator
+│   │   ├── DAC Evaluator
+│   │   ├── Row-Level Security Filter
+│   │   ├── Column-Level Security Masker
+│   │   └── Object Permission Checker
+│   ├── User Management
+│   │   ├── User & Role Catalog
+│   │   ├── Role Hierarchy Resolver
+│   │   ├── Account Lifecycle Manager
+│   │   └── User Profile Manager
+│   ├── Encryption
+│   │   ├── Transparent Data Encryption (TDE)
+│   │   ├── TLS/SSL Transport Encryptor
+│   │   └── KMS Adapter
+│   └── Auditing
+│       ├── Audit Log Writer
+│       └── Audit Rule Engine
+
+├── Administration & Monitoring
+│   ├── Backup Strategy
+│   │   ├── Background Worker
+│   │   ├── Scheduler
+│   │   ├── Auto Vacuum
+│   │   ├── Statistics Collection
+│   │   └── Backup Scheduler
+│   ├── Monitoring & Logging
+│   │   ├── Performance Metrics Collector
+│   │   ├── Slow Query Profiler
+│   │   └── System Error Log Writer
+│   ├── Configuration Management
+│   │   ├── Config Parameters Registry
+│   │   └── Dynamic Parameter Reloader
+│   └── Import and Export
+│       ├── Bulk COPY Loader
+│       ├── Binary Importer
+│       ├── CSV Importer
+│       ├── Logical Dump Utility
+│       ├── Restore Utility
+│       └── Data Export Manager
