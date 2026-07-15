@@ -12,18 +12,18 @@ Instead of a giant flat diagram, this architectural map is **segmented into dist
 
 ```mermaid
 classDiagram
-    class BufferPoolManager["BufferPoolManager\n[Group 2]"]
-    class DiskManager["DiskManager\n[Group 1]"]
-    class SlottedPage["SlottedPage\n[Group 3]"]
-    class RecordLayoutManager["RecordLayoutManager\n[Group 4]"]
-    class TableHeap["TableHeap\n[Group 4]"]
-    class FreeSpaceMap["FreeSpaceMap\n[Group 5]"]
-    class ExtentManager["ExtentManager\n[Group 5]"]
-    class WalWriter["WalWriter\n[Group 6]"]
-    class BPlusTreeIndex["BPlusTreeIndex\n[Group 7]"]
-    class TableScanCoordinator["TableScanCoordinator\n[Group 8]"]
-    class TableIterator["TableIterator\n[Group 8]"]
-    class IndexScanIterator["IndexScanIterator\n[Group 8]"]
+    class BufferPoolManager["BufferPoolManager[Group 2]"]
+    class DiskManager["DiskManager[Group 1]"]
+    class SlottedPage["SlottedPage[Group 3]"]
+    class RecordLayoutManager["RecordLayoutManager[Group 4]"]
+    class TableHeap["TableHeap[Group 4]"]
+    class FreeSpaceMap["FreeSpaceMap[Group 5]"]
+    class ExtentManager["ExtentManager[Group 5]"]
+    class WalWriter["WalWriter[Group 6]"]
+    class BPlusTreeIndex["BPlusTreeIndex[Group 7]"]
+    class TableScanCoordinator["TableScanCoordinator[Group 8]"]
+    class TableIterator["TableIterator[Group 8]"]
+    class IndexScanIterator["IndexScanIterator[Group 8]"]
 
     BufferPoolManager --> DiskManager : ReadPage() / WritePage()
     BufferPoolManager --> SlottedPage : returns on FetchPage()

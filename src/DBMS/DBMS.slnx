@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="DBMS.Domain/DBMS.Domain.csproj" />
+  <Project Path="DBMS.Tests/DBMS.Tests.csproj" />
+</Solution>
