@@ -68,62 +68,60 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     autonumber
-    actor DM as DiskManager
+    actor Caller as DataFileManager / BufferPool
     participant FDM as FileDescriptorManager
     participant Registry as DataFileRegistry
-    participant OS as OS File System
+    participant DM as IDiskManager
 
     Note over DM,OS: Purpose: avoid re-opening the same file on every ReadPage/WritePage
 
     %% ─────────────────────────────────────────
     %% First access — cache miss
     %% ─────────────────────────────────────────
-    DM->>FDM: Get file descriptor for I/O [ GetDescriptor(fileId: 1) ]
+    Caller->>FDM: Get file descriptor for I/O [ GetDescriptor(fileId: 1) ]
 
     FDM->>FDM: Check internal cache — not found (cache miss)
     FDM->>Registry: Resolve path [ GetFilePath(fileId: 1) ]
 
     alt fileId not in registry
         Registry-->>FDM: Throw KeyNotFoundException
-        FDM-->>DM: Propagate FileNotFoundException
+        FDM-->>Caller: Propagate FileNotFoundException
     else found
         Registry-->>FDM: Return "data/orders.db"
-        FDM->>OS: Open file [ File.Open("data/orders.db") ]
-        OS-->>FDM: Return OS FileDescriptor / FileStream handle
+        FDM->>DM: Open file [ OpenFile("data/orders.db") ]
+        DM-->>FDM: Return new OS File Descriptor (fd = 100)
 
-        Note over FDM: Cache: { fileId=1 → descriptor }
+        Note over FDM: Cache: { fileId=1 → fd=100 }
         Note over FDM: GetActiveCount() increases by 1
-        FDM-->>DM: Return descriptor
+        FDM-->>Caller: Return fd = 100
     end
 
     %% ─────────────────────────────────────────
     %% Second access — cache hit
     %% ─────────────────────────────────────────
-    DM->>FDM: Get descriptor again [ GetDescriptor(fileId: 1) ]
-    Note over FDM: Cache HIT — same descriptor returned<br/>(ReferenceEquals == true)
-    FDM-->>DM: Return SAME descriptor (GetActiveCount still 1)
+    Caller->>FDM: Get descriptor again [ GetDescriptor(fileId: 1) ]
+    Note over FDM: Cache HIT — returns cached integer fd
+    FDM-->>Caller: Return SAME fd = 100 (GetActiveCount still 1)
 
     %% ─────────────────────────────────────────
     %% Release
     %% ─────────────────────────────────────────
-    DM->>FDM: Release when done [ ReleaseDescriptor(descriptor) ]
+    Caller->>FDM: Release when done [ ReleaseDescriptor(fileId: 1) ]
 
-    alt descriptor is null
-        FDM-->>DM: Throw ArgumentNullException
-    else already released
-        FDM-->>DM: Throw InvalidOperationException
+    alt fileId not in cache
+        FDM-->>Caller: Throw InvalidOperationException
     else valid
-        FDM->>OS: Close file handle
+        FDM->>DM: Close file [ CloseFile(fd: 100) ]
         Note over FDM: Cache entry removed<br/>GetActiveCount() decreases by 1
-        FDM-->>DM: OK
+        FDM-->>Caller: OK
     end
 
     %% ─────────────────────────────────────────
     %% Re-acquisition after release
     %% ─────────────────────────────────────────
-    DM->>FDM: Get descriptor again after release [ GetDescriptor(fileId: 1) ]
-    Note over FDM: Cache miss again — opens a new OS handle<br/>(new descriptor object, not the released one)
-    FDM-->>DM: Return NEW descriptor
+    Caller->>FDM: Get descriptor again after release [ GetDescriptor(fileId: 1) ]
+    Note over FDM: Cache miss again — calls DM.OpenFile() again
+    FDM-->>Caller: Return new fd (e.g., 101)
 ```
 
 ---
@@ -183,15 +181,27 @@ sequenceDiagram
     participant OS as OS File System (FileStream)
 
     %% ─────────────────────────────────────────
-    %% Phase 0: Construction (one-time setup)
+    %% Phase 0: Legacy Construction (Foundation tests)
     %% ─────────────────────────────────────────
-    Note over BPM,DM: Phase 0 — DiskManager Construction (happens once at startup)
+    Note over BPM,DM: Phase 0 — Legacy Setup (used in early tests)
     BPM->>DM: Create DiskManager [ new DiskManager(dbFilePath) ]
-    Note over DM: Validate: dbFilePath must not be null/empty/whitespace<br/>→ Throws ArgumentException if invalid
+    Note over DM: Validate path, throw ArgumentException if invalid
 
-    DM->>OS: Open or create file at dbFilePath
-    OS-->>DM: Return FileStream handle
-    DM-->>BPM: DiskManager instance ready
+    %% ─────────────────────────────────────────
+    %% Phase 0.5: Multi-File Support (Core Engine)
+    %% ─────────────────────────────────────────
+    Note over BPM,OS: Phase 0.5 — Create and Open Files (Multi-file upgrade)
+    
+    BPM->>DM: Create physical file [ CreateFile("data/users.db") ]
+    DM->>OS: OS File.Create
+    OS-->>DM: Created
+    DM-->>BPM: void
+    
+    BPM->>DM: Open physical file [ OpenFile("data/users.db") ]
+    DM->>OS: OS File.Open
+    OS-->>DM: Return OS FileStream
+    Note over DM: DM maps internal integer fd -> FileStream
+    DM-->>BPM: Return fd = 100
 
     %% ─────────────────────────────────────────
     %% Phase 1: ReadPage
@@ -238,20 +248,17 @@ This diagram expands on the **`ReadPage()` and `WritePage()`** calls that appear
 
 ---
 
-## Phase 0 — Construction
+## Phase 0 & 0.5 — Initialization
 
-The constructor is the **sole point of validation** for the DiskManager. This is verified by `DiskManagerTests`:
+During the learning and foundation-building phase (Foundation), `DiskManager` is tested with a constructor that manages a single file:
 
-```csharp
-// DiskManagerTests — what gets verified:
-new DiskManager("test_db.db")   // ✅ Happy path
-new DiskManager(null)           // ❌ ArgumentException
-new DiskManager("")             // ❌ ArgumentException
-new DiskManager("   ")          // ❌ ArgumentException (whitespace-only)
-```
+`new DiskManager(path)`
 
-> [!IMPORTANT]
-> The constructor uses `[Theory] [InlineData(null)] [InlineData("")] [InlineData("   ")]` — a single test method covers all three invalid input variants. This is idiomatic xUnit for boundary cases.
+As the system evolves to support multiple files (Core Engine), the constructor is simplified to initialize only an empty dictionary, while all file operations are performed through the following APIs:
+
+- `CreateFile(path)`: Creates a new empty file.
+- `OpenFile(path)`: Opens the file for I/O, allocates and returns a file descriptor (`fd`).
+- `CloseFile(fd)`: Flushes pending data and closes the file connection.
 
 ---
 
