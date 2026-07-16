@@ -1,18 +1,24 @@
 using System;
 using Xunit;
 using FluentAssertions;
+using Moq;
 using DBMS.Domain.DatabaseObjectManagement;
 using DBMS.Domain.Models;
+using DBMS.Domain.Interfaces;
+using DBMS.Domain.StorageEngine;
 
 namespace DBMS.Tests.DatabaseObjectManagement;
 
 public class DatabaseManagerTests
 {
+    private readonly Mock<IMetadataCatalog> _mockCatalog;
     private readonly DatabaseManager _manager;
 
     public DatabaseManagerTests()
     {
-        _manager = new DatabaseManager();
+        _mockCatalog = new Mock<IMetadataCatalog>();
+        // TablespaceManager doesn't have an interface yet, so passing null for red phase tests.
+        _manager = new DatabaseManager(_mockCatalog.Object, null!);
     }
 
     [Fact]

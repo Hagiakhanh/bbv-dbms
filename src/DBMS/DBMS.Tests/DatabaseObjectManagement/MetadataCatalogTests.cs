@@ -1,18 +1,22 @@
 using System;
 using Xunit;
 using FluentAssertions;
+using Moq;
 using DBMS.Domain.DatabaseObjectManagement;
 using DBMS.Domain.Models;
+using DBMS.Domain.Interfaces;
 
 namespace DBMS.Tests.DatabaseObjectManagement;
 
 public class MetadataCatalogTests
 {
+    private readonly Mock<IBufferPool> _mockBufferPool;
     private readonly MetadataCatalog _catalog;
 
     public MetadataCatalogTests()
     {
-        _catalog = new MetadataCatalog();
+        _mockBufferPool = new Mock<IBufferPool>();
+        _catalog = new MetadataCatalog(_mockBufferPool.Object);
     }
 
     [Fact]
