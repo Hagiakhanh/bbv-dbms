@@ -823,3 +823,226 @@ classDiagram
     AuthorizationManager ..|> IAuthorizationManager
     AuthorizationManager --> IMetadataCatalog
 ```
+
+# Unit Test Specifications
+
+## DiskManager
+* `DiskManagerInitialize_NewDatabase_CreatesDataFiles`
+* `DiskManagerReadPage_ValidPageId_ReturnsRawBytes`
+* `DiskManagerReadPage_InvalidPageId_ThrowsFileNotFoundException`
+* `DiskManagerWritePage_ValidPageId_WritesBytesCorrectly`
+
+## TablespaceManager
+* `TablespaceManagerAllocateTablespace_WithinQuota_ReturnsTablespaceId`
+* `TablespaceManagerAllocateTablespace_ExceedsQuota_ThrowsQuotaExceededException`
+
+## PageFormatter
+* `PageFormatterFormat_NewRawPage_SetsHeaderCorrectly`
+* `PageFormatterAddTuple_ToFormattedPage_UpdatesSlotArrayAndFreeSpace`
+* `PageFormatterAddTuple_InsufficientSpace_ThrowsPageOverflowException`
+
+## PageManager
+* `PageManagerGetPage_FromCacheOrDisk_ReturnsFormattedPage`
+* `PageManagerFlushDirtyPage_WritesToDisk_AndClearsDirtyFlag`
+
+## BufferPoolManager
+* `BufferPoolManagerFetchPage_NotInCache_LoadsFromDiskAndPins`
+* `BufferPoolManagerFetchPage_InCache_IncrementsPinCount`
+* `BufferPoolManagerUnpinPage_PinCountZero_LeavesPageUnpinned`
+* `BufferPoolManagerUnpinPage_DirtyPage_MarksAsDirty`
+* `BufferPoolManagerEvictPage_WhenCapacityFull_EvictsLeastRecentlyUsed`
+* `BufferPoolManagerFlushAll_DirtiesOnlyWritesDirtyPages`
+
+## LRUPolicy
+* `LRUPolicySelectVictim_AfterMultipleAccesses_ReturnsLeastRecentlyUsed`
+
+## ClockPolicy
+* `ClockPolicySelectVictim_ReferenceBitHandling_EvictsCorrectPage`
+
+## RecordManager
+* `RecordManagerSerializeTuple_CorrectByteLayout`
+* `RecordManagerDeserializeRecord_ValidBytes_ReturnsEquivalentTuple`
+
+## RIDGenerator
+* `RIDGeneratorGenerate_UniqueAcrossThreads_ReturnsUniqueRID`
+
+## BPlusTree
+* `BPlusTreeInsert_KeyCausesLeafSplit_CreatesNewRoot`
+* `BPlusTreeSearch_ExistingKey_ReturnsCorrectLeafNode`
+* `BPlusTreeSearch_NonExistingKey_ReturnsNull`
+* `BPlusTreeDelete_KeyLeavesNodeUnderflow_PerformsMergeOrBorrow`
+
+## HashIndex
+* `HashIndexInsert_DuplicateKey_ThrowsDuplicateKeyException`
+* `HashIndexLookup_ExistingKey_ReturnsRidList`
+* `HashIndexDelete_ExistingKey_RemovesEntry`
+
+## TableScan
+* `TableScanInitialize_EmptyTable_ReturnsNoRows`
+* `TableScanNext_IteratesAllRows_InOrder`
+
+## IndexScan
+* `IndexScanInitialize_WithBTreeIndex_ReturnsRowsInKeyOrder`
+
+## SpaceManager
+* `SpaceManagerAllocateExtent_WhenFreeSpaceAvailable_ReturnsExtentId`
+* `SpaceManagerFreeExtent_ValidId_MarksAsFree`
+
+## ExtentManager
+* `ExtentManagerAllocateSegment_WithinLimits_ReturnsSegmentId`
+
+## SegmentManager
+* `SegmentManagerAllocatePage_InSegment_ReturnsPageId`
+
+## WALManager
+* `WALManagerAppendLogRecord_ValidRecord_AppendsToBuffer`
+* `WALManagerAppendLogRecord_BufferFull_TriggersFlush`
+
+## LogWriter
+* `LogWriterFlush_EmptyBuffer_DoesNothing`
+* `LogWriterFlush_NonEmptyBuffer_WritesToDiskAndUpdatesLSN`
+
+## LSNGenerator
+* `LSNGeneratorNext_IncrementsMonotonically_ReturnsHigherLSN`
+
+## PageHeader
+* `PageHeaderParseHeader_FromRawBytes_ReturnsCorrectValues`
+
+## LRUCache
+* `LRUCacheGet_AddsToCache_AndEvictsOldestWhenFull`
+
+## TransactionManager
+* `TransactionManagerBeginTransaction_ReturnsActiveContext`
+* `TransactionManagerCommitTransaction_WithAllLocks_ReleasesLocksAndMarksCommitted`
+* `TransactionManagerAbortTransaction_RollsBackChanges_AndReleasesLocks`
+* `TransactionManagerCommitTransaction_WhenDeadlockDetected_ThrowsDeadlockException`
+
+## TransactionTable
+* `TransactionTableAddTransaction_NewEntry_AppearInActiveList`
+* `TransactionTableRemoveTransaction_WhenCommittedOrAborted_NotPresentInActiveList`
+
+## LockManager
+* `LockManagerAcquireSharedLock_WhenNoConflict_GrantsImmediately`
+* `LockManagerAcquireExclusiveLock_WhenSharedExists_WaitsInQueue`
+* `LockManagerReleaseLock_TriggersNextWaitingTransaction`
+* `LockManagerUpgradeLock_FromSharedToExclusive_IfNoOtherShared_Grants`
+
+## MVCCManager
+* `MVCCManagerCreateVersion_OnUpdate_GeneratesNewVersionChainNode`
+* `MVCCManagerReadVisibleVersion_ForSnapshot_ReturnsCorrectVersion`
+* `MVCCManagerCleanupObsoleteVersions_AfterCheckpoint_RemovesOldVersions`
+
+## SnapshotManager
+* `SnapshotManagerCreateSnapshot_IncludesAllActiveTxIds`
+* `SnapshotManagerIsVisible_VisibleForCommittedTx_ReturnsTrue`
+* `SnapshotManagerIsVisible_InvisibleForFutureTx_ReturnsFalse`
+
+## DeadlockDetector
+* `DeadlockDetectorDetectCycle_WithTwoTx_ReturnsTrueAndVictimChosen`
+* `DeadlockDetectorResolveDeadlock_KillsVictimAndUnblocksOtherTx`
+
+## TransactionContext
+* `TransactionContextEquals_TwoContextsWithSameId_ReturnsTrue`
+
+## LockQueue
+* `LockQueueEnqueue_WhenLockBusy_AddsToQueueInOrder`
+* `LockQueueDequeue_AfterRelease_RemovesFirstInQueue`
+
+## SqlParser
+* `SqlParserParse_ValidSelectStatement_ReturnsValidAst`
+* `SqlParserParse_SelectWithJoin_ReturnsAstContainingJoinNode`
+* `SqlParserParse_InvalidSyntax_ThrowsSqlSyntaxException`
+* `SqlParserParse_LexicalTokens_CorrectlyIdentifiesKeywordsAndIdentifiers`
+
+## QueryValidator
+* `QueryValidatorValidate_ValidAst_AcceptsWithoutError`
+* `QueryValidatorValidate_UnknownTable_ThrowsSqlException`
+* `QueryValidatorValidate_ColumnTypeMismatch_ThrowsSqlException`
+
+## QueryOptimizer
+* `QueryOptimizerApplyRule_PredicatePushdown_MovesFilterBelowScan`
+* `QueryOptimizerApplyRule_JoinReordering_ChoosesCheapestJoinOrder`
+* `QueryOptimizerEstimateCost_IndexAvailable_ReturnsLowerCostThanSeqScan`
+* `QueryOptimizerGeneratePhysicalPlan_FromLogicalPlan_ProducesExecutionPlan`
+
+## ExecutionEngine
+* `ExecutionEngineExecute_SequentialScan_ReturnsAllRows`
+* `ExecutionEngineExecute_HashJoin_CorrectlyMatchesRows`
+* `ExecutionEngineExecute_Projection_OutputsOnlySelectedColumns`
+* `ExecutionEngineExecute_Aggregation_GroupByCorrectResult`
+* `ExecutionEngineExecute_SortOperator_SortsRowsAccordingToOrderBy`
+
+## ResultProcessor
+* `ResultProcessorProcessResultSet_ToResultCursor_ReturnsCursorWithCorrectMetadata`
+* `ResultProcessorFormatResult_WithJsonFormatter_ReturnsValidJson`
+
+## ASTNode
+* `ASTNodeEquals_SameStructure_ReturnsTrue`
+
+## Token
+* `TokenIsKeyword_ReturnsTrueForSelect`
+
+## CostModel
+* `CostModelCalculateCost_ForLogicalPlan_ReturnsExpectedValue`
+
+## LogicalPlan
+* `LogicalPlanValidate_NoCycles_InPlanGraph`
+
+## ExecutionPlan
+* `ExecutionPlanClone_DeepCopy_ReturnsIndependentCopy`
+
+## DatabaseManager
+* `DatabaseManagerCreateDatabase_ValidName_AddsToSystemCatalog`
+* `DatabaseManagerDropDatabase_Existing_RemovesCatalogEntriesAndPhysicalFiles`
+* `DatabaseManagerGetDatabaseMeta_ReturnsCorrectMetadata`
+
+## SchemaManager
+* `SchemaManagerCreateSchema_ValidDefinition_AddsToCatalog`
+* `SchemaManagerResolveSchema_Existing_ReturnsSchemaObject`
+* `SchemaManagerRenameSchema_UpdatesAllDependentObjects`
+
+## TableManager
+* `TableManagerCreateTable_WithColumns_AddsTableToCatalog`
+* `TableManagerAlterTable_AddColumn_UpdatesTableMetaAndPhysicalStorage`
+* `TableManagerDropTable_RemovesCatalogAndPhysicalPages`
+
+## IndexManager
+* `IndexManagerCreateIndex_OnColumn_AddsIndexMetaAndBuildsStructure`
+* `IndexManagerDropIndex_RemovesMetaAndPhysicalStructure`
+
+## MetadataCatalog
+* `MetadataCatalogLookupTable_Existing_ReturnsTableMeta`
+* `MetadataCatalogLookupColumn_Existing_ReturnsColumnMeta`
+
+## ConstraintManager
+* `ConstraintManagerAddPrimaryKey_ValidColumns_SetsUniqueConstraint`
+* `ConstraintManagerAddForeignKey_ValidReference_EnforcesReferentialIntegrity`
+* `ConstraintManagerValidateInsert_WithConstraintViolations_ThrowsConstraintException`
+
+## CatalogObject
+* `CatalogObjectEquals_TwoObjectsSameId_ReturnsTrue`
+
+## ObjectId
+* `ObjectIdGenerate_UniqueAcrossCatalog_ReturnsUniqueId`
+
+## TableMeta
+* `TableMetaClone_DeepCopy_ReturnsIndependentMeta`
+
+## IndexMeta
+* `IndexMetaUpdateStatistics_UpdatesCostEstimates`
+
+## AuthenticationManager
+* `AuthenticationManagerAuthenticate_ValidCredentials_ReturnsSession`
+* `AuthenticationManagerAuthenticate_InvalidPassword_ThrowsAuthenticationException`
+* `AuthenticationManagerHashPassword_ProducesDeterministicHash_WithSalt`
+
+## AuthorizationManager
+* `AuthorizationManagerAuthorize_UserHasPermission_ReturnsTrue`
+* `AuthorizationManagerAuthorize_UserMissingPermission_ThrowsPermissionDeniedException`
+* `AuthorizationManagerCheckRoleHierarchy_InheritedPermissions_AreEffectivePermissions`
+
+## Session
+* `SessionIsActive_AfterLogout_ReturnsFalse`
+
+## RoleId / UserId
+* `RoleId_UserIdEquals_SameGuid_ReturnsTrue`
