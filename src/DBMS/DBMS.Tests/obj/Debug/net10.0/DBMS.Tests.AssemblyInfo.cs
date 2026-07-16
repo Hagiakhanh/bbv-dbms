@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DBMS.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9e1a10118ea4cde25210cc6efed22c9facae4b3f")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f9d6b3d26168e960bedcfb3703148491299f2ac9")]
 [assembly: System.Reflection.AssemblyProductAttribute("DBMS.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DBMS.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
