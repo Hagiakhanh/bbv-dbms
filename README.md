@@ -1,6 +1,6 @@
 # This overview of DBMS Mindmap
 
-```mermaid
+<!-- ```mermaid
 graph LR
     %% Styles cho nền tối (GitHub Dark Mode)
     classDef default fill:#2d2d2d,stroke:#888,stroke-width:1px,color:#fff;
@@ -90,7 +90,9 @@ graph LR
     am --- am_ml[Monitoring & Logging]:::layer2
     am --- am_cm[Configuration]:::layer2
     am --- am_ie[Import & Export]:::layer2
-```
+``` -->
+
+![alt text](image.png)
 
 ## Class diagram
 ```mermaid
