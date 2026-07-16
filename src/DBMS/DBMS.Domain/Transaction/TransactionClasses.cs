@@ -2,56 +2,67 @@ namespace DBMS.Domain.Transaction;
 
 using System.Collections.Generic;
 using DBMS.Domain.Models;
-using DBMS.Domain.StorageEngine;
+using DBMS.Domain.Interfaces;
 
 public class TransactionManager
 {
-    public TransactionTable TxTable { get; set; }
-    public LockManager LockMgr { get; set; }
-    public WALManager WalMgr { get; set; }
-
-    public TxId Begin() => throw new System.NotImplementedException();
-    public void Commit(TxId txId) => throw new System.NotImplementedException();
-    public void Abort(TxId txId) => throw new System.NotImplementedException();
+    private TransactionTable txTable;
+    private LockManager lockMgr;
+    private IWALManager walMgr;
+    private MVCCManager mvccMgr;
+    
+    public TransactionId Begin() => throw new System.NotImplementedException();
+    public void Commit(TransactionId txId) => throw new System.NotImplementedException();
+    public void Abort(TransactionId txId) => throw new System.NotImplementedException();
 }
 
 public class TransactionTable
 {
-    public Dictionary<string, object> ActiveTxns { get; set; }
-
-    public void AddTx() => throw new System.NotImplementedException();
-    public void RemoveTx() => throw new System.NotImplementedException();
+    private Dictionary<TransactionId, TxState> activeTxns;
+    
+    public void AddTx(TransactionId txId) => throw new System.NotImplementedException();
+    public void RemoveTx(TransactionId txId) => throw new System.NotImplementedException();
+    public TxState GetState(TransactionId txId) => throw new System.NotImplementedException();
+    public List<TransactionId> GetActiveIds() => throw new System.NotImplementedException();
 }
 
 public class LockManager
 {
-    public Dictionary<string, object> LockTable { get; set; }
-    public DeadlockDetector Detector { get; set; }
-
-    public bool AcquireLock(TxId txId, ResId resId) => throw new System.NotImplementedException();
-    public void ReleaseLock(TxId txId, ResId resId) => throw new System.NotImplementedException();
+    private Dictionary<ResourceId, LockQueue> lockTable;
+    private DeadlockDetector detector;
+    
+    private void WaitFor(TransactionId txId, ResourceId resId) => throw new System.NotImplementedException();
+    public void AcquireLock(TransactionId txId, ResourceId resId, LockMode mode) => throw new System.NotImplementedException();
+    public void ReleaseLock(TransactionId txId, ResourceId resId) => throw new System.NotImplementedException();
+    public void ReleaseAll(TransactionId txId) => throw new System.NotImplementedException();
 }
 
 public class MVCCManager
 {
-    public SnapshotManager SnapshotMgr { get; set; }
-
-    public Record ReadVersion(RID rid, TxId txId) => throw new System.NotImplementedException();
-    public void WriteVersion(RID rid, TxId txId) => throw new System.NotImplementedException();
+    private ISnapshotProvider snapshotProvider;
+    
+    public Record? ReadVersion(RID rid, SnapshotId snapshotId) => throw new System.NotImplementedException();
+    public void WriteVersion(RID rid, TransactionId txId, byte[] data) => throw new System.NotImplementedException();
+    public void Vacuum(LSN olderThan) => throw new System.NotImplementedException();
 }
 
-public class SnapshotManager
+public class SnapshotManager : ISnapshotProvider
 {
-    public List<object> ActiveSnapshots { get; set; }
-
-    public void CreateSnapshot() => throw new System.NotImplementedException();
-    public void IsVisible(TxId txId) => throw new System.NotImplementedException();
+    private List<Snapshot> activeSnapshots;
+    
+    private Snapshot BuildSnapshot(TransactionId txId) => throw new System.NotImplementedException();
+    public SnapshotId CreateSnapshot(TransactionId txId) => throw new System.NotImplementedException();
+    public void ReleaseSnapshot(SnapshotId id) => throw new System.NotImplementedException();
+    public bool IsVisible(TransactionId txId, SnapshotId snapshotId) => throw new System.NotImplementedException();
 }
 
 public class DeadlockDetector
 {
-    public WaitForGraph Graph { get; set; }
-
-    public void BuildGraph() => throw new System.NotImplementedException();
-    public void DetectCycle() => throw new System.NotImplementedException();
+    private WaitForGraph graph;
+    
+    private WaitForGraph BuildGraph(TransactionTable txTable) => throw new System.NotImplementedException();
+    private List<TransactionId>? DetectCycle(WaitForGraph graph) => throw new System.NotImplementedException();
+    private TransactionId SelectVictim(List<TransactionId> cycle) => throw new System.NotImplementedException();
+    
+    public void Check(TransactionTable txTable) => throw new System.NotImplementedException();
 }

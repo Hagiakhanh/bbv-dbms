@@ -94,336 +94,732 @@ graph LR
 
 ![alt text](image.png)
 
-## Class diagram
+## Diagram 10 — Full Dependency Overview (Cross-Layer)
+
 ```mermaid
 classDiagram
-    %% ==========================================
-    %% LAYER 1: QUERY PROCESSOR
-    %% ==========================================
-    class SqlParser {
-        +String sqlText
-        +ASTNode ast
-        +tokenize()
-        +parse()
-        +buildAST() ASTNode
+    %% Query layer
+    SqlParser --> QueryValidator
+    QueryValidator --> QueryOptimizer
+    QueryOptimizer --> ExecutionEngine
+    ExecutionEngine --> ResultProcessor
+    ExecutionEngine --> IAccessMethod
+    ExecutionEngine --> IAuthorizationManager
+    ExecutionEngine --> TransactionManager
+    ExecutionEngine --> IMetadataCatalog
+
+    %% Access methods
+    IAccessMethod <|.. TableScan
+    IAccessMethod <|.. IndexScan
+    TableScan --> RecordManager
+    IndexScan --> IIndexStructure
+
+    %% Storage
+    RecordManager --> IBufferPool
+    IndexManager --> IBufferPool
+    IndexManager --> IIndexStructure
+    IIndexStructure <|.. BPlusTree
+    IIndexStructure <|.. HashIndex
+    IBufferPool <|.. BufferPoolManager
+    BufferPoolManager --> DiskManager
+    BufferPoolManager --> IReplacementPolicy
+    IReplacementPolicy <|.. LRUPolicy
+    IReplacementPolicy <|.. ClockPolicy
+
+    %% Logging
+    IWALManager <|.. WALManager
+    WALManager --> ILogWriter
+    ILogWriter <|.. LogWriter
+    WALManager --> LSNGenerator
+
+    %% Transaction
+    TransactionManager --> LockManager
+    TransactionManager --> IWALManager
+    TransactionManager --> MVCCManager
+    TransactionManager --> TransactionTable
+    LockManager --> DeadlockDetector
+    MVCCManager --> ISnapshotProvider
+    ISnapshotProvider <|.. SnapshotManager
+
+    %% Recovery & Backup
+    RecoveryManager --> IWALManager
+    RecoveryManager --> IBufferPool
+    BackupManager --> IWALManager
+
+    %% Metadata & Security
+    IMetadataCatalog <|.. MetadataCatalog
+    DatabaseManager --> IMetadataCatalog
+    TableManager --> IMetadataCatalog
+    IAuthorizationManager <|.. AuthorizationManager
+    AuthorizationManager --> IMetadataCatalog
+```
+
+---
+
+## Diagram 1 — Value Objects & Exception Hierarchy
+
+> This is the foundation of the entire system. Every class uses these types instead of primitives.
+
+```mermaid
+classDiagram
+
+    %% ── VALUE OBJECTS ──────────────────────────────────────
+    class PageId {
+        <<value object>>
+        +FileId fileId
+        +Int pageNumber
+        +equals(other PageId) Boolean
+        +toString() String
     }
-    class QueryValidator {
-        +ASTNode ast
-        +MetadataCatalog catalog
-        +validateSyntax()
-        +validateSemantics()
-        +checkPrivileges()
+    class LSN {
+        <<value object>>
+        +Long value
+        +isAfter(other LSN) Boolean
+        +next() LSN
     }
-    class QueryOptimizer {
-        +ASTNode validatedAst
-        +CostModel costModel
-        +generateLogicalPlan()
-        +generatePhysicalPlan() ExecutionPlan
-        +optimize() ExecutionPlan
+    class TransactionId {
+        <<value object>>
+        +Long id
+        +isValid() Boolean
     }
-    class ExecutionEngine {
-        +ExecutionPlan plan
-        +TransactionContext txContext
-        +execute() ResultSet
-        +initPhysicalOperators()
-        +getNextTuple() Tuple
+    class RID {
+        <<value object>>
+        +PageId pageId
+        +Int slotNumber
+        +equals(other RID) Boolean
     }
-    class ResultProcessor {
-        +TupleBuffer outputBuffer
-        +ResultSet resultSet
-        +formatTuple()
-        +serialize()
-        +getCursor()
+    class DatabaseName {
+        <<value object>>
+        +String value
+        +validate()
+    }
+    class AbsolutePath {
+        <<value object>>
+        +String path
+        +exists() Boolean
+        +resolve(child String) AbsolutePath
+    }
+    class PoolSize {
+        <<value object>>
+        +Int value
+        +validate()
+    }
+    class BTreeDegree {
+        <<value object>>
+        +Int value
+        +validate()
     }
 
-    %% ==========================================
-    %% LAYER 2: STORAGE ENGINE (Disk, Buffer, Page)
-    %% ==========================================
-    class DiskManager {
-        +Map openFiles
-        +String dataDir
-        +readPage(pageId, buffer)
-        +writePage(pageId, buffer)
-        +allocateFile()
+    %% ── EXCEPTION HIERARCHY ────────────────────────────────
+    class DbmsException {
+        <<exception>>
+        +String message
+        +Throwable cause
     }
-    class TablespaceManager {
-        +Map tablespaces
-        +createTablespace()
-        +getTablespace()
-        +mapToFile()
+    class StorageException {
+        <<exception>>
     }
-    class PageManager {
-        +DiskManager diskManager
-        +allocatePage()
-        +fetchPage()
-        +freePage()
+    class PageNotFoundException {
+        <<exception>>
+        +PageId missingPage
     }
-    class PageFormatter {
-        +PageHeader header
-        +SlotArray slots
-        +formatSlottedPage()
-        +insertTuple()
+    class LockException {
+        <<exception>>
     }
-    class BufferPoolManager {
-        +Page[] frames
-        +PageTable pageTable
-        +ReplacementPolicy policy
-        +fetchPage(pageId) Page
-        +unpinPage(pageId)
-        +flushPage(pageId)
+    class LockTimeoutException {
+        <<exception>>
+        +TransactionId txId
+        +Long waitedMs
     }
-    class ReplacementPolicy {
-        +Int frameCount
-        +recordAccess(frameId)
-        +evictFrame() FrameId
+    class DeadlockException {
+        <<exception>>
+        +TransactionId victim
+    }
+    class SqlException {
+        <<exception>>
+    }
+    class SqlSyntaxException {
+        <<exception>>
+        +Int line
+        +Int column
+    }
+    class PermissionDeniedException {
+        <<exception>>
+        +String user
+        +String object
     }
 
-    %% ==========================================
-    %% LAYER 2: STORAGE ENGINE (Record, Index)
-    %% ==========================================
-    class RecordManager {
-        +BufferPoolManager bpm
-        +insertRecord(record) RID
-        +deleteRecord(rid)
-        +updateRecord(rid, record)
-        +readRecord(rid) Record
-    }
-    class RecordLayoutManager {
-        +Schema schema
-        +Int fixedLength
-        +getFieldOffset(colId)
-        +serialize()
-    }
-    class RIDGenerator {
-        +PageId currentPageId
-        +Int nextSlotId
-        +generateNextRID()
-    }
-    class IndexManager {
-        +BufferPoolManager bpm
-        +MetadataCatalog catalog
-        +createIndex()
-        +dropIndex()
-        +getIndex()
-    }
-    class BPlusTree {
-        +PageId rootPageId
-        +Int degree
-        +insert(key, rid)
-        +search(key)
-        +rangeScan()
-    }
-    class HashIndex {
-        +PageId directoryPageId
-        +insert(key, rid)
-        +search(key)
-    }
+    DbmsException <|-- StorageException
+    DbmsException <|-- LockException
+    DbmsException <|-- SqlException
+    StorageException <|-- PageNotFoundException
+    LockException <|-- LockTimeoutException
+    LockException <|-- DeadlockException
+    SqlException <|-- SqlSyntaxException
+    SqlException <|-- PermissionDeniedException
 
-    %% ==========================================
-    %% LAYER 2: STORAGE ENGINE (Access, Space, Log)
-    %% ==========================================
-    class AccessMethod {
+    RID *-- PageId
+```
+
+---
+
+---
+
+## Diagram 2 — Interface Contracts (DIP Foundation)
+
+> All high-level classes depend on these interfaces, regardless of their implementations.
+
+```mermaid
+classDiagram
+
+    %% ── INTERFACES ─────────────────────────────────────────
+    class IBufferPool {
         <<interface>>
-        +ExecutionPlan plan
-        +init()
-        +next()
+        +fetchPage(id PageId) Page
+        +unpinPage(id PageId)
+        +flushPage(id PageId)
+        +markDirty(id PageId)
+    }
+    class IWALManager {
+        <<interface>>
+        +append(record LogRecord) LSN
+        +flush(upToLSN LSN)
+        +truncateBefore(lsn LSN)
+    }
+    class ILogWriter {
+        <<interface>>
+        +write(bytes Byte[])
+        +fsync()
+        +currentOffset() Long
+    }
+    class IIndexStructure {
+        <<interface>>
+        +insert(key Key, rid RID)
+        +delete(key Key)
+        +search(key Key) Optional~RID~
+        +rangeScan(from Key, to Key) Iterator~RID~
+    }
+    class IReplacementPolicy {
+        <<interface>>
+        +recordAccess(frameId Int)
+        +evictFrame() Optional~Int~
+        +pin(frameId Int)
+        +unpin(frameId Int)
+    }
+    class ISnapshotProvider {
+        <<interface>>
+        +createSnapshot(txId TransactionId) SnapshotId
+        +releaseSnapshot(id SnapshotId)
+        +isVisible(txId TransactionId, snapshotId SnapshotId) Boolean
+    }
+    class IAccessMethod {
+        <<interface>>
+        +open(ctx ScanContext)
+        +next() Optional~Tuple~
         +close()
     }
-    class TableScan {
-        +TableId tableId
-        +RID currentRid
-        +init()
-        +next()
-    }
-    class IndexScan {
-        +IndexId indexId
-        +Key searchKey
-        +init()
-        +next()
-    }
-    class SpaceManager {
-        +ExtentManager extentMgr
-        +allocateSpace()
-        +freeSpace()
-    }
-    class ExtentManager {
-        +Map extents
-        +allocateExtent()
-    }
-    class SegmentManager {
-        +Map segments
-        +createSegment()
-        +growSegment()
+
+    %% ── IMPLEMENTATIONS ────────────────────────────────────
+    class BufferPoolManager {
+        -Page[] frames
+        -PageTable pageTable
+        -IReplacementPolicy policy
+        -findInCache(id PageId) Optional~Page~
+        -loadFromDisk(id PageId) Page
+        -evictIfFull()
+        +fetchPage(id PageId) Page
+        +unpinPage(id PageId)
+        +flushPage(id PageId)
+        +markDirty(id PageId)
     }
     class WALManager {
-        +LogBuffer buffer
-        +LogWriter writer
-        +appendLogRecord(record) LSN
-        +flushLog()
+        -LogBuffer buffer
+        -ILogWriter writer
+        -LSNGenerator lsnGen
+        -writeToBuffer(record LogRecord) LSN
+        -shouldForceFlush() Boolean
+        +append(record LogRecord) LSN
+        +flush(upToLSN LSN)
+        +truncateBefore(lsn LSN)
     }
     class LogWriter {
-        +File logFile
-        +Int currentOffset
-        +write(data)
+        -AbsolutePath logFilePath
+        -Long currentOffset
+        +write(bytes Byte[])
         +fsync()
+        +currentOffset() Long
     }
-    class LSNGenerator {
-        +LSN currentLSN
-        +getNextLSN()
+    class BPlusTree {
+        -PageId rootPageId
+        -BTreeDegree degree
+        -IBufferPool bufferPool
+        -splitNode(nodeId PageId) PageId
+        -propagateSplit(child PageId, parent PageId)
+        -findLeaf(key Key) PageId
+        +insert(key Key, rid RID)
+        +delete(key Key)
+        +search(key Key) Optional~RID~
+        +rangeScan(from Key, to Key) Iterator~RID~
     }
-
-    %% ==========================================
-    %% LAYER 4: BACKUP & DURABILITY
-    %% ==========================================
-    class RecoveryManager {
-        +WALManager walMgr
-        +BufferPoolManager bpm
-        +analyzePass()
-        +redoPass()
-        +undoPass()
+    class HashIndex {
+        -PageId directoryPageId
+        -IBufferPool bufferPool
+        -resolveChain(hash Int) PageId
+        +insert(key Key, rid RID)
+        +delete(key Key)
+        +search(key Key) Optional~RID~
+        +rangeScan(from Key, to Key) Iterator~RID~
     }
-    class BackupManager {
-        +String backupDir
-        +WALManager walMgr
-        +startFullBackup()
-        +startIncrementalBackup()
+    class LRUPolicy {
+        -PoolSize frameCount
+        -LinkedHashMap~Int~ usageOrder
+        +recordAccess(frameId Int)
+        +evictFrame() Optional~Int~
+        +pin(frameId Int)
+        +unpin(frameId Int)
     }
-
-    %% ==========================================
-    %% LAYER 5: TRANSACTION
-    %% ==========================================
-    class TransactionManager {
-        +TransactionTable txTable
-        +LockManager lockMgr
-        +WALManager walMgr
-        +begin() TxId
-        +commit(txId)
-        +abort(txId)
-    }
-    class TransactionTable {
-        +Map activeTxns
-        +addTx()
-        +removeTx()
-    }
-    class LockManager {
-        +Map lockTable
-        +DeadlockDetector detector
-        +acquireLock(txId, resId) Boolean
-        +releaseLock(txId, resId)
-    }
-    class MVCCManager {
-        +SnapshotManager snapshotMgr
-        +readVersion(rid, txId) Record
-        +writeVersion(rid, txId)
+    class ClockPolicy {
+        -PoolSize frameCount
+        -Boolean[] referenceBits
+        -Int clockHand
+        +recordAccess(frameId Int)
+        +evictFrame() Optional~Int~
+        +pin(frameId Int)
+        +unpin(frameId Int)
     }
     class SnapshotManager {
-        +List activeSnapshots
-        +createSnapshot()
-        +isVisible(txId)
+        -List~Snapshot~ activeSnapshots
+        -Snapshot buildSnapshot(txId TransactionId) Snapshot
+        +createSnapshot(txId TransactionId) SnapshotId
+        +releaseSnapshot(id SnapshotId)
+        +isVisible(txId TransactionId, snapshotId SnapshotId) Boolean
     }
+    class TableScan {
+        -TableId tableId
+        -RID currentRid
+        -RecordManager recordMgr
+        +open(ctx ScanContext)
+        +next() Optional~Tuple~
+        +close()
+    }
+    class IndexScan {
+        -IndexId indexId
+        -Key searchKey
+        -IIndexStructure index
+        +open(ctx ScanContext)
+        +next() Optional~Tuple~
+        +close()
+    }
+
+    IBufferPool <|.. BufferPoolManager
+    IWALManager <|.. WALManager
+    ILogWriter <|.. LogWriter
+    IIndexStructure <|.. BPlusTree
+    IIndexStructure <|.. HashIndex
+    IReplacementPolicy <|.. LRUPolicy
+    IReplacementPolicy <|.. ClockPolicy
+    ISnapshotProvider <|.. SnapshotManager
+    IAccessMethod <|.. TableScan
+    IAccessMethod <|.. IndexScan
+
+    WALManager --> ILogWriter
+    BufferPoolManager --> IReplacementPolicy
+```
+
+---
+
+## Diagram 3 — Query Processor Layer
+
+```mermaid
+classDiagram
+
+    class SqlParser {
+        -String sqlText
+        -tokenize() Token[]
+        -buildAST(tokens Token[]) ASTNode
+        +parse(sql String) ASTNode
+    }
+    note for SqlParser "Throws SqlSyntaxException if tokenize() or buildAST() fail"
+
+    class QueryValidator {
+        -IMetadataCatalog catalog
+        -IAuthorizationManager authz
+        -checkTableExists(node ASTNode)
+        -checkColumnTypes(node ASTNode)
+        +validate(ast ASTNode) ValidatedAst
+    }
+    note for QueryValidator "Throws PermissionDeniedException or SqlSyntaxException"
+
+    class QueryOptimizer {
+        -CostModel costModel
+        -IMetadataCatalog catalog
+        -toLogicalPlan(ast ValidatedAst) LogicalPlan
+        -toPhysicalPlan(plan LogicalPlan) ExecutionPlan
+        +optimize(ast ValidatedAst) ExecutionPlan
+    }
+
+    class ExecutionEngine {
+        -IAccessMethod scanner
+        -IAuthorizationManager authz
+        -openOperators(plan ExecutionPlan)
+        -closeOperators()
+        +execute(plan ExecutionPlan, ctx TransactionContext) ResultCursor
+    }
+    note for ExecutionEngine "plan is a parameter, not a field. Avoid keeping temporary state."
+
+    class ResultProcessor {
+        +format(cursor ResultCursor) ResultSet
+        +serialize(row Tuple) Byte[]
+        +paginate(cursor ResultCursor, pageSize Int) Page~Tuple~
+    }
+    note for ResultProcessor "No field state — everything is received via parameters."
+
+    SqlParser --> QueryValidator : passes ASTNode
+    QueryValidator --> QueryOptimizer : passes ValidatedAst
+    QueryOptimizer --> ExecutionEngine : passes ExecutionPlan
+    ExecutionEngine --> ResultProcessor : passes ResultCursor
+    ExecutionEngine --> IAccessMethod : depends on interface
+```
+
+---
+
+## Diagram 4 — Storage Engine Layer
+
+```mermaid
+classDiagram
+
+    class DiskManager {
+        -Map~FileId, FileHandle~ openFiles
+        -AbsolutePath dataDir
+        -ensureOpen(path AbsolutePath) FileHandle
+        +readPage(id PageId) Byte[]
+        +writePage(id PageId, data Byte[])
+        +allocateFile(path AbsolutePath) FileId
+    }
+    note for DiskManager "Throws StorageException if file does not exist"
+
+    class TablespaceManager {
+        -Map~TablespaceId, Tablespace~ tablespaces
+        -IMetadataCatalog catalog
+        +createTablespace(name String, path AbsolutePath)
+        +getTablespace(id TablespaceId) Tablespace
+        +mapDatabaseToFile(db DatabaseName) AbsolutePath
+    }
+
+    class PageManager {
+        -DiskManager diskManager
+        -SpaceManager spaceMgr
+        +allocatePage(tableId TableId) PageId
+        +fetchPage(id PageId) RawPage
+        +freePage(id PageId)
+    }
+
+    class PageFormatter {
+        -formatHeader(page RawPage) PageHeader
+        -computeFreeSpace(page RawPage) Int
+        +formatSlottedPage(page RawPage) FormattedPage
+        +insertTuple(page FormattedPage, tuple Byte[]) SlotId
+    }
+    note for PageFormatter "insertTuple throw StorageException if does not have enough free space"
+
+    class BufferPoolManager {
+        -Page[] frames
+        -PageTable pageTable
+        -IReplacementPolicy policy
+        -DiskManager diskManager
+        -findInCache(id PageId) Optional~Page~
+        -loadFromDisk(id PageId) Page
+        -evictIfFull()
+        +fetchPage(id PageId) Page
+        +unpinPage(id PageId)
+        +flushPage(id PageId)
+        +markDirty(id PageId)
+    }
+
+    class RecordManager {
+        -IBufferPool bufferPool
+        -RecordLayoutManager layoutMgr
+        -RIDGenerator ridGen
+        +insertRecord(tableId TableId, data Byte[]) RID
+        +deleteRecord(rid RID)
+        +updateRecord(rid RID, data Byte[])
+        +readRecord(rid RID) Optional~Record~
+    }
+
+    class RecordLayoutManager {
+        -Schema schema
+        +getFieldOffset(colId ColId) Int
+        +serialize(record Record) Byte[]
+        +deserialize(data Byte[]) Record
+    }
+
+    class RIDGenerator {
+        -PageId currentPageId
+        -Int nextSlotId
+        +generateNextRID(tableId TableId) RID
+    }
+
+    class IndexManager {
+        -IBufferPool bufferPool
+        -IMetadataCatalog catalog
+        -Map~IndexId, IIndexStructure~ indexCache
+        +createIndex(def IndexDef) IndexId
+        +dropIndex(id IndexId)
+        +getIndex(id IndexId) IIndexStructure
+    }
+
+    class SpaceManager {
+        -ExtentManager extentMgr
+        +allocateSpace(size Int) ExtentId
+        +freeSpace(extent ExtentId)
+        +availableSpace() Long
+    }
+
+    class ExtentManager {
+        -Map~ExtentId, ExtentInfo~ extents
+        -SegmentManager segMgr
+        +allocateExtent(segId SegmentId) ExtentId
+        +freeExtent(id ExtentId)
+    }
+
+    class SegmentManager {
+        -Map~SegmentId, SegmentInfo~ segments
+        +createSegment(tableId TableId) SegmentId
+        +growSegment(id SegmentId)
+        +dropSegment(id SegmentId)
+    }
+
+    RecordManager --> IBufferPool
+    IndexManager --> IBufferPool
+    BufferPoolManager --> DiskManager
+    BufferPoolManager --> IReplacementPolicy
+    PageManager --> DiskManager
+    PageManager --> SpaceManager
+    DiskManager --> TablespaceManager
+    SpaceManager --> ExtentManager
+    ExtentManager --> SegmentManager
+    RecordManager --> RecordLayoutManager
+    RecordManager --> RIDGenerator
+    IndexManager *-- IIndexStructure
+```
+
+---
+
+## Diagram 5 — WAL & Logging Layer
+
+```mermaid
+classDiagram
+
+    class WALManager {
+        -LogBuffer buffer
+        -ILogWriter writer
+        -LSNGenerator lsnGen
+        -writeToBuffer(record LogRecord) LSN
+        -shouldForceFlush() Boolean
+        +append(record LogRecord) LSN
+        +flush(upToLSN LSN)
+        +truncateBefore(lsn LSN)
+    }
+
+    class LogWriter {
+        -AbsolutePath logFilePath
+        -Long currentOffset
+        +write(bytes Byte[])
+        +fsync()
+        +currentOffset() Long
+    }
+
+    class LSNGenerator {
+        -LSN currentLSN
+        +getNextLSN() LSN
+        +getCurrentLSN() LSN
+    }
+
+    WALManager --> ILogWriter
+    WALManager --> LSNGenerator
+    LogWriter ..|> ILogWriter
+```
+
+---
+
+## Diagram 6 — Transaction Layer
+
+```mermaid
+classDiagram
+
+    class TransactionManager {
+        -TransactionTable txTable
+        -LockManager lockMgr
+        -IWALManager walMgr
+        -MVCCManager mvccMgr
+        +begin() TransactionId
+        +commit(txId TransactionId)
+        +abort(txId TransactionId)
+    }
+    note for TransactionManager "commit() forces flush WAL before return\nabort() calls UNDO log and releaseLock()"
+
+    class TransactionTable {
+        -Map~TransactionId, TxState~ activeTxns
+        +addTx(txId TransactionId)
+        +removeTx(txId TransactionId)
+        +getState(txId TransactionId) TxState
+        +getActiveIds() List~TransactionId~
+    }
+
+    class LockManager {
+        -Map~ResourceId, LockQueue~ lockTable
+        -DeadlockDetector detector
+        -waitFor(txId TransactionId, resId ResourceId)
+        +acquireLock(txId TransactionId, resId ResourceId, mode LockMode)
+        +releaseLock(txId TransactionId, resId ResourceId)
+        +releaseAll(txId TransactionId)
+    }
+    note for LockManager "acquireLock throw LockTimeoutException if wait for too long"
+
+    class MVCCManager {
+        -ISnapshotProvider snapshotProvider
+        +readVersion(rid RID, snapshotId SnapshotId) Optional~Record~
+        +writeVersion(rid RID, txId TransactionId, data Byte[])
+        +vacuum(olderThan LSN)
+    }
+
     class DeadlockDetector {
-        +WaitForGraph graph
-        +buildGraph()
-        +detectCycle()
+        -WaitForGraph graph
+        -buildGraph(txTable TransactionTable) WaitForGraph
+        -detectCycle(graph WaitForGraph) Optional~List~TransactionId~~
+        -selectVictim(cycle List~TransactionId~) TransactionId
+        +check(txTable TransactionTable)
+    }
+    note for DeadlockDetector "check() throw DeadlockException with victim TransactionId"
+
+    TransactionManager --> TransactionTable
+    TransactionManager --> LockManager
+    TransactionManager --> IWALManager
+    TransactionManager --> MVCCManager
+    LockManager --> DeadlockDetector
+    MVCCManager --> ISnapshotProvider
+```
+
+---
+
+## Diagram 7 — Recovery & Backup Layer
+
+```mermaid
+classDiagram
+
+    class RecoveryManager {
+        -IWALManager walMgr
+        -IBufferPool bufferPool
+        -TransactionTable txTable
+        -analyzePass(startLSN LSN) Map~TransactionId, LSN~
+        -applyRedo(record LogRecord)
+        -applyUndo(record LogRecord)
+        +recover(checkpointLSN LSN)
+    }
+    note for RecoveryManager "recover() = analyzePass + redoPass + undoPass\nEach step is a separate method — SRP"
+
+    class BackupManager {
+        -AbsolutePath backupDir
+        -IWALManager walMgr
+        -DiskManager diskManager
+        -snapshotFiles() List~AbsolutePath~
+        -verifyChecksum(file AbsolutePath) Boolean
+        +startFullBackup() BackupId
+        +startIncrementalBackup(since LSN) BackupId
+        +verifyBackup(id BackupId) Boolean
     }
 
-    %% ==========================================
-    %% LAYER 6: DATABASE OBJECT MANAGEMENT
-    %% ==========================================
-    class DatabaseManager {
-        +MetadataCatalog catalog
-        +createDatabase()
-        +dropDatabase()
+    RecoveryManager --> IWALManager
+    RecoveryManager --> IBufferPool
+    BackupManager --> IWALManager
+    BackupManager --> DiskManager
+```
+
+---
+
+## Diagram 8 — Database Object Management Layer
+
+```mermaid
+classDiagram
+
+    class IMetadataCatalog {
+        <<interface>>
+        +getTableMeta(name TableName) Optional~TableMeta~
+        +getIndexMeta(id IndexId) Optional~IndexMeta~
+        +updateMeta(obj CatalogObject)
+        +deleteMeta(id ObjectId)
     }
-    class SchemaManager {
-        +DatabaseId dbId
-        +createSchema()
-    }
-    class TableManager {
-        +SchemaId schemaId
-        +IndexManager indexMgr
-        +createTable()
-        +alterTable()
-    }
+
     class MetadataCatalog {
-        +Map sysTables
-        +getTableMeta()
-        +updateMeta()
+        -Map~String, CatalogObject~ sysTables
+        -IBufferPool bufferPool
+        -loadFromStorage(id ObjectId) CatalogObject
+        +getTableMeta(name TableName) Optional~TableMeta~
+        +getIndexMeta(id IndexId) Optional~IndexMeta~
+        +updateMeta(obj CatalogObject)
+        +deleteMeta(id ObjectId)
     }
 
-    %% ==========================================
-    %% LAYER 7: SECURITY & ACCESS CONTROL
-    %% ==========================================
+    class DatabaseManager {
+        -IMetadataCatalog catalog
+        -TablespaceManager tablespaceMgr
+        +createDatabase(name DatabaseName)
+        +dropDatabase(name DatabaseName)
+        +getDatabase(name DatabaseName) Optional~DatabaseMeta~
+    }
+
+    class SchemaManager {
+        -IMetadataCatalog catalog
+        +createSchema(dbName DatabaseName, schemaName String)
+        +dropSchema(dbName DatabaseName, schemaName String)
+    }
+
+    class TableManager {
+        -IMetadataCatalog catalog
+        -IndexManager indexMgr
+        -SpaceManager spaceMgr
+        +createTable(def TableDef)
+        +alterTable(name TableName, patch TablePatch)
+        +dropTable(name TableName)
+    }
+
+    MetadataCatalog ..|> IMetadataCatalog
+    DatabaseManager --> IMetadataCatalog
+    SchemaManager --> IMetadataCatalog
+    TableManager --> IMetadataCatalog
+    TableManager --> IndexManager
+    TableManager --> SpaceManager
+```
+
+---
+
+## Diagram 9 — Security Layer
+
+```mermaid
+classDiagram
+
+    class IAuthorizationManager {
+        <<interface>>
+        +checkPermission(user UserId, obj ObjectId, action Action)
+        +grantRole(user UserId, role RoleId)
+        +revokeRole(user UserId, role RoleId)
+    }
+
     class AuthenticationManager {
-        +Map userDb
-        +authenticate()
-        +hashPassword()
+        -Map~String, HashedCredential~ userDb
+        -hashPassword(raw String, salt String) HashedCredential
+        +authenticate(username String, password String) Session
     }
+    note for AuthenticationManager "authenticate throw PermissionDeniedException if credentials is not valid"
+
     class AuthorizationManager {
-        +MetadataCatalog catalog
-        +checkPermission()
-        +grantRole()
+        -IMetadataCatalog catalog
+        -resolveRoles(user UserId) Set~RoleId~
+        +checkPermission(user UserId, obj ObjectId, action Action)
+        +grantRole(user UserId, role RoleId)
+        +revokeRole(user UserId, role RoleId)
     }
 
-    %% ==========================================
-    %% RELATIONSHIPS (Core Backbone)
-    %% ==========================================
-    
-    %% Query -> Execution
-    SqlParser --> QueryValidator : passes AST
-    QueryValidator --> QueryOptimizer : passes Validated AST
-    QueryOptimizer --> ExecutionEngine : passes Plan
-    ExecutionEngine --> ResultProcessor : generates Tuples
-    
-    %% Execution -> Access & Metadata & Security
-    ExecutionEngine --> AccessMethod : calls
-    ExecutionEngine --> MetadataCatalog : reads schema
-    ExecutionEngine --> AuthorizationManager : verifies rights
-    ExecutionEngine --> TransactionManager : manages scope
-
-    %% Access -> Record & Index
-    AccessMethod <|-- TableScan
-    AccessMethod <|-- IndexScan
-    TableScan ..> RecordManager : fetches records
-    IndexScan ..> IndexManager : fetches RIDs
-    
-    %% Record & Index -> Buffer Pool
-    RecordManager --> BufferPoolManager : requests pages
-    IndexManager --> BufferPoolManager : requests pages
-    IndexManager *-- BPlusTree
-    IndexManager *-- HashIndex
-    RecordManager --> RecordLayoutManager : formats
-    RecordManager --> RIDGenerator : uses
-    
-    %% Buffer Pool -> Disk & Space
-    BufferPoolManager --> DiskManager : I/O
-    BufferPoolManager --> ReplacementPolicy : chooses eviction
-    PageManager --> DiskManager : delegates
-    DiskManager --> TablespaceManager : maps files
-    SpaceManager --> ExtentManager : orchestrates
-    ExtentManager --> SegmentManager : orchestrates
-    
-    %% Transaction -> Concurrency & Logging
-    TransactionManager --> TransactionTable : tracks
-    TransactionManager --> LockManager : uses 2PL
-    TransactionManager --> MVCCManager : visibility
-    TransactionManager --> WALManager : forces log (durability)
-    
-    LockManager --> DeadlockDetector : monitors
-    MVCCManager --> SnapshotManager : coordinates
-    
-    %% Logging -> Durability & Recovery
-    WALManager --> LogWriter : persists
-    WALManager --> LSNGenerator : sequences
-    RecoveryManager --> WALManager : replays logs
-    BackupManager --> WALManager : archives logs
-    RecoveryManager --> BufferPoolManager : restores state
-    
-    %% Object Management
-    DatabaseManager --> MetadataCatalog : stores
-    TableManager --> MetadataCatalog : stores
-    SchemaManager --> MetadataCatalog : stores
-    
-    %% Security
-    AuthorizationManager --> MetadataCatalog : checks roles
+    AuthorizationManager ..|> IAuthorizationManager
+    AuthorizationManager --> IMetadataCatalog
 ```

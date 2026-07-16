@@ -1,196 +1,186 @@
 namespace DBMS.Domain.StorageEngine;
 
 using System.Collections.Generic;
-using System.IO;
 using DBMS.Domain.Models;
-using DBMS.Domain.DatabaseObjectManagement;
+using DBMS.Domain.Interfaces;
 
 public class DiskManager
 {
-    public Dictionary<string, object> OpenFiles { get; set; }
-    public string DataDir { get; set; }
-
-    public void ReadPage(PageId pageId, object buffer) => throw new System.NotImplementedException();
-    public void WritePage(PageId pageId, object buffer) => throw new System.NotImplementedException();
-    public void AllocateFile() => throw new System.NotImplementedException();
+    private Dictionary<FileId, FileHandle> openFiles;
+    private AbsolutePath dataDir;
+    private FileHandle EnsureOpen(AbsolutePath path) => throw new System.NotImplementedException();
+    public byte[] ReadPage(PageId id) => throw new System.NotImplementedException();
+    public void WritePage(PageId id, byte[] data) => throw new System.NotImplementedException();
+    public FileId AllocateFile(AbsolutePath path) => throw new System.NotImplementedException();
 }
 
 public class TablespaceManager
 {
-    public Dictionary<string, object> Tablespaces { get; set; }
-
-    public void CreateTablespace() => throw new System.NotImplementedException();
-    public void GetTablespace() => throw new System.NotImplementedException();
-    public void MapToFile() => throw new System.NotImplementedException();
+    private Dictionary<TablespaceId, Tablespace> tablespaces;
+    private IMetadataCatalog catalog;
+    public void CreateTablespace(string name, AbsolutePath path) => throw new System.NotImplementedException();
+    public Tablespace GetTablespace(TablespaceId id) => throw new System.NotImplementedException();
+    public AbsolutePath MapDatabaseToFile(DatabaseName db) => throw new System.NotImplementedException();
 }
 
 public class PageManager
 {
-    public DiskManager DiskManager { get; set; }
-
-    public void AllocatePage() => throw new System.NotImplementedException();
-    public void FetchPage() => throw new System.NotImplementedException();
-    public void FreePage() => throw new System.NotImplementedException();
+    private DiskManager diskManager;
+    private SpaceManager spaceMgr;
+    public PageId AllocatePage(TableId tableId) => throw new System.NotImplementedException();
+    public RawPage FetchPage(PageId id) => throw new System.NotImplementedException();
+    public void FreePage(PageId id) => throw new System.NotImplementedException();
 }
 
 public class PageFormatter
 {
-    public PageHeader Header { get; set; }
-    public SlotArray Slots { get; set; }
-
-    public void FormatSlottedPage() => throw new System.NotImplementedException();
-    public void InsertTuple() => throw new System.NotImplementedException();
+    private PageHeader FormatHeader(RawPage page) => throw new System.NotImplementedException();
+    private int ComputeFreeSpace(RawPage page) => throw new System.NotImplementedException();
+    public FormattedPage FormatSlottedPage(RawPage page) => throw new System.NotImplementedException();
+    public SlotId InsertTuple(FormattedPage page, byte[] tuple) => throw new System.NotImplementedException();
 }
 
-public class BufferPoolManager
+public class BufferPoolManager : IBufferPool
 {
-    public Page[] Frames { get; set; }
-    public PageTable PageTable { get; set; }
-    public ReplacementPolicy Policy { get; set; }
-
-    public Page FetchPage(PageId pageId) => throw new System.NotImplementedException();
-    public void UnpinPage(PageId pageId) => throw new System.NotImplementedException();
-    public void FlushPage(PageId pageId) => throw new System.NotImplementedException();
+    private object[] frames;
+    private object pageTable;
+    private IReplacementPolicy policy;
+    private DiskManager diskManager;
+    
+    private object FindInCache(PageId id) => throw new System.NotImplementedException();
+    private object LoadFromDisk(PageId id) => throw new System.NotImplementedException();
+    private void EvictIfFull() => throw new System.NotImplementedException();
+    
+    public object FetchPage(PageId id) => throw new System.NotImplementedException();
+    public void UnpinPage(PageId id) => throw new System.NotImplementedException();
+    public void FlushPage(PageId id) => throw new System.NotImplementedException();
+    public void MarkDirty(PageId id) => throw new System.NotImplementedException();
 }
 
-public class ReplacementPolicy
+public class LRUPolicy : IReplacementPolicy
 {
-    public int FrameCount { get; set; }
+    private PoolSize frameCount;
+    private Dictionary<int, object> usageOrder;
+    public void RecordAccess(int frameId) => throw new System.NotImplementedException();
+    public int? EvictFrame() => throw new System.NotImplementedException();
+    public void Pin(int frameId) => throw new System.NotImplementedException();
+    public void Unpin(int frameId) => throw new System.NotImplementedException();
+}
 
-    public void RecordAccess(FrameId frameId) => throw new System.NotImplementedException();
-    public FrameId EvictFrame() => throw new System.NotImplementedException();
+public class ClockPolicy : IReplacementPolicy
+{
+    private PoolSize frameCount;
+    private bool[] referenceBits;
+    private int clockHand;
+    public void RecordAccess(int frameId) => throw new System.NotImplementedException();
+    public int? EvictFrame() => throw new System.NotImplementedException();
+    public void Pin(int frameId) => throw new System.NotImplementedException();
+    public void Unpin(int frameId) => throw new System.NotImplementedException();
 }
 
 public class RecordManager
 {
-    public BufferPoolManager Bpm { get; set; }
-
-    public RID InsertRecord(Record record) => throw new System.NotImplementedException();
+    private IBufferPool bufferPool;
+    private RecordLayoutManager layoutMgr;
+    private RIDGenerator ridGen;
+    public RID InsertRecord(TableId tableId, byte[] data) => throw new System.NotImplementedException();
     public void DeleteRecord(RID rid) => throw new System.NotImplementedException();
-    public void UpdateRecord(RID rid, Record record) => throw new System.NotImplementedException();
-    public Record ReadRecord(RID rid) => throw new System.NotImplementedException();
+    public void UpdateRecord(RID rid, byte[] data) => throw new System.NotImplementedException();
+    public Record? ReadRecord(RID rid) => throw new System.NotImplementedException();
 }
 
 public class RecordLayoutManager
 {
-    public Schema Schema { get; set; }
-    public int FixedLength { get; set; }
-
-    public void GetFieldOffset(int colId) => throw new System.NotImplementedException();
-    public void Serialize() => throw new System.NotImplementedException();
+    private Schema schema;
+    public int GetFieldOffset(ColId colId) => throw new System.NotImplementedException();
+    public byte[] Serialize(Record record) => throw new System.NotImplementedException();
+    public Record Deserialize(byte[] data) => throw new System.NotImplementedException();
 }
 
 public class RIDGenerator
 {
-    public PageId CurrentPageId { get; set; }
-    public int NextSlotId { get; set; }
-
-    public void GenerateNextRID() => throw new System.NotImplementedException();
+    private PageId currentPageId;
+    private int nextSlotId;
+    public RID GenerateNextRID(TableId tableId) => throw new System.NotImplementedException();
 }
 
 public class IndexManager
 {
-    public BufferPoolManager Bpm { get; set; }
-    public MetadataCatalog Catalog { get; set; }
-
-    public void CreateIndex() => throw new System.NotImplementedException();
-    public void DropIndex() => throw new System.NotImplementedException();
-    public void GetIndex() => throw new System.NotImplementedException();
+    private IBufferPool bufferPool;
+    private IMetadataCatalog catalog;
+    private Dictionary<IndexId, IIndexStructure> indexCache;
+    public IndexId CreateIndex(IndexDef def) => throw new System.NotImplementedException();
+    public void DropIndex(IndexId id) => throw new System.NotImplementedException();
+    public IIndexStructure GetIndex(IndexId id) => throw new System.NotImplementedException();
 }
 
-public class BPlusTree
+public class BPlusTree : IIndexStructure
 {
-    public PageId RootPageId { get; set; }
-    public int Degree { get; set; }
-
+    private PageId rootPageId;
+    private BTreeDegree degree;
+    private IBufferPool bufferPool;
+    private PageId SplitNode(PageId nodeId) => throw new System.NotImplementedException();
+    private void PropagateSplit(PageId child, PageId parent) => throw new System.NotImplementedException();
+    private PageId FindLeaf(Key key) => throw new System.NotImplementedException();
+    
     public void Insert(Key key, RID rid) => throw new System.NotImplementedException();
-    public void Search(Key key) => throw new System.NotImplementedException();
-    public void RangeScan() => throw new System.NotImplementedException();
+    public void Delete(Key key) => throw new System.NotImplementedException();
+    public RID? Search(Key key) => throw new System.NotImplementedException();
+    public IEnumerable<RID> RangeScan(Key fromKey, Key toKey) => throw new System.NotImplementedException();
 }
 
-public class HashIndex
+public class HashIndex : IIndexStructure
 {
-    public PageId DirectoryPageId { get; set; }
-
+    private PageId directoryPageId;
+    private IBufferPool bufferPool;
+    private PageId ResolveChain(int hash) => throw new System.NotImplementedException();
+    
     public void Insert(Key key, RID rid) => throw new System.NotImplementedException();
-    public void Search(Key key) => throw new System.NotImplementedException();
+    public void Delete(Key key) => throw new System.NotImplementedException();
+    public RID? Search(Key key) => throw new System.NotImplementedException();
+    public IEnumerable<RID> RangeScan(Key fromKey, Key toKey) => throw new System.NotImplementedException();
 }
 
-public interface AccessMethod
+public class TableScan : IAccessMethod
 {
-    ExecutionPlan Plan { get; set; }
-
-    void Init();
-    void Next();
-    void Close();
-}
-
-public class TableScan : AccessMethod
-{
-    public ExecutionPlan Plan { get; set; }
-    public TableId TableId { get; set; }
-    public RID CurrentRid { get; set; }
-
-    public void Init() => throw new System.NotImplementedException();
-    public void Next() => throw new System.NotImplementedException();
+    private TableId tableId;
+    private RID currentRid;
+    private RecordManager recordMgr;
+    public void Open(ScanContext ctx) => throw new System.NotImplementedException();
+    public Tuple? Next() => throw new System.NotImplementedException();
     public void Close() => throw new System.NotImplementedException();
 }
 
-public class IndexScan : AccessMethod
+public class IndexScan : IAccessMethod
 {
-    public ExecutionPlan Plan { get; set; }
-    public IndexId IndexId { get; set; }
-    public Key SearchKey { get; set; }
-
-    public void Init() => throw new System.NotImplementedException();
-    public void Next() => throw new System.NotImplementedException();
+    private IndexId indexId;
+    private Key searchKey;
+    private IIndexStructure index;
+    public void Open(ScanContext ctx) => throw new System.NotImplementedException();
+    public Tuple? Next() => throw new System.NotImplementedException();
     public void Close() => throw new System.NotImplementedException();
 }
 
 public class SpaceManager
 {
-    public ExtentManager ExtentMgr { get; set; }
-
-    public void AllocateSpace() => throw new System.NotImplementedException();
-    public void FreeSpace() => throw new System.NotImplementedException();
+    private ExtentManager extentMgr;
+    public ExtentId AllocateSpace(int size) => throw new System.NotImplementedException();
+    public void FreeSpace(ExtentId extent) => throw new System.NotImplementedException();
+    public long AvailableSpace() => throw new System.NotImplementedException();
 }
 
 public class ExtentManager
 {
-    public Dictionary<string, object> Extents { get; set; }
-
-    public void AllocateExtent() => throw new System.NotImplementedException();
+    private Dictionary<ExtentId, ExtentInfo> extents;
+    private SegmentManager segMgr;
+    public ExtentId AllocateExtent(SegmentId segId) => throw new System.NotImplementedException();
+    public void FreeExtent(ExtentId id) => throw new System.NotImplementedException();
 }
 
 public class SegmentManager
 {
-    public Dictionary<string, object> Segments { get; set; }
-
-    public void CreateSegment() => throw new System.NotImplementedException();
-    public void GrowSegment() => throw new System.NotImplementedException();
-}
-
-public class WALManager
-{
-    public LogBuffer Buffer { get; set; }
-    public LogWriter Writer { get; set; }
-
-    public LSN AppendLogRecord(object record) => throw new System.NotImplementedException();
-    public void FlushLog() => throw new System.NotImplementedException();
-}
-
-public class LogWriter
-{
-    public FileInfo LogFile { get; set; }
-    public int CurrentOffset { get; set; }
-
-    public void Write(object data) => throw new System.NotImplementedException();
-    public void Fsync() => throw new System.NotImplementedException();
-}
-
-public class LSNGenerator
-{
-    public LSN CurrentLSN { get; set; }
-
-    public void GetNextLSN() => throw new System.NotImplementedException();
+    private Dictionary<SegmentId, SegmentInfo> segments;
+    public SegmentId CreateSegment(TableId tableId) => throw new System.NotImplementedException();
+    public void GrowSegment(SegmentId id) => throw new System.NotImplementedException();
+    public void DropSegment(SegmentId id) => throw new System.NotImplementedException();
 }
