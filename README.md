@@ -1,1191 +1,1415 @@
+﻿# DBMS Core Architecture Flowchart
+
+```mermaid
+flowchart LR
+    %% =====================================================
+    %% NODE DECLARATIONS & STYLING (Declared exactly once)
+    %% =====================================================
+    DBMS((DBMS)):::rootStyle
+    %% Left-side Branches
+    Server["Database Server"]:::branchAdmin
+    Security["Security"]:::branchAdmin
+    Replication["Replication"]:::branchAdmin
+    Recovery["Recovery"]:::branchTx
+    DatabaseServer["DatabaseServer"]:::leafStyle
+    DatabaseManager["DatabaseManager"]:::leafStyle
+    ConfigurationManager["ConfigurationManager"]:::leafStyle
+    SecurityManager["SecurityManager"]:::leafStyle
+    MonitoringManager["MonitoringManager"]:::leafStyle
+    User["User"]:::leafStyle
+    Role["Role"]:::leafStyle
+    Permission["Permission"]:::leafStyle
+    ClusterNode["Cluster Node"]:::leafStyle
+    LogRecord["Log Record"]:::leafStyle
+    %% Right-side Branches
+    Database["Database"]:::branchCatalog
+    Storage["Storage Engine"]:::branchStorage
+    Query["Query Processing"]:::branchQuery
+    Transaction["Transaction"]:::branchTx
+    Metadata["Metadata"]:::branchCatalog
+    Schema["Schema"]:::leafStyle
+    Table["Table"]:::leafStyle
+    Column["Column"]:::leafStyle
+    Row["Row"]:::leafStyle
+    Index["Index"]:::leafStyle
+    BufferPool["Buffer Pool"]:::leafStyle
+    PageManager["Page Manager"]:::leafStyle
+    FileManager["File Manager"]:::leafStyle
+    SQLParser["SQL Parser"]:::leafStyle
+    Lexer["Lexer"]:::leafStyle
+    AST["AST"]:::leafStyle
+    QueryOptimizer["Query Optimizer"]:::leafStyle
+    LogicalPlan["Logical Plan"]:::leafStyle
+    PhysicalPlan["Physical Plan"]:::leafStyle
+    StatisticsManager["Statistics Manager"]:::leafStyle
+    QueryExecutor["Query Executor"]:::leafStyle
+    RuntimeContext["Runtime Context"]:::leafStyle
+    TransactionObject["Transaction Object"]:::leafStyle
+    TransactionManager["Transaction Manager"]:::leafStyle
+    LockManager["Lock Manager"]:::leafStyle
+    MVCCManager["MVCC Manager"]:::leafStyle
+    WALManager["WAL Manager"]:::leafStyle
+    CatalogManager["Catalog Manager"]:::leafStyle
+    %% =====================================================
+    %% CONNECTIONS (Simple Node IDs only)
+    %% =====================================================
+    %% Left Side Connections (pointing left-to-right into DBMS)
+    Server --> DBMS
+    Security --> DBMS
+    Replication --> DBMS
+    Recovery --> DBMS
+    DatabaseServer --> Server
+    DatabaseManager --> Server
+    ConfigurationManager --> Server
+    SecurityManager --> Server
+    MonitoringManager --> Server
+    User --> Security
+    Role --> Security
+    Permission --> Security
+    ClusterNode --> Replication
+    LogRecord --> Recovery
+    %% Right Side Connections (pointing right)
+    DBMS --> Database
+    DBMS --> Storage
+    DBMS --> Query
+    DBMS --> Transaction
+    DBMS --> Metadata
+    Database --> Schema
+    Database --> Table
+    Database --> Column
+    Database --> Row
+    Database --> Index
+    Storage --> BufferPool
+    Storage --> PageManager
+    Storage --> FileManager
+    Query --> SQLParser
+    SQLParser --> Lexer
+    SQLParser --> AST
+    Query --> QueryOptimizer
+    QueryOptimizer --> LogicalPlan
+    QueryOptimizer --> PhysicalPlan
+    QueryOptimizer --> StatisticsManager
+    Query --> QueryExecutor
+    QueryExecutor --> RuntimeContext
+    QueryExecutor --> PhysicalPlan
+    Transaction --> TransactionObject
+    Transaction --> TransactionManager
+    Transaction --> LockManager
+    Transaction --> MVCCManager
+    Transaction --> WALManager
+    Metadata --> CatalogManager
+    %% =====================================================
+    %% STYLING DEFINITIONS (HSL Colors)
+    %% =====================================================
+    classDef rootStyle fill:#1d3557,stroke:#457b9d,stroke-width:3px,color:#fff,font-weight:bold,font-size:16px;
+    classDef branchAdmin fill:#e1f5fe,stroke:#0288d1,stroke-width:2px,color:#01579b,font-weight:bold;
+    classDef branchQuery fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#e65100,font-weight:bold;
+    classDef branchCatalog fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#1b5e20,font-weight:bold;
+    classDef branchStorage fill:#e0f2f1,stroke:#00695c,stroke-width:2px,color:#004d40,font-weight:bold;
+    classDef branchTx fill:#ffebee,stroke:#c62828,stroke-width:2px,color:#842029,font-weight:bold;
+    classDef leafStyle fill:#ffffff,stroke:#b0bec5,stroke-width:1px,color:#37474f;
+```
+
 # This overview of DBMS Mindmap
-
-<!-- ```mermaid
-graph LR
-    %% Styles cho nền tối (GitHub Dark Mode)
-    classDef default fill:#2d2d2d,stroke:#888,stroke-width:1px,color:#fff;
-    classDef root fill:#ff8888,stroke:#ff5555,stroke-width:2px,font-weight:bold,color:#000;
-    classDef layer1 fill:#99ccff,stroke:#5ba3e3,stroke-width:1.5px,font-weight:bold,color:#000;
-    classDef layer2 fill:#5fbb97,stroke:#3a9672,stroke-width:1.5px,font-weight:bold,color:#000;
-
-    %% Tăng độ tương phản cho đường nối liên kết giữa các node
-    linkStyle default stroke:#ffffff,stroke-width:1.5px;
-
-    db((DBMS)):::root
-
-    %% ===== BÊN TRÁI (module 1-4) =====
-
-    %% 1. Query Processor
-    qp[1. Query Processor]:::layer1 --- db
-    qp_sp[SQL Parser]:::layer2 --- qp
-    qp_qo[Query Optimizer]:::layer2 --- qp
-    qp_qe[Query Execution]:::layer2 --- qp
-    qp_qv[Query Validation]:::layer2 --- qp
-    qp_rp[Result Processing]:::layer2 --- qp
-
-    %% 2. Storage Engine
-    se[2. Storage Engine]:::layer1 --- db
-    se_df[Data File Manager]:::layer2 --- se
-    se_pm[Page Manager]:::layer2 --- se
-    se_bp[Buffer Pool + Cache]:::layer2 --- se
-    se_rm[Record Management]:::layer2 --- se
-    se_im[Index Management]:::layer2 --- se
-    se_am[Access Methods]:::layer2 --- se
-    se_sa[Storage Allocation]:::layer2 --- se
-    se_lf[Log File / WAL]:::layer2 --- se
-
-    %% 3. Transaction & Concurrency
-    tx[3. Transaction & Concurrency]:::layer1 --- db
-    tx_cc[Concurrency Control]:::layer2 --- tx
-    tx_dl[Deadlock Handler]:::layer2 --- tx
-    tx_tm[Transaction Manager]:::layer2 --- tx
-    tx_lm[Lock Manager]:::layer2 --- tx
-    tx_im[Isolation Management]:::layer2 --- tx
-
-    %% 4. Backup & Durability
-    bd[4. Backup & Durability]:::layer1 --- db
-    bd_bm[Backup Management]:::layer2 --- bd
-    bd_rm[Restore Management]:::layer2 --- bd
-    bd_tl[Transaction Logging]:::layer2 --- bd
-    bd_re[Recovery Manager]:::layer2 --- bd
-    bd_cp[Checkpoint Manager]:::layer2 --- bd
-    bd_rp[Replication & HA]:::layer2 --- bd
-
-    %% ===== BÊN PHẢI (module 5-8) =====
-
-    %% 5. Performance & Memory
-    db --- pf[5. Performance & Memory]:::layer1
-    pf --- pf_qa[Performance Analyzer]:::layer2
-    pf --- pf_ch[Caching Systems]:::layer2
-    pf --- pf_mm[Memory Management]:::layer2
-    pf --- pf_dd[Data Distribution]:::layer2
-    pf --- pf_ct[Connection & Threads]:::layer2
-
-    %% 6. Database Object Management
-    db --- om[6. Object Management]:::layer1
-    om --- om_dm[Database Management]:::layer2
-    om --- om_sm[Schema Management]:::layer2
-    om --- om_tm[Table Management]:::layer2
-    om --- om_vm[View Management]:::layer2
-    om --- om_rm[Relationship Management]:::layer2
-    om --- om_idx[Index Definition]:::layer2
-    om --- om_cm[Constraint Management]:::layer2
-    om --- om_com[Column Management]:::layer2
-    om --- om_po[Programmable Objects]:::layer2
-    om --- om_dt[Data Type System]:::layer2
-    om --- om_mm[Metadata Management]:::layer2
-
-    %% 7. Security & Access Control
-    db --- sa[7. Security & Access Control]:::layer1
-    sa --- sa_au[Authentication]:::layer2
-    sa --- sa_az[Authorization]:::layer2
-    sa --- sa_ac[Access Control Filters]:::layer2
-    sa --- sa_um[User Management]:::layer2
-    sa --- sa_ec[Encryption Engine]:::layer2
-    sa --- sa_ad[Auditing]:::layer2
-
-    %% 8. Administration & Monitoring
-    db --- am[8. Admin & Monitoring]:::layer1
-    am --- am_bs[Background Strategy]:::layer2
-    am --- am_ml[Monitoring & Logging]:::layer2
-    am --- am_cm[Configuration]:::layer2
-    am --- am_ie[Import & Export]:::layer2
-``` -->
 
 ![alt text](image.png)
 
----
-
-## Diagram 0 — Full Dependency Overview
-
-> Tổng quan toàn bộ hệ thống — xem chi tiết từng nhóm tại Diagram 1–7.
+## Diagram — Full Dependency Overview (Cross-Layer)
 
 ```mermaid
 classDiagram
 direction LR
-
+%% =====================================================
+%% Server
+%% =====================================================
+class DatabaseServer {
+    +ServerId : int
+    +Version : string
+    +Status : ServerStatus
+    +Start()
+    +Stop()
+    +Restart()
+}
+class DatabaseManager {
+    -catalog : CatalogManager
+    +CreateDatabase(name : string)
+    +DropDatabase(name : string)
+    +GetDatabase(name : string) Database
+    +ListDatabases() List~Database~
+}
+%% =====================================================
+%% Database Objects (Pure Domain Models)
+%% =====================================================
+class Database {
+    +DatabaseId : int
+    +Name : string
+    +Owner : string
+    +Schemas : List~Schema~
+}
+class Schema {
+    +SchemaId : int
+    +Name : string
+    +Tables : List~Table~
+    +Views : List~View~
+    +Procedures : List~StoredProcedure~
+    +Sequences : List~Sequence~
+}
+%% =====================================================
+%% Domain Services (Business Logic on Domain Objects)
+%% =====================================================
+class SchemaService {
+    -catalog : CatalogManager
+    -storage : StorageEngine
+    +CreateTable(schema : Schema, def : TableDef) Table
+    +DropTable(schema : Schema, name : string)
+    +CreateView(schema : Schema, name : string, query : string) View
+    +DropView(schema : Schema, name : string)
+}
+note for SchemaService "DDL service — orchestrates CatalogManager\n+ StorageEngine to create/drop objects"
+class RecordManager {
+    -storage : StorageEngine
+    -catalog : CatalogManager
+    +Insert(table : Table, row : Row) RID
+    +Update(table : Table, rid : RID, row : Row)
+    +Delete(table : Table, rid : RID)
+    +Read(table : Table, rid : RID) Row
+    +Scan(table : Table) List~Row~
+}
+note for RecordManager "DML service — translates Row operations\ninto StorageEngine page reads/writes"
+class Table {
+    +TableId : int
+    +Name : string
+    +Columns : List~Column~
+    +Constraints : List~Constraint~
+    +Indexes : List~Index~
+    +Partitions : List~Partition~
+    +Triggers : List~Trigger~
+}
+class Column {
+    +ColumnId : int
+    +Name : string
+    +DataType : DataType
+    +Nullable : bool
+    +DefaultValue : object
+}
+class Row {
+    +RowId : RID
+    +Data : RecordData
+    +Version : long
+}
+class RecordData {
+    <<value object>>
+    +Bytes : Byte[]
+    +Length : int
+}
+class RID {
+    <<value object>>
+    +PageId : int
+    +SlotNumber : int
+    +Equals(other : RID) bool
+}
+class DataType {
+    <<enumeration>>
+    INT
+    BIGINT
+    VARCHAR
+    BOOLEAN
+    FLOAT
+    DATETIME
+}
+%% =====================================================
+%% Constraints
+%% =====================================================
+class Constraint {
+    <<abstract>>
+    +Name : string
+    +Validate(row : Row) bool
+}
+class PrimaryKey {
+    +Columns : List~Column~
+}
+class ForeignKey {
+    +ReferenceTable : Table
+    +ReferenceColumns : List~Column~
+}
+class UniqueConstraint
+class CheckConstraint {
+    +Expression : string
+}
+%% =====================================================
+%% Indexes
+%% =====================================================
+class Index {
+    <<abstract>>
+    +IndexId : int
+    +Name : string
+    +Columns : List~Column~
+    +Search(key : object) RID
+    +InsertKey(key : object, rid : RID)
+    +DeleteKey(key : object)
+}
+class BTreeIndex
+class HashIndex
+class BitmapIndex
+%% =====================================================
+%% Other Database Objects (Pure Domain Models)
+%% =====================================================
+class Partition {
+    +PartitionKey : string
+    +PartitionType : PartitionType
+}
+class View {
+    +ViewId : int
+    +Name : string
+    +QueryDefinition : string
+}
+class StoredProcedure {
+    +Name : string
+    +Parameters : List~Column~
+    +Body : string
+}
+class Trigger {
+    +Name : string
+    +Event : TriggerEvent
+    +Timing : TriggerTiming
+    +Body : string
+}
+class Sequence {
+    +Name : string
+    +CurrentValue : long
+    +Increment : long
+    +NextValue() long
+}
+%% =====================================================
+%% Transaction
+%% =====================================================
+class Transaction {
+    +TransactionId : int
+    +Status : TxStatus
+    +Begin()
+    +Commit()
+    +Rollback()
+}
+class TransactionManager {
+    -txTable : TransactionTable
+    -lockMgr : LockManager
+    -walMgr : WALManager
+    -mvccMgr : MVCCManager
+    +Begin() Transaction
+    +Commit(txId : int)
+    +Abort(txId : int)
+}
+class LockManager {
+    -lockTable : Map~string, LockQueue~
+    -detector : DeadlockDetector
+    +AcquireLock(txId : int, resId : string, mode : LockMode)
+    +ReleaseLock(txId : int, resId : string)
+    +ReleaseAll(txId : int)
+}
+note for LockManager "AcquireLock() throws LockTimeoutException\nor DeadlockException on conflict"
+class MVCCManager {
+    +CreateVersion(rid : RID, txId : int, data : RecordData)
+    +ReadVersion(rid : RID, snapshotId : long) Row
+    +GarbageCollect(olderThan : long)
+}
+%% =====================================================
+%% Storage Engine
+%% =====================================================
+class StorageEngine {
+    +ReadPage(id : PageId) Byte[]
+    +WritePage(id : PageId, data : Byte[])
+    +AllocatePage(tableId : int) PageId
+}
+class BufferPool {
+    -frames : Page[]
+    -policy : ReplacementPolicy
+    +FetchPage(id : PageId) Page
+    +UnpinPage(id : PageId)
+    +FlushPage(id : PageId)
+    +MarkDirty(id : PageId)
+}
+class Page {
+    +PageId : int
+    +Data : Byte[]
+    +IsDirty : bool
+    +PinCount : int
+}
+class FileManager {
+    -dataDir : string
+    +Read(pageId : PageId) Byte[]
+    +Write(pageId : PageId, data : Byte[])
+    +AllocateFile(path : string) int
+}
+class WALManager {
+    -buffer : LogBuffer
+    +Append(record : LogRecord) long
+    +Flush(upToLSN : long)
+    +Truncate(beforeLSN : long)
+}
+class RecoveryManager {
+    -walMgr : WALManager
+    +Recover(checkpointLSN : long)
+}
+%% =====================================================
+%% Catalog
+%% =====================================================
+class CatalogManager {
+    -sysTables : Map~string, object~
+    +RegisterTable(table : Table)
+    +GetTable(name : string) Table
+    +GetIndex(name : string) Index
+    +DeleteMeta(id : int)
+}
+note for CatalogManager "GetTable() / GetIndex() throws\nNotFoundException if not found"
+%% =====================================================
+%% Query Processor
+%% =====================================================
+class SQLParser {
+    +Parse(sql : string) ASTNode
+    -Tokenize(sql : string) Token[]
+    -BuildAST(tokens : Token[]) ASTNode
+}
+note for SQLParser "Parse() throws SqlSyntaxException\non invalid input"
+class Lexer {
+    +Tokenize(sql : string) Token[]
+}
+class AST {
+    +Root : ASTNode
+    +ToLogicalPlan() LogicalPlan
+}
+class LogicalPlan {
+    +Operators : List~Operator~
+}
+class PhysicalPlan {
+    +Operators : List~Operator~
+}
+class QueryOptimizer {
+    -costModel : CostModel
+    -catalog : CatalogManager
+    +Optimize(ast : ASTNode) PhysicalPlan
+}
+class QueryExecutor {
+    +Execute(plan : PhysicalPlan, tx : Transaction) ResultCursor
+}
+class StatisticsManager {
+    +Collect(table : Table)
+    +GetStats(tableId : int) TableStats
+}
+%% =====================================================
+%% Security
+%% =====================================================
+class SecurityManager {
+    -userDb : Map~string, HashedCredential~
+    +Authenticate(username : string, password : string) Session
+    +CheckPermission(user : string, obj : int, action : string) bool
+    +GrantRole(user : string, role : string)
+    +RevokeRole(user : string, role : string)
+}
+note for SecurityManager "Authenticate() throws\nPermissionDeniedException if invalid"
+class User {
+    +UserId : int
+    +Username : string
+    +PasswordHash : string
+}
+class Role {
+    +RoleId : int
+    +Name : string
+}
+class Permission {
+    +Action : string
+    +ObjectId : int
+}
+%% =====================================================
+%% Relationships
+%% =====================================================
 DatabaseServer --> DatabaseManager
 DatabaseServer --> TransactionManager
 DatabaseServer --> StorageEngine
 DatabaseServer --> CatalogManager
 DatabaseServer --> SecurityManager
-
 DatabaseManager --> Database
-
-Database --> Schema
-
-Schema --> Table
-Schema --> View
-Schema --> StoredProcedure
-Schema --> Sequence
-
-Table --> Column
-Table --> Row
-Table --> Constraint
-Table --> Index
-Table --> Partition
-Table --> Trigger
-
+SchemaService --> CatalogManager
+SchemaService --> StorageEngine
+SchemaService --> Schema
+SchemaService --> Table
+RecordManager --> StorageEngine
+RecordManager --> CatalogManager
+RecordManager --> Table
+RecordManager --> Row
+Database "1" *-- "many" Schema
+Schema "1" *-- "many" Table
+Schema "1" *-- "many" View
+Schema "1" *-- "many" StoredProcedure
+Schema "1" *-- "many" Sequence
+Table "1" *-- "many" Column
+Table "1" *-- "many" Constraint
+Table "1" *-- "many" Index
+Table "1" *-- "many" Partition
+Table "1" *-- "many" Trigger
+Table "1" *-- "many" Row
+Row *-- RID
+Row *-- RecordData
 Column --> DataType
-
 Constraint <|-- PrimaryKey
 Constraint <|-- ForeignKey
 Constraint <|-- UniqueConstraint
 Constraint <|-- CheckConstraint
-
 ForeignKey --> Table
-
 Index <|-- BTreeIndex
 Index <|-- HashIndex
 Index <|-- BitmapIndex
-
 TransactionManager --> Transaction
 TransactionManager --> LockManager
 TransactionManager --> MVCCManager
 TransactionManager --> WALManager
-
 StorageEngine --> BufferPool
 StorageEngine --> FileManager
-
 BufferPool --> Page
-
 RecoveryManager --> WALManager
-
 CatalogManager --> Database
 CatalogManager --> Schema
 CatalogManager --> Table
 CatalogManager --> Index
-
 SQLParser --> Lexer
 SQLParser --> AST
-
 AST --> LogicalPlan
-
 QueryOptimizer --> LogicalPlan
 QueryOptimizer --> PhysicalPlan
 QueryOptimizer --> StatisticsManager
-
 StatisticsManager --> Table
-
 QueryExecutor --> PhysicalPlan
 QueryExecutor --> Transaction
-
 SecurityManager --> User
 SecurityManager --> Role
-
 Role --> Permission
 ```
 
 ---
 
-## Diagram 1 — Server & Database Management
+## Split Class Diagrams
 
-> `DatabaseServer` là entry point khởi động toàn bộ hệ thống. `DatabaseManager` quản lý vòng đời database. `Database` và `Schema` là container chứa mọi đối tượng dữ liệu.
+To avoid clutter in a single large diagram, the architecture can be broken down into 7 logical components.
 
-```mermaid
-classDiagram
-direction LR
-
-    class DatabaseServer {
-        +String serverId
-        +String version
-        +String status
-        +start()
-        +stop()
-        +restart()
-    }
-
-    class DatabaseManager {
-        +createDatabase(name String)
-        +dropDatabase(name String)
-        +getDatabase(name String) Database
-        +listDatabases() List~Database~
-    }
-
-    class Database {
-        +String databaseId
-        +String name
-        +String owner
-        +open()
-        +close()
-    }
-
-    class Schema {
-        +String schemaId
-        +String name
-        +createTable(def TableDef)
-        +dropTable(name String)
-        +listTables() List~Table~
-    }
-
-    class TransactionManager {
-        <<see Diagram 4>>
-    }
-
-    class StorageEngine {
-        <<see Diagram 3>>
-    }
-
-    class CatalogManager {
-        <<see Diagram 6>>
-    }
-
-    class SecurityManager {
-        <<see Diagram 7>>
-    }
-
-    DatabaseServer --> DatabaseManager : manages
-    DatabaseServer --> TransactionManager : coordinates
-    DatabaseServer --> StorageEngine : uses
-    DatabaseServer --> CatalogManager : queries
-    DatabaseServer --> SecurityManager : authenticates via
-    DatabaseManager --> Database : creates / drops
-    Database --> Schema : contains
-```
-
----
-
-## Diagram 2 — Database Objects
-
-> Cấu trúc dữ liệu cốt lõi: Table, Column, Constraint, Index và các đối tượng lập trình (View, Procedure, Trigger, Sequence, Partition).
-
-```mermaid
-classDiagram
-direction TB
-
-    %% ── Core Table Objects ───────────────────────────────
-    class Table {
-        +int tableId
-        +String name
-        +String schemaId
-        +insert(row Row)
-        +update(rowId int, values Map)
-        +delete(rowId int)
-        +truncate()
-    }
-
-    class Column {
-        +int columnId
-        +String name
-        +DataType dataType
-        +Boolean nullable
-        +Object defaultValue
-        +validate(value Object) Boolean
-    }
-
-    class Row {
-        +int rowId
-        +Map~String, Object~ values
-        +int version
-        +Long createdBy
-        +Long deletedBy
-    }
-
-    class DataType {
-        <<enumeration>>
-        INTEGER
-        BIGINT
-        VARCHAR
-        TEXT
-        BOOLEAN
-        DATE
-        TIMESTAMP
-        FLOAT
-        DOUBLE
-        DECIMAL
-        BLOB
-    }
-
-    %% ── Constraints ──────────────────────────────────────
-    class Constraint {
-        <<abstract>>
-        +int constraintId
-        +String name
-        +String type
-        +validate(row Row) Boolean
-        +isEnabled() Boolean
-        +enable()
-        +disable()
-    }
-
-    class PrimaryKey {
-        +int constraintId
-        +String name
-        +List~String~ columns
-        +validate(row Row) Boolean
-    }
-
-    class ForeignKey {
-        +int constraintId
-        +String name
-        +String referenceTable
-        +List~String~ referenceColumns
-        +String onDelete
-        +String onUpdate
-        +validate(row Row) Boolean
-    }
-
-    class UniqueConstraint {
-        +int constraintId
-        +String name
-        +List~String~ columns
-        +validate(row Row) Boolean
-    }
-
-    class CheckConstraint {
-        +int constraintId
-        +String name
-        +String expression
-        +validate(row Row) Boolean
-    }
-
-    %% ── Indexes ──────────────────────────────────────────
-    class Index {
-        <<abstract>>
-        +int indexId
-        +String name
-        +List~String~ columns
-        +Boolean isUnique
-        +search(key Object) Optional~int~
-        +insertKey(key Object, rowId int)
-        +deleteKey(key Object)
-        +rebuild()
-    }
-
-    class BTreeIndex {
-        +int indexId
-        +String name
-        +int degree
-        +search(key Object) Optional~int~
-        +insertKey(key Object, rowId int)
-        +deleteKey(key Object)
-        +rangeScan(from Object, to Object) List~int~
-        +rebuild()
-    }
-
-    class HashIndex {
-        +int indexId
-        +String name
-        +int bucketCount
-        +search(key Object) Optional~int~
-        +insertKey(key Object, rowId int)
-        +deleteKey(key Object)
-        +rebuild()
-    }
-
-    class BitmapIndex {
-        +int indexId
-        +String name
-        +List~String~ distinctValues
-        +search(key Object) Optional~int~
-        +insertKey(key Object, rowId int)
-        +deleteKey(key Object)
-        +rebuild()
-    }
-
-    %% ── Other Database Objects ───────────────────────────
-    class Partition {
-        +int partitionId
-        +String name
-        +String partitionKey
-        +String method
-        +String expression
-        +route(row Row) int
-    }
-
-    class View {
-        +int viewId
-        +String name
-        +String queryDefinition
-        +Boolean isMaterialized
-        +refresh()
-    }
-
-    class StoredProcedure {
-        +int procedureId
-        +String name
-        +List~String~ parameters
-        +String body
-        +execute(params Map) Object
-        +compile()
-    }
-
-    class Trigger {
-        +int triggerId
-        +String name
-        +String timing
-        +String event
-        +String body
-        +Boolean enabled
-        +fire(row Row)
-        +enable()
-        +disable()
-    }
-
-    class Sequence {
-        +int sequenceId
-        +String name
-        +Long currentValue
-        +Long increment
-        +Long minValue
-        +Long maxValue
-        +Boolean cycle
-        +nextValue() Long
-        +reset(value Long)
-    }
-
-    %% ── Relationships ────────────────────────────────────
-    Table --> Column       : has
-    Table --> Row          : stores
-    Table --> Constraint   : enforces
-    Table --> Index        : indexed by
-    Table --> Partition    : partitioned into
-    Table --> Trigger      : fired by
-
-    Column --> DataType    : typed as
-
-    Constraint <|-- PrimaryKey
-    Constraint <|-- ForeignKey
-    Constraint <|-- UniqueConstraint
-    Constraint <|-- CheckConstraint
-
-    ForeignKey --> Table   : references
-
-    Index <|-- BTreeIndex
-    Index <|-- HashIndex
-    Index <|-- BitmapIndex
-```
-
----
-
-## Diagram 3 — Storage Engine
-
-> Tầng lưu trữ vật lý: đọc/ghi page từ đĩa, quản lý buffer pool, WAL log và recovery.
+### 1. Server & Database Management
 
 ```mermaid
 classDiagram
 direction LR
-
-    class StorageEngine {
-        +String dataDir
-        +int pageSize
-        +readPage(pageId int) Page
-        +writePage(pageId int, page Page)
-        +allocatePage(tableId int) int
-        +freePage(pageId int)
-    }
-
-    class BufferPool {
-        +int capacity
-        +int frameCount
-        +Map~int, Page~ frames
-        +Map~int, int~ pinCounts
-        +pinPage(pageId int) Page
-        +unpinPage(pageId int)
-        +flushPage(pageId int)
-        +flushAll()
-        +evict() int
-        +markDirty(pageId int)
-    }
-
-    class Page {
-        +int pageId
-        +Byte[] data
-        +Boolean dirty
-        +int pinCount
-        +Long pageLSN
-        +getHeader() PageHeader
-        +read(offset int, length int) Byte[]
-        +write(offset int, data Byte[])
-    }
-
-    class FileManager {
-        +String dataDir
-        +Map~int, FileHandle~ openFiles
-        +read(pageId int) Byte[]
-        +write(pageId int, data Byte[])
-        +allocate(name String) int
-        +delete(fileId int)
-        +sync(fileId int)
-    }
-
-    class WALManager {
-        +Long currentLSN
-        +String logDir
-        +appendLog(record LogRecord) Long
-        +flush(upToLSN Long)
-        +truncateBefore(lsn Long)
-        +readFrom(lsn Long) List~LogRecord~
-    }
-
-    class RecoveryManager {
-        +Long checkpointLSN
-        +recover(checkpointLSN Long)
-        +redo(record LogRecord)
-        +undo(record LogRecord)
-        +checkpoint()
-    }
-
-    StorageEngine --> BufferPool   : caches pages via
-    StorageEngine --> FileManager  : reads/writes disk via
-    BufferPool --> Page            : manages
-    FileManager --> Page           : loads
-    RecoveryManager --> WALManager : replays log from
-    RecoveryManager --> BufferPool : applies pages to
+class DatabaseServer {
+    +ServerId : int
+    +Version : string
+    +Status : ServerStatus
+    +Start()
+    +Stop()
+    +Restart()
+}
+class DatabaseManager {
+    -catalog : CatalogManager
+    +CreateDatabase(name : string)
+    +DropDatabase(name : string)
+    +GetDatabase(name : string) Database
+    +ListDatabases() List~Database~
+}
+class ConfigurationManager {
+    +Configure(key : string, value : string)
+    +Get(key : string) string
+}
+class SecurityManager {
+    -userDb : Map~string, HashedCredential~
+    +Authenticate(username : string, password : string) Session
+    +CheckPermission(user : string, obj : int, action : string) bool
+    +GrantRole(user : string, role : string)
+    +RevokeRole(user : string, role : string)
+}
+note for SecurityManager "Authenticate() throws\nPermissionDeniedException if invalid"
+class MonitoringManager {
+    +Monitor()
+    +GetMetrics() ServerMetrics
+}
+DatabaseServer --> DatabaseManager
+DatabaseServer --> ConfigurationManager
+DatabaseServer --> SecurityManager
+DatabaseServer --> MonitoringManager
 ```
 
----
-
-## Diagram 4 — Transaction & Concurrency
-
-> Đảm bảo tính ACID: quản lý giao dịch, lock, phát hiện deadlock và MVCC phiên bản dữ liệu.
-
-```mermaid
-classDiagram
-direction LR
-
-    class Transaction {
-        +int transactionId
-        +String status
-        +Long startLSN
-        +Long commitLSN
-        +String isolationLevel
-        +begin()
-        +commit()
-        +rollback()
-        +savepoint(name String)
-        +rollbackTo(name String)
-    }
-
-    class TransactionManager {
-        +Map~int, Transaction~ activeTxns
-        +beginTransaction() Transaction
-        +commit(txId int)
-        +rollback(txId int)
-        +getTransaction(txId int) Transaction
-        +getActiveIds() List~int~
-    }
-
-    class LockManager {
-        +Map~String, LockQueue~ lockTable
-        +acquireLock(txId int, resourceId String, mode String)
-        +releaseLock(txId int, resourceId String)
-        +releaseAll(txId int)
-        +upgradeLock(txId int, resourceId String, newMode String)
-    }
-
-    class MVCCManager {
-        +createVersion(rowId int, txId int, data Map)
-        +readVersion(rowId int, snapshotId Long) Optional~Row~
-        +garbageCollect(olderThan Long)
-        +getVisibleVersion(rowId int, txId int) Optional~Row~
-    }
-
-    class WALManager {
-        <<see Diagram 3>>
-    }
-
-    TransactionManager --> Transaction  : creates / manages
-    TransactionManager --> LockManager  : delegates locking
-    TransactionManager --> MVCCManager  : delegates versioning
-    TransactionManager --> WALManager   : logs operations via
-    LockManager --> DeadlockDetector    : detects cycle via
-```
-
----
-
-## Diagram 5 — Query Processor
-
-> Pipeline xử lý SQL: tokenize → parse → build AST → optimize → execute → return result.
-
-```mermaid
-classDiagram
-direction LR
-
-    class SQLParser {
-        +String sql
-        +parse(sql String) AST
-        +validate(ast AST) Boolean
-    }
-
-    class Lexer {
-        +String input
-        +int position
-        +tokenize(sql String) List~Token~
-        +nextToken() Token
-    }
-
-    class AST {
-        +ASTNode root
-        +String type
-        +toLogicalPlan() LogicalPlan
-        +accept(visitor ASTVisitor)
-    }
-
-    class LogicalPlan {
-        +List~Operator~ operators
-        +String planType
-        +validate()
-        +addOperator(op Operator)
-        +getRoot() Operator
-    }
-
-    class PhysicalPlan {
-        +List~Operator~ operators
-        +Double estimatedCost
-        +Long estimatedRows
-        +addOperator(op Operator)
-        +getRoot() Operator
-    }
-
-    class QueryOptimizer {
-        +optimize(plan LogicalPlan) PhysicalPlan
-        +pushDownPredicates(plan LogicalPlan) LogicalPlan
-        +reorderJoins(plan LogicalPlan) LogicalPlan
-        +selectAccessPath(table Table) Operator
-    }
-
-    class QueryExecutor {
-        +execute(plan PhysicalPlan, txId int) ResultSet
-        +executeUpdate(plan PhysicalPlan, txId int) int
-        +cancel(queryId String)
-    }
-
-    class StatisticsManager {
-        +collect(table Table)
-        +getCardinality(tableId int, column String) Long
-        +getHistogram(tableId int, column String) Map
-        +estimateSelectivity(predicate String) Double
-    }
-
-    class Table {
-        <<see Diagram 2>>
-    }
-
-    class Transaction {
-        <<see Diagram 4>>
-    }
-
-    SQLParser --> Lexer              : tokenizes via
-    SQLParser --> AST                : produces
-    AST --> LogicalPlan              : generates
-    QueryOptimizer --> LogicalPlan   : reads
-    QueryOptimizer --> PhysicalPlan  : produces
-    QueryOptimizer --> StatisticsManager : gets cost estimates from
-    StatisticsManager --> Table      : collects stats from
-    QueryExecutor --> PhysicalPlan   : executes
-    QueryExecutor --> Transaction    : runs within
-```
-
----
-
-## Diagram 6 — Catalog & Metadata
-
-> Tầng catalog tập trung: lưu và tra cứu metadata của mọi đối tượng trong hệ thống (Database, Schema, Table, Index).
-
-```mermaid
-classDiagram
-direction LR
-
-    class CatalogManager {
-        +Map~String, Object~ registry
-        +registerDatabase(db Database)
-        +findDatabase(name String) Database
-        +deregisterDatabase(name String)
-        +registerSchema(schema Schema)
-        +findSchema(name String) Schema
-        +deregisterSchema(name String)
-        +registerTable(table Table)
-        +findTable(name String) Table
-        +deregisterTable(name String)
-        +registerIndex(index Index)
-        +findIndex(name String) Index
-        +deregisterIndex(name String)
-        +listAll(type String) List~Object~
-    }
-
-    class Database {
-        <<see Diagram 1>>
-    }
-
-    class Schema {
-        <<see Diagram 1>>
-    }
-
-    class Table {
-        <<see Diagram 2>>
-    }
-
-    class Index {
-        <<see Diagram 2>>
-    }
-
-    CatalogManager --> Database : catalogs
-    CatalogManager --> Schema   : catalogs
-    CatalogManager --> Table    : catalogs
-    CatalogManager --> Index    : catalogs
-```
-
----
-
-## Diagram 7 — Security
-
-> Tầng bảo mật: xác thực người dùng (Authentication), phân quyền (Authorization) và kiểm soát truy cập qua User/Role/Permission.
-
-```mermaid
-classDiagram
-direction LR
-
-    class SecurityManager {
-        +authenticate(username String, password String) Boolean
-        +authorize(user User, action String, object String) Boolean
-        +createSession(user User) Session
-        +invalidateSession(sessionId String)
-        +hashPassword(raw String, salt String) String
-    }
-
-    class User {
-        +int userId
-        +String username
-        +String hashedPassword
-        +String salt
-        +String email
-        +Boolean active
-        +List~Role~ roles
-        +addRole(role Role)
-        +removeRole(role Role)
-        +hasPermission(action String, object String) Boolean
-    }
-
-    class Role {
-        +int roleId
-        +String name
-        +String description
-        +List~Permission~ permissions
-        +addPermission(perm Permission)
-        +removePermission(perm Permission)
-        +inherits(parent Role)
-    }
-
-    class Permission {
-        +int permissionId
-        +String action
-        +String objectType
-        +String objectName
-        +Boolean granted
-        +matches(action String, object String) Boolean
-    }
-
-    SecurityManager --> User       : authenticates
-    SecurityManager --> Role       : resolves roles of
-    Role --> Permission            : grants
-    User --> Role                  : assigned
-```
-
----
-
-# Unit Test Specifications
-
----
-
-## Group 1 — Database Object Management
-
-### MetadataCatalog
-* `LookupTable_Existing_ReturnsTableDef`
-* `LookupColumn_Existing_ReturnsColumnDef`
-* `UpdateMeta_ShouldPersistChangeToCatalogStore`
-* `DeleteMeta_ShouldRemoveEntryFromCatalog`
-
-### CatalogObject
-* `Equals_TwoObjectsSameId_ReturnsTrue`
-
-### ObjectId
-* `Generate_UniqueAcrossCatalog_ReturnsUniqueId`
-
-### SchemaManager
-* `CreateSchema_ValidDefinition_AddsToCatalog`
-* `ResolveSchema_Existing_ReturnsSchemaObject`
-* `RenameSchema_UpdatesAllDependentObjects`
-* `DropSchema_RemovesAllChildObjectsFromCatalog`
-
-### Schema
-* `AddTable_ShouldAppearInTableList`
-* `DropTable_ShouldRemoveFromTableList`
-* `CreateView_ShouldRegisterViewInSchema`
-* `CreateProcedure_ShouldRegisterProcedureInSchema`
-* `ValidateDuplicateObjectName_ShouldThrow`
-
-### TableManager
-* `CreateTable_WithColumns_AddsTableToCatalog`
-* `AlterTable_AddColumn_UpdatesTableDefAndPhysicalStorage`
-* `DropTable_RemovesCatalogAndPhysicalPages`
-
-### Table
-* `InsertRow_ShouldIncreaseRowCount`
-* `UpdateRow_ShouldModifyExistingData`
-* `DeleteRow_ShouldDecreaseRowCount`
-* `Truncate_ShouldRemoveAllRowsAndResetSpace`
-* `AddColumn_ShouldUpdateSchemaAndStorage`
-* `RemoveColumn_ShouldInvalidateDependentIndexes`
-* `AddConstraint_ShouldEnforceOnNextWrite`
-* `DropConstraint_ShouldAllowPreviouslyBlockedData`
-* `CreateIndex_ShouldBuildIndexStructureOnExistingData`
-* `DropIndex_ShouldRemoveIndexAndFreeSpace`
-* `CreatePartition_ShouldRouteDataToCorrectPartition`
-* `RebuildIndexes_ShouldProduceConsistentIndexState`
-* `Clone_DeepCopy_ReturnsIndependentTableDef`
-
-### Column
-* `ValidateNullable_NullInNotNullColumn_ShouldThrow`
-* `ValidateDataType_MismatchedType_ShouldThrow`
-* `ValidateLength_ExceedsMaxLength_ShouldThrow`
-* `ApplyDefaultValue_WhenNoValueProvided_ShouldInsertDefault`
-* `ChangeDataType_ShouldMigrateExistingDataOrThrow`
-* `EvaluateComputedColumn_ShouldReturnDerivedValue`
-
-### Row
-* `CreateRow_ShouldAssignUniqueRID`
-* `CloneVersion_ShouldCreateIndependentMVCCVersion`
-* `Serialize_ThenDeserialize_ShouldProduceIdenticalRow`
-* `CalculateRowSize_ShouldMatchPhysicalStorageUsage`
-* `CompareRows_SameData_ShouldReturnEqual`
-
-### ConstraintManager
-* `AddPrimaryKey_ValidColumns_SetsUniqueConstraint`
-* `AddForeignKey_ValidReference_EnforcesReferentialIntegrity`
-* `ValidateInsert_WithConstraintViolations_ThrowsConstraintException`
-
-### Constraint
-* `ValidatePrimaryKey_DuplicateValue_ShouldThrow`
-* `ValidateUnique_DuplicateValue_ShouldThrow`
-* `ValidateForeignKey_NoParentRow_ShouldThrow`
-* `ValidateCheckConstraint_ViolatedExpression_ShouldThrow`
-* `CascadeDelete_ShouldRemoveDependentChildRows`
-* `CascadeUpdate_ShouldPropagateKeyChange`
-* `DisableConstraint_ShouldAllowViolatingInsert`
-* `EnableConstraint_WithExistingViolation_ShouldThrow`
-
-### IndexManager
-* `CreateIndex_OnColumn_AddsIndexDefAndBuildsStructure`
-* `DropIndex_RemovesDefAndPhysicalStructure`
-
-### Index
-* `Search_ExistingKey_ShouldReturnCorrectRID`
-* `Search_NonExistingKey_ShouldReturnEmpty`
-* `InsertKey_CausingNodeSplit_ShouldMaintainOrder`
-* `DeleteKey_CausingUnderflow_ShouldRebalance`
-* `RangeScan_ShouldReturnAllKeysInRange`
-* `Rebuild_ShouldProduceConsistentStructure`
-* `EstimateSelectivity_ShouldReturnReasonableCardinality`
-* `UpdateStatistics_ShouldUpdateCostEstimates`
-
-### BPlusTree
-* `Insert_KeyCausesLeafSplit_CreatesNewRoot`
-* `Search_ExistingKey_ReturnsCorrectLeafNode`
-* `Search_NonExistingKey_ReturnsNull`
-* `Delete_KeyLeavesNodeUnderflow_PerformsMergeOrBorrow`
-
-### HashIndex
-* `Insert_DuplicateKey_ThrowsDuplicateKeyException`
-* `Lookup_ExistingKey_ReturnsRidList`
-* `Delete_ExistingKey_RemovesEntry`
-
-### Partition
-* `RouteInsert_ShouldGoToCorrectPartition`
-* `MovePartition_ShouldRelocateDataWithoutLoss`
-* `QueryAcrossPartitions_ShouldMergeResults`
-
----
-
-## Group 2 — Programmable Objects
-
-### View
-* `CreateView_ValidDefinition_ShouldResolveAgainstBaseTables`
-* `QueryView_ShouldReturnLiveDataFromBaseTables`
-* `DropView_ShouldNotAffectBaseTables`
-* `ValidateDefinition_ReferencesNonExistentTable_ShouldThrow`
-
-### StoredProcedure
-* `Compile_ValidBody_ShouldCachePlan`
-* `Execute_WithValidParameters_ShouldReturnExpectedResult`
-* `Execute_WithInvalidParameters_ShouldThrow`
-* `HandleException_WithinBody_ShouldRollbackAndPropagate`
-
-### Trigger
-* `BeforeInsert_ShouldFireBeforeRowIsWritten`
-* `AfterInsert_ShouldFireAfterRowIsCommitted`
-* `BeforeUpdate_ShouldAllowModifyingNewValues`
-* `AfterDelete_ShouldCascadeToAuditLog`
-* `DisableTrigger_ShouldSkipFiringOnDML`
-* `EnableTrigger_ShouldResumeNormalFiring`
-
----
-
-## Group 3 — Server & Database Lifecycle
+## Server & Database Management
 
 ### DatabaseServer
-* `StartServer_ShouldInitializeAllServices`
-* `StopServer_ShouldShutdownGracefully`
+* `Start_ShouldInitializeAllServices`
+* `Start_ShouldReject_WhenServerAlreadyRunning`
+* `Stop_ShouldShutdownAllServices`
+* `Stop_ShouldFlushDirtyPagesBeforeShutdown`
+* `Restart_ShouldRestartServerSuccessfully`
 * `RecoverAfterCrash_ShouldReplayWAL`
-* `RejectDuplicateDatabaseName`
 
 ### DatabaseManager
-* `CreateDatabase_ValidName_AddsToSystemCatalog`
-* `DropDatabase_Existing_RemovesCatalogEntriesAndPhysicalFiles`
-* `GetDatabase_ReturnsCorrectMetadata`
+* `CreateDatabase_ShouldCreateDatabaseSuccessfully`
+* `CreateDatabase_ShouldRejectDuplicateDatabaseName`
+* `DropDatabase_ShouldRemoveDatabaseSuccessfully`
+* `DropDatabase_ShouldRejectOpenDatabase`
+* `OpenDatabase_ShouldLoadStorageAndCatalog`
+* `CloseDatabase_ShouldFlushDirtyBuffers`
+* `GetDatabase_ShouldReturnExistingDatabase`
+* `ListDatabases_ShouldReturnAllDatabases`
 
-### Database
-* `Open_ShouldLoadStorageAndCatalog`
-* `Close_ShouldFlushAllDirtyBuffers`
-* `Drop_ShouldRemoveAllMetadataAndFiles`
-* `Exists_ReturnsTrueForExistingName`
-
----
-
-## Group 4 — Storage Engine
-
-### DiskManager
-* `Initialize_NewDatabase_CreatesDataFiles`
-* `ReadPage_ValidPageId_ReturnsRawBytes`
-* `ReadPage_InvalidPageId_ThrowsFileNotFoundException`
-* `WritePage_ValidPageId_WritesBytesCorrectly`
-
-### TablespaceManager
-* `AllocateTablespace_WithinQuota_ReturnsTablespaceId`
-* `AllocateTablespace_ExceedsQuota_ThrowsQuotaExceededException`
-
-### SpaceManager / ExtentManager / SegmentManager
-* `AllocateExtent_WhenFreeSpaceAvailable_ReturnsExtentId`
-* `FreeExtent_ValidId_MarksAsFree`
-* `AllocateSegment_WithinLimits_ReturnsSegmentId`
-* `AllocatePage_InSegment_ReturnsPageId`
-
-### PageFormatter
-* `Format_NewRawPage_SetsHeaderCorrectly`
-* `AddTuple_ToFormattedPage_UpdatesSlotArrayAndFreeSpace`
-* `AddTuple_InsufficientSpace_ThrowsPageOverflowException`
-
-### PageManager
-* `GetPage_FromCacheOrDisk_ReturnsFormattedPage`
-* `FlushDirtyPage_WritesToDisk_AndClearsDirtyFlag`
-
-### PageHeader
-* `ParseHeader_FromRawBytes_ReturnsCorrectValues`
-
-### RecordManager
-* `SerializeTuple_CorrectByteLayout`
-* `DeserializeRecord_ValidBytes_ReturnsEquivalentTuple`
-
-### RIDGenerator
-* `Generate_UniqueAcrossThreads_ReturnsUniqueRID`
-
----
-
-## Group 5 — Buffer Pool & Cache
-
-### BufferPoolManager
-* `FetchPage_NotInCache_LoadsFromDiskAndPins`
-* `FetchPage_InCache_IncrementsPinCount`
-* `UnpinPage_PinCountZero_LeavesPageUnpinned`
-* `UnpinPage_DirtyPage_MarksAsDirty`
-* `EvictPage_WhenCapacityFull_EvictsLeastRecentlyUsed`
-* `FlushAll_WritesOnlyDirtyPages`
-
-### LRUPolicy
-* `SelectVictim_AfterMultipleAccesses_ReturnsLeastRecentlyUsed`
-
-### ClockPolicy
-* `SelectVictim_ReferenceBitHandling_EvictsCorrectPage`
-
-### LRUCache
-* `Get_AddsToCache_AndEvictsOldestWhenFull`
-
----
-
-## Group 6 — WAL & Recovery
-
-### WALManager
-* `AppendLogRecord_ValidRecord_AppendsToBuffer`
-* `AppendLogRecord_BufferFull_TriggersFlush`
-
-### LogWriter
-* `Flush_EmptyBuffer_DoesNothing`
-* `Flush_NonEmptyBuffer_WritesToDiskAndUpdatesLSN`
-
-### LSNGenerator
-* `Next_IncrementsMonotonically_ReturnsHigherLSN`
-
----
-
-## Group 7 — Transaction & Concurrency
-
-### TransactionManager
-* `BeginTransaction_ReturnsActiveContext`
-* `CommitTransaction_WithAllLocks_ReleasesLocksAndMarksCommitted`
-* `AbortTransaction_RollsBackChanges_AndReleasesLocks`
-* `CommitTransaction_WhenDeadlockDetected_ThrowsDeadlockException`
-
-### Transaction
-* `CommitChanges_ShouldPersistAllWrites`
-* `RollbackChanges_ShouldUndoAllWrites`
-* `CreateSavepoint_ShouldMarkPartialRollbackPoint`
-* `RollbackToSavepoint_ShouldUndoOnlyPostSavepointChanges`
-* `SetIsolationLevel_ShouldAffectVisibility`
-* `Timeout_ShouldAutoRollback`
-
-### TransactionTable
-* `AddTransaction_NewEntry_AppearInActiveList`
-* `RemoveTransaction_WhenCommittedOrAborted_NotPresentInActiveList`
-
-### TransactionContext
-* `Equals_TwoContextsWithSameId_ReturnsTrue`
-
-### LockManager
-* `AcquireSharedLock_WhenNoConflict_GrantsImmediately`
-* `AcquireExclusiveLock_WhenSharedExists_WaitsInQueue`
-* `ReleaseLock_TriggersNextWaitingTransaction`
-* `UpgradeLock_FromSharedToExclusive_IfNoOtherShared_Grants`
-
-### LockQueue
-* `Enqueue_WhenLockBusy_AddsToQueueInOrder`
-* `Dequeue_AfterRelease_RemovesFirstInQueue`
-
-### MVCCManager
-* `CreateVersion_OnUpdate_GeneratesNewVersionChainNode`
-* `ReadVisibleVersion_ForSnapshot_ReturnsCorrectVersion`
-* `CleanupObsoleteVersions_AfterCheckpoint_RemovesOldVersions`
-
-### SnapshotManager
-* `CreateSnapshot_IncludesAllActiveTxIds`
-* `IsVisible_VisibleForCommittedTx_ReturnsTrue`
-* `IsVisible_InvisibleForFutureTx_ReturnsFalse`
-
-### DeadlockDetector
-* `DetectCycle_WithTwoTx_ReturnsTrueAndVictimChosen`
-* `ResolveDeadlock_KillsVictimAndUnblocksOtherTx`
-
----
-
-## Group 8 — Query Processing
-
-### SqlParser
-* `Parse_ValidSelectStatement_ReturnsValidAst`
-* `Parse_SelectWithJoin_ReturnsAstContainingJoinNode`
-* `Parse_InvalidSyntax_ThrowsSqlSyntaxException`
-* `Parse_LexicalTokens_CorrectlyIdentifiesKeywordsAndIdentifiers`
-
-### ASTNode
-* `Equals_SameStructure_ReturnsTrue`
-
-### Token
-* `IsKeyword_ReturnsTrueForSelect`
-
-### QueryValidator
-* `Validate_ValidAst_AcceptsWithoutError`
-* `Validate_UnknownTable_ThrowsSqlException`
-* `Validate_ColumnTypeMismatch_ThrowsSqlException`
-
-### QueryOptimizer
-* `ApplyRule_PredicatePushdown_MovesFilterBelowScan`
-* `ApplyRule_JoinReordering_ChoosesCheapestJoinOrder`
-* `EstimateCost_IndexAvailable_ReturnsLowerCostThanSeqScan`
-* `GeneratePhysicalPlan_FromLogicalPlan_ProducesExecutionPlan`
-
-### CostModel
-* `CalculateCost_ForLogicalPlan_ReturnsExpectedValue`
-
-### LogicalPlan
-* `Validate_NoCycles_InPlanGraph`
-
-### ExecutionPlan
-* `Clone_DeepCopy_ReturnsIndependentCopy`
-
-### ExecutionEngine
-* `Execute_SequentialScan_ReturnsAllRows`
-* `Execute_HashJoin_CorrectlyMatchesRows`
-* `Execute_Projection_OutputsOnlySelectedColumns`
-* `Execute_Aggregation_GroupByCorrectResult`
-* `Execute_SortOperator_SortsRowsAccordingToOrderBy`
-
-### TableScan
-* `Initialize_EmptyTable_ReturnsNoRows`
-* `Next_IteratesAllRows_InOrder`
-
-### IndexScan
-* `Initialize_WithBTreeIndex_ReturnsRowsInKeyOrder`
-
-### ResultProcessor
-* `ProcessResultSet_ToResultCursor_ReturnsCursorWithCorrectMetadata`
-* `FormatResult_WithJsonFormatter_ReturnsValidJson`
-
----
-
-## Group 9 — Security & Access Control
-
-### AuthenticationManager
-* `Authenticate_ValidCredentials_ReturnsSession`
-* `Authenticate_InvalidPassword_ThrowsAuthenticationException`
-* `HashPassword_ProducesDeterministicHash_WithSalt`
-
-### AuthorizationManager
-* `Authorize_UserHasPermission_ReturnsTrue`
-* `Authorize_UserMissingPermission_ThrowsPermissionDeniedException`
-* `CheckRoleHierarchy_InheritedPermissions_AreEffectivePermissions`
-
-### Session
-* `IsActive_AfterLogout_ReturnsFalse`
-
-### RoleId / UserId
-* `Equals_SameGuid_ReturnsTrue`
-
----
-
-## Group 10 — Operations & Infrastructure
-
-### StatisticsManager
-* `CollectStatistics_ShouldPopulateHistogram`
-* `EstimateCardinality_ShouldInfluenceOptimizerChoice`
-* `RefreshStatistics_AfterBulkInsert_ShouldUpdateRowCount`
-
-### BackupManager
-* `FullBackup_ShouldCopyAllDataAndCatalogFiles`
-* `RestoreBackup_ShouldProduceSameDatabaseState`
-* `IncrementalBackup_ShouldOnlyCopyChangedPages`
-* `VerifyBackup_CorruptedFile_ShouldThrow`
-
-### ReplicationManager
-* `ReplicateLog_ShouldApplyWALToReplica`
-* `Failover_ShouldPromoteReplicaToLeader`
-* `Heartbeat_WhenPrimaryDown_ShouldTriggerElection`
-* `SynchronizeReplica_ShouldCatchUpLaggedNode`
+### ConfigurationManager
+* `LoadConfiguration_ShouldLoadServerConfiguration`
+* `LoadConfiguration_ShouldUseDefaultConfiguration_WhenFileNotExists`
+* `UpdateConfiguration_ShouldPersistChanges`
+* `GetConfiguration_ShouldReturnConfiguredValue`
 
 ### MonitoringManager
-* `CollectMetrics_AfterQuery_ShouldRecordExecutionTime`
-* `DetectSlowQuery_ExceedsThreshold_ShouldRaiseAlert`
-* `CaptureDeadlock_ShouldLogInvolvedTransactions`
+* `CollectMetrics_ShouldCollectServerMetrics`
+* `CollectMetrics_ShouldCollectBufferPoolStatistics`
+* `CollectMetrics_ShouldCollectTransactionStatistics`
+* `GetMetrics_ShouldReturnLatestMetrics`
 
-### ConnectionPool
-* `AcquireConnection_WhenPoolNotFull_ShouldReturnConnection`
-* `ReuseConnection_AfterRelease_ShouldNotCreateNew`
-* `EvictIdleConnection_ExceedsTimeout_ShouldClose`
-* `MaxPoolSize_AllConnectionsInUse_ShouldBlockOrThrow`
+### Integration
+* `StartServer_ShouldLoadConfigurationBeforeInitializingServices`
+* `StartServer_ShouldInitializeDatabaseManager`
+* `StartServer_ShouldInitializeStorageEngine`
+* `StopServer_ShouldFlushDirtyPagesBeforeShutdown`
+* `StopServer_ShouldShutdownAllManagers`
+* `RestartServer_ShouldRecoverDatabaseAfterUnexpectedShutdown`
+* `CreateDatabase_ShouldRegisterDatabaseInCatalog`
+* `OpenDatabase_ShouldInitializeStorageEngine`
+* `CloseDatabase_ShouldFlushPendingChanges`
 
----
+### 2. Database Objects
 
-# Integration Test Specifications
+```mermaid
+classDiagram
+direction LR
+class Database {
+    +DatabaseId : int
+    +Name : string
+    +Owner : string
+    +Schemas : List~Schema~
+}
+class Schema {
+    +SchemaId : int
+    +Name : string
+    +Tables : List~Table~
+    +Views : List~View~
+    +Procedures : List~StoredProcedure~
+    +Sequences : List~Sequence~
+}
+class Table {
+    +TableId : int
+    +Name : string
+    +Columns : List~Column~
+    +Constraints : List~Constraint~
+    +Indexes : List~Index~
+    +Partitions : List~Partition~
+    +Triggers : List~Trigger~
+}
+class Column {
+    +ColumnId : int
+    +Name : string
+    +DataType : DataType
+    +Nullable : bool
+    +DefaultValue : object
+}
+class Row {
+    +RowId : RID
+    +Data : RecordData
+    +Version : long
+}
+class RecordData {
+    <<value object>>
+    +Bytes : Byte[]
+    +Length : int
+}
+class RID {
+    <<value object>>
+    +PageId : int
+    +SlotNumber : int
+    +Equals(other : RID) bool
+}
+class DataType {
+    <<enumeration>>
+    INT
+    BIGINT
+    VARCHAR
+    BOOLEAN
+    FLOAT
+    DATETIME
+}
+class Constraint {
+    <<abstract>>
+    +Name : string
+    +Validate(row : Row) bool
+}
+class PrimaryKey {
+    +Columns : List~Column~
+}
+class ForeignKey {
+    +ReferenceTable : Table
+    +ReferenceColumns : List~Column~
+}
+class UniqueConstraint
+class CheckConstraint {
+    +Expression : string
+}
+Database "1" *-- "many" Schema
+Schema "1" *-- "many" Table
+Table "1" *-- "many" Column
+Table "1" *-- "many" Constraint
+Table "1" *-- "many" Row
+Row *-- RID
+Row *-- RecordData
+Column --> DataType
+Constraint <|-- PrimaryKey
+Constraint <|-- ForeignKey
+Constraint <|-- UniqueConstraint
+Constraint <|-- CheckConstraint
+ForeignKey --> Table
+%% ── Domain Services ─────────────────────────────────
+class SchemaService {
+    -catalog : CatalogManager
+    -storage : StorageEngine
+    +CreateTable(schema : Schema, def : TableDef) Table
+    +DropTable(schema : Schema, name : string)
+    +CreateView(schema : Schema, name : string, query : string) View
+    +DropView(schema : Schema, name : string)
+}
+note for SchemaService "DDL service — orchestrates CatalogManager\n+ StorageEngine to create/drop objects"
+class RecordManager {
+    -storage : StorageEngine
+    -catalog : CatalogManager
+    +Insert(table : Table, row : Row) RID
+    +Update(table : Table, rid : RID, row : Row)
+    +Delete(table : Table, rid : RID)
+    +Read(table : Table, rid : RID) Row
+    +Scan(table : Table) List~Row~
+}
+note for RecordManager "DML service — translates Row operations\ninto StorageEngine page reads/writes"
+SchemaService --> Schema : manages DDL
+SchemaService --> Table : creates/drops
+RecordManager --> Table : reads schema from
+RecordManager --> Row : reads/writes
+```
+## Database Objects
 
-| ID | Test Group / Scenario | Key Components Involved | Success Criteria |
-| :--- | :--- | :--- | :--- |
-| **1** | **Startup / Database Lifecycle**<br>_Create‑Open‑Close‑Drop Database_ | DatabaseManager, DiskManager, TablespaceManager, BufferPoolManager, WALManager | • Database directory and system‑catalog files are created.<br>• On open, catalog is loaded without errors.<br>• After close, all dirty pages are flushed and WAL is checkpointed.<br>• Drop removes all physical files and releases any allocated buffers. |
-| **2** | **Schema Management**<br>_Create Schema → Create Table → Create Index → Drop Index → Drop Table → Drop Schema_ | SchemaManager, TableManager, IndexManager, MetadataCatalog, BufferPoolManager, BPlusTree | • All catalog entries exist after each creation step.<br>• Index structure is built and searchable.<br>• Dropping an index removes its physical pages and catalog entry.<br>• Dropping the table removes its pages, index pages, and updates the catalog.<br>• No orphaned files remain on disk. |
-| **3** | **Basic DML Flow**<br>_INSERT → SELECT → UPDATE → DELETE (single‑table, no indexes)_ | SqlParser, QueryValidator, ExecutionEngine, TransactionManager, RecordManager, BufferPoolManager, WALManager | • INSERT writes a new tuple, WAL records the operation, and page becomes dirty.<br>• SELECT returns the inserted row.<br>• UPDATE modifies the row, creates a new MVCC version, and logs the change.<br>• DELETE marks the tuple as deleted (tombstone) and logs it.<br>• After a commit, data is persisted on disk and visible to a new transaction. |
-| **4** | **Index‑Driven DML**<br>_INSERT + SELECT with Index Scan (B+Tree index on primary key)_ | SqlParser, QueryValidator, ExecutionEngine, BPlusTree, BufferPoolManager, WALManager | • INSERT updates the B+Tree leaf nodes correctly (split if needed).<br>• SELECT using WHERE pk = ? triggers an IndexScan and returns the correct tuple in $O(\log N)$ page reads.<br>• The number of I/O operations matches the expected tree depth. |
-| **5** | **Complex Query**<br>_JOIN + FILTER + PROJECTION + ORDER BY (two tables, one indexed)_ | SqlParser, QueryValidator, QueryOptimizer, ExecutionEngine, BPlusTree, HashIndex, ResultProcessor, BufferPoolManager | • Optimizer rewrites the logical plan (predicate push‑down, join reordering).<br>• Physical plan uses an IndexScan on the indexed table, a HashJoin on the join key, and a Sort operator for the final ordering.<br>• Result set matches the expected row count and ordering. |
-| **6** | **Transaction Isolation (MVCC)**<br>_Concurrent Readers & Writers (Snapshot Isolation)_ | TransactionManager, MVCCManager, LockManager, SnapshotManager, ExecutionEngine, BufferPoolManager, WALManager | • Transaction A (reader) starts and takes a snapshot.<br>• Transaction B (writer) updates the same rows and commits.<br>• Transaction A's subsequent SELECT still sees the pre‑commit version (no dirty reads).<br>• After A commits, a new transaction sees the post‑commit version. |
-| **7** | **Deadlock Detection & Resolution**<br>_Two‑Transaction Circular Wait_ | TransactionManager, LockManager, DeadlockDetector, WALManager | • Tx 1 acquires an exclusive lock on Table X, then requests a lock on Table Y.<br>• Tx 2 acquires an exclusive lock on Table Y, then requests a lock on Table X.<br>• Deadlock detector identifies the cycle, aborts the victim (the younger transaction), and releases its locks.<br>• The survivor transaction completes successfully. |
-| **8** | **Recovery (WAL + Checkpoint)**<br>_Crash‑Recovery Scenario_ | WALManager, LogWriter, LSNGenerator, TransactionManager, RecoveryManager, DiskManager, BufferPoolManager | 1. Begin a transaction, perform several INSERT/UPDATE operations (WAL records are written).<br>2. Force a checkpoint – all dirty pages flushed, WAL checkpoint record written.<br>3. Simulate a crash (process termination) without a clean shutdown.<br>4. Restart DBMS → Recovery manager reads WAL from the last checkpoint LSN, re‑applies REDO for committed transactions and UNDO for incomplete ones.<br>5. After recovery the database state matches the state at the moment of the last successful commit. |
-| **9** | **Backup & Restore**<br>_Full Physical Backup → Restore to New Instance_ | BackupManager (if present), DiskManager, TablespaceManager, MetadataCatalog | • A full backup copies all data files, tablespace files, and catalog files to a backup directory.<br>• Restoring copies the backup set into a new data directory and starts the DBMS pointing at that directory.<br>• After restore, a simple SELECT on a known table returns the exact same data as before the backup. |
-| **10** | **Security / Access Control**<br>_Authentication → Authorization → Operation_ | AuthenticationManager, AuthorizationManager, Session, TransactionManager, ExecutionEngine | • Valid user credentials produce a session token.<br>• The session's role grants SELECT on Table A but not DELETE.<br>• An attempt to DELETE rows on Table A fails with PermissionDeniedException.<br>• Changing the role to include DELETE and re‑authenticating allows the operation. |
-| **11** | **Performance‑Metrics Collection**<br>_Run a Query and Verify Metrics are Logged_ | PerformanceMetricsCollector, ExecutionEngine, LogWriter, WALManager | • After a query finishes, the metrics collector records execution time, rows read, pages fetched, and CPU usage.<br>• A log entry containing these metrics appears in the system log file. |
-| **12** | **Parallel Bulk Load**<br>_COPY / Bulk INSERT of 1M rows_ | CsvImporter (or similar), TransactionManager, BufferPoolManager, WALManager, BPlusTree | • Bulk load runs inside a single transaction.<br>• All rows are inserted, index is built (or updated) incrementally.<br>• After commit, a SELECT verifies the exact row count.<br>• Duration and I/O statistics are within expected thresholds (e.g., < 30 s on a test dataset). |
-| **13** | **Distributed Query**<br>_Partitioned Scan + Remote Execution_ | PartitionRouter, RemoteExecutionManager, ExecutionEngine, BufferPoolManager | • Table is partitioned across two logical nodes.<br>• A query with a filter that touches both partitions is dispatched.<br>• Each node scans its local pages, returns a partial result set.<br>• The coordinator merges the partial results and returns the final set.<br>• Result matches a single‑node execution baseline. |
+### Database
+* `CreateSchema_ShouldAddSchemaToDatabase`
+* `CreateSchema_ShouldRejectDuplicateSchemaName`
+* `DropSchema_ShouldRemoveExistingSchema`
+* `DropSchema_ShouldThrow_WhenSchemaDoesNotExist`
+* `GetSchema_ShouldReturnExistingSchema`
+* `GetSchema_ShouldThrow_WhenSchemaDoesNotExist`
+* `Backup_ShouldCreateBackupSuccessfully`
+* `Restore_ShouldRestoreDatabaseSuccessfully`
+
+### Schema
+* `AddTable_ShouldAddTableSuccessfully`
+* `AddTable_ShouldRejectDuplicateTableName`
+* `DropTable_ShouldRemoveExistingTable`
+* `DropTable_ShouldThrow_WhenTableDoesNotExist`
+* `CreateView_ShouldRegisterView`
+* `DropView_ShouldRemoveView`
+* `CreateProcedure_ShouldRegisterProcedure`
+* `DropProcedure_ShouldRemoveProcedure`
+* `CreateSequence_ShouldRegisterSequence`
+
+### Table
+* `AddColumn_ShouldAddColumnSuccessfully`
+* `AddColumn_ShouldRejectDuplicateColumnName`
+* `RemoveColumn_ShouldRemoveExistingColumn`
+* `AddConstraint_ShouldRegisterConstraint`
+* `RemoveConstraint_ShouldRemoveConstraint`
+* `AddIndex_ShouldRegisterIndex`
+* `RemoveIndex_ShouldRemoveIndex`
+* `AddTrigger_ShouldRegisterTrigger`
+* `RemoveTrigger_ShouldRemoveTrigger`
+
+### Column
+* `SetDataType_ShouldUpdateDataType`
+* `SetNullable_ShouldUpdateNullableFlag`
+* `SetDefaultValue_ShouldUpdateDefaultValue`
+* `ValidateValue_ShouldAcceptValidValue`
+* `ValidateValue_ShouldRejectInvalidValue`
+
+### Row
+* `UpdateValue_ShouldModifyColumnValue`
+* `UpdateValue_ShouldIncreaseVersion`
+* `UpdateValue_ShouldRejectInvalidColumn`
+
+### RecordData
+* `Serialize_ShouldConvertRecordToBytes`
+* `Deserialize_ShouldRestoreRecordCorrectly`
+
+### RID
+* `Equals_ShouldReturnTrue_ForSamePageAndSlot`
+* `Equals_ShouldReturnFalse_ForDifferentLocation`
+
+### View
+* `Compile_ShouldGenerateExecutionPlan`
+* `Compile_ShouldRejectInvalidQuery`
+
+### StoredProcedure
+* `Compile_ShouldCompileProcedure`
+* `Compile_ShouldRejectInvalidProcedure`
+* `Execute_ShouldExecuteProcedureSuccessfully`
+
+### Sequence
+* `NextValue_ShouldReturnIncrementedValue`
+* `NextValue_ShouldRespectCustomIncrement`
+* `NextValue_ShouldThrow_WhenOverflowOccurs`
+
+### Partition
+* `InsertRecord_ShouldRouteRecordToCorrectPartition`
+* `InsertRecord_ShouldRejectInvalidPartitionKey`
+
+### Trigger
+* `Execute_ShouldRunBeforeInsertTrigger`
+* `Execute_ShouldRunAfterUpdateTrigger`
+* `Execute_ShouldRunAfterDeleteTrigger`
+
+### Integration
+* `Database_CreateSchema_ShouldRegisterSchema`
+* `Schema_AddTable_ShouldRegisterTable`
+* `Table_AddColumn_ShouldRegisterColumn`
+* `Table_AddConstraint_ShouldRegisterConstraint`
+* `Table_AddIndex_ShouldRegisterIndex`
+* `Table_AddTrigger_ShouldRegisterTrigger`
+* `Sequence_ShouldGenerateUniqueValues`
+* `View_ShouldReferenceExistingTables`
+* `StoredProcedure_ShouldAccessDatabaseObjects`
+
+## Constraints & Indexes
+
+### PrimaryKeyConstraint
+* `Validate_ShouldAcceptUniqueKey`
+* `Validate_ShouldRejectDuplicateKey`
+* `Validate_ShouldRejectNullKey`
+* `Validate_ShouldRejectCompositeKeyWithMissingColumn`
+
+### ForeignKeyConstraint
+* `Validate_ShouldAcceptExistingReferencedRow`
+* `Validate_ShouldRejectMissingReferencedRow`
+* `Validate_ShouldRejectDeleteReferencedRow_WhenRestrictEnabled`
+* `Validate_ShouldCascadeDelete_WhenCascadeEnabled`
+* `Validate_ShouldCascadeUpdate_WhenCascadeUpdateEnabled`
+
+### UniqueConstraint
+* `Validate_ShouldAcceptUniqueValue`
+* `Validate_ShouldRejectDuplicateValue`
+* `Validate_ShouldAcceptMultipleNullValues_WhenSupported`
+
+### CheckConstraint
+* `Validate_ShouldAcceptValidExpression`
+* `Validate_ShouldRejectInvalidExpression`
+* `Validate_ShouldRejectNull_WhenColumnIsRequired`
+
+### ConstraintManager
+* `ValidateInsert_ShouldValidateAllConstraints`
+* `ValidateUpdate_ShouldValidateAllConstraints`
+* `ValidateDelete_ShouldValidateForeignKeys`
+* `Validate_ShouldStopAtFirstConstraintViolation`
+
+### Index
+* `Build_ShouldCreateIndexSuccessfully`
+* `Insert_ShouldAddKeyToIndex`
+* `Delete_ShouldRemoveKeyFromIndex`
+* `Update_ShouldUpdateIndexedKey`
+* `Search_ShouldReturnMatchingRID`
+* `Search_ShouldReturnEmpty_WhenKeyDoesNotExist`
+
+### BTreeIndex
+* `Insert_ShouldKeepTreeBalanced`
+* `Search_ShouldFindExistingKey`
+* `SearchRange_ShouldReturnSortedRecords`
+* `Delete_ShouldRebalanceTreeAfterDeletion`
+* `SplitNode_ShouldCreateBalancedTree`
+
+### HashIndex
+* `Insert_ShouldStoreKeyInBucket`
+* `Search_ShouldFindExistingKey`
+* `Search_ShouldReturnEmpty_WhenKeyDoesNotExist`
+* `Delete_ShouldRemoveExistingKey`
+* `HandleCollision_ShouldStoreMultipleKeysInSameBucket`
+
+### BitmapIndex
+* `Build_ShouldGenerateBitmapSuccessfully`
+* `Search_ShouldReturnMatchingRows`
+* `Update_ShouldRefreshBitmap`
+* `Delete_ShouldClearCorrespondingBit`
+
+### IndexManager
+* `CreateIndex_ShouldRegisterIndex`
+* `CreateIndex_ShouldRejectDuplicateIndexName`
+* `DropIndex_ShouldRemoveExistingIndex`
+* `DropIndex_ShouldThrow_WhenIndexDoesNotExist`
+* `FindBestIndex_ShouldReturnOptimalIndexForQuery`
+* `RebuildIndex_ShouldRebuildCorruptedIndex`
+
+### Integration
+* `InsertRecord_ShouldUpdateAllRelatedIndexes`
+* `DeleteRecord_ShouldRemoveKeysFromIndexes`
+* `UpdateIndexedColumn_ShouldUpdateIndexAutomatically`
+* `InsertRecord_ShouldValidateConstraintsBeforeUpdatingIndexes`
+* `ConstraintFailure_ShouldRollbackIndexChanges`
+* `ForeignKeyCascadeDelete_ShouldUpdateIndexes`
+* `RebuildIndex_ShouldPreserveSearchResults`
+
+## Domain Services
+
+### SchemaService
+* `CreateSchema_ShouldCreateSchemaSuccessfully`
+* `CreateSchema_ShouldRejectDuplicateSchemaName`
+* `DropSchema_ShouldRemoveExistingSchema`
+* `DropSchema_ShouldThrow_WhenSchemaDoesNotExist`
+* `RenameSchema_ShouldUpdateSchemaName`
+* `RenameSchema_ShouldRejectDuplicateName`
+* `GetSchema_ShouldReturnExistingSchema`
+* `GetSchema_ShouldThrow_WhenSchemaDoesNotExist`
+
+### TableService
+* `CreateTable_ShouldCreateTableSuccessfully`
+* `CreateTable_ShouldRejectDuplicateTableName`
+* `DropTable_ShouldRemoveExistingTable`
+* `DropTable_ShouldThrow_WhenTableDoesNotExist`
+* `RenameTable_ShouldRenameTableSuccessfully`
+* `RenameTable_ShouldRejectDuplicateTableName`
+* `GetTable_ShouldReturnExistingTable`
+* `GetTable_ShouldThrow_WhenTableDoesNotExist`
+
+### RecordManager
+* `InsertRecord_ShouldInsertSuccessfully`
+* `InsertRecord_ShouldValidateConstraintsBeforeInsert`
+* `InsertRecord_ShouldUpdateIndexes`
+* `UpdateRecord_ShouldModifyExistingRecord`
+* `UpdateRecord_ShouldValidateConstraints`
+* `UpdateRecord_ShouldUpdateIndexes`
+* `DeleteRecord_ShouldRemoveRecordSuccessfully`
+* `DeleteRecord_ShouldRemoveIndexEntries`
+* `DeleteRecord_ShouldValidateForeignKeyConstraints`
+* `GetRecord_ShouldReturnExistingRecord`
+* `GetRecord_ShouldReturnNull_WhenRecordDoesNotExist`
+
+### MetadataManager
+* `RegisterTable_ShouldStoreMetadata`
+* `RegisterIndex_ShouldStoreMetadata`
+* `RemoveTable_ShouldDeleteMetadata`
+* `RemoveIndex_ShouldDeleteMetadata`
+* `GetMetadata_ShouldReturnRegisteredObject`
+
+### Dependency Integration
+* `CreateTable_ShouldRegisterMetadata`
+* `DropTable_ShouldRemoveMetadata`
+* `InsertRecord_ShouldValidateConstraintsBeforeInsert`
+* `InsertRecord_ShouldUpdateIndexesAfterInsert`
+* `UpdateRecord_ShouldSynchronizeIndexes`
+* `DeleteRecord_ShouldSynchronizeIndexes`
+* `DeleteRecord_ShouldUpdateMetadataStatistics`
+
+### 3. Storage Engine
+
+```mermaid
+classDiagram
+direction LR
+class StorageEngine {
+    +ReadPage(id : PageId) Byte[]
+    +WritePage(id : PageId, data : Byte[])
+    +AllocatePage(tableId : int) PageId
+}
+class BufferPool {
+    -frames : Page[]
+    -policy : ReplacementPolicy
+    +FetchPage(id : PageId) Page
+    +UnpinPage(id : PageId)
+    +FlushPage(id : PageId)
+    +MarkDirty(id : PageId)
+}
+class Page {
+    +PageId : int
+    +Data : Byte[]
+    +IsDirty : bool
+    +PinCount : int
+}
+class FileManager {
+    -dataDir : string
+    +Read(pageId : PageId) Byte[]
+    +Write(pageId : PageId, data : Byte[])
+    +AllocateFile(path : string) int
+}
+StorageEngine --> BufferPool
+StorageEngine --> FileManager
+BufferPool --> Page
+```
+
+## Storage Engine
+
+### StorageEngine
+* `CreateDatabase_ShouldInitializeStorageFiles`
+* `OpenDatabase_ShouldLoadExistingStorage`
+* `CloseDatabase_ShouldFlushDirtyPages`
+* `DropDatabase_ShouldDeleteStorageFiles`
+* `AllocatePage_ShouldReturnNewPage`
+* `FreePage_ShouldReleasePageSuccessfully`
+
+### BufferPool
+* `FetchPage_ShouldLoadPageIntoBuffer`
+* `FetchPage_ShouldReturnCachedPage_WhenAlreadyLoaded`
+* `UnpinPage_ShouldDecreasePinCount`
+* `FlushPage_ShouldWriteDirtyPageToDisk`
+* `FlushAllPages_ShouldPersistAllDirtyPages`
+* `EvictPage_ShouldUseReplacementPolicy`
+* `EvictPage_ShouldNotEvictPinnedPage`
+
+### Page
+* `InsertRecord_ShouldInsertSuccessfully`
+* `InsertRecord_ShouldReject_WhenPageIsFull`
+* `DeleteRecord_ShouldRemoveRecord`
+* `UpdateRecord_ShouldModifyExistingRecord`
+* `FindRecord_ShouldReturnExistingRecord`
+* `Compact_ShouldReclaimFreeSpace`
+
+### FileManager
+* `CreateFile_ShouldCreateNewDataFile`
+* `OpenFile_ShouldOpenExistingFile`
+* `CloseFile_ShouldReleaseFileHandle`
+* `DeleteFile_ShouldDeleteExistingFile`
+* `ReadPage_ShouldReturnRequestedPage`
+* `WritePage_ShouldPersistPageData`
+* `ReadPage_ShouldThrow_WhenPageDoesNotExist`
+
+### WALManager
+* `WriteLog_ShouldAppendLogRecord`
+* `WriteLog_ShouldAssignIncreasingLSN`
+* `FlushLog_ShouldPersistPendingLogs`
+* `Recover_ShouldReplayCommittedTransactions`
+* `Recover_ShouldUndoUncommittedTransactions`
+* `Checkpoint_ShouldCreateCheckpointRecord`
+
+### RecoveryManager
+* `Recover_ShouldRedoCommittedTransactions`
+* `Recover_ShouldUndoIncompleteTransactions`
+* `Recover_ShouldRestoreConsistentDatabase`
+* `Recover_ShouldIgnoreAlreadyAppliedLogs`
+* `Recover_ShouldHandleEmptyLogFile`
+
+### FreeSpaceManager
+* `AllocatePage_ShouldReturnAvailablePage`
+* `AllocatePage_ShouldCreateNewPage_WhenNoFreePageExists`
+* `ReleasePage_ShouldReturnPageToFreeList`
+* `FindFreePage_ShouldReturnPageWithEnoughSpace`
+
+### Integration
+* `InsertRecord_ShouldAllocatePage_WhenCurrentPageIsFull`
+* `InsertRecord_ShouldWriteWALBeforeWritingPage`
+* `UpdateRecord_ShouldMarkPageAsDirty`
+* `DeleteRecord_ShouldMarkPageAsDirty`
+* `FlushPage_ShouldWritePageToDiskAfterLogFlush`
+* `Recovery_ShouldReplayWALAfterCrash`
+* `BufferPool_ShouldReadPageThroughFileManager`
+* `BufferPool_ShouldWritePageThroughFileManager`
+* `Checkpoint_ShouldReduceRecoveryTime`
+* `Restart_ShouldRecoverDatabaseToConsistentState`
+
+### 4. Transaction & Concurrency
+
+```mermaid
+classDiagram
+direction LR
+class TransactionManager {
+    -txTable : TransactionTable
+    -lockMgr : LockManager
+    -walMgr : WALManager
+    -mvccMgr : MVCCManager
+    +Begin() Transaction
+    +Commit(txId : int)
+    +Abort(txId : int)
+}
+class Transaction {
+    +TransactionId : int
+    +Status : TxStatus
+    +Begin()
+    +Commit()
+    +Rollback()
+}
+class LockManager {
+    -lockTable : Map~string, LockQueue~
+    -detector : DeadlockDetector
+    +AcquireLock(txId : int, resId : string, mode : LockMode)
+    +ReleaseLock(txId : int, resId : string)
+    +ReleaseAll(txId : int)
+}
+note for LockManager "AcquireLock() throws LockTimeoutException\nor DeadlockException on conflict"
+class MVCCManager {
+    +CreateVersion(rid : RID, txId : int, data : RecordData)
+    +ReadVersion(rid : RID, snapshotId : long) Row
+    +GarbageCollect(olderThan : long)
+}
+class WALManager {
+    -buffer : LogBuffer
+    +Append(record : LogRecord) long
+    +Flush(upToLSN : long)
+    +Truncate(beforeLSN : long)
+}
+class RecoveryManager {
+    -walMgr : WALManager
+    +Recover(checkpointLSN : long)
+}
+TransactionManager --> Transaction
+TransactionManager --> LockManager
+TransactionManager --> MVCCManager
+TransactionManager --> WALManager
+RecoveryManager --> WALManager
+```
+
+### Transaction
+* `Begin_ShouldCreateActiveTransaction`
+* `Commit_ShouldPersistChanges`
+* `Rollback_ShouldUndoAllChanges`
+* `Commit_ShouldThrow_WhenTransactionAlreadyCompleted`
+* `Rollback_ShouldThrow_WhenTransactionAlreadyCompleted`
+* `SetSavepoint_ShouldCreateSavepoint`
+* `RollbackToSavepoint_ShouldRestorePreviousState`
+
+### TransactionManager
+* `BeginTransaction_ShouldReturnNewTransaction`
+* `CommitTransaction_ShouldCommitSuccessfully`
+* `RollbackTransaction_ShouldRollbackSuccessfully`
+* `CommitTransaction_ShouldReleaseAllLocks`
+* `RollbackTransaction_ShouldReleaseAllLocks`
+* `GetTransaction_ShouldReturnActiveTransaction`
+* `CleanupCompletedTransactions_ShouldRemoveCompletedTransactions`
+
+### LockManager
+* `AcquireSharedLock_ShouldGrantLock_WhenNoConflict`
+* `AcquireExclusiveLock_ShouldGrantLock_WhenResourceIsFree`
+* `AcquireExclusiveLock_ShouldWait_WhenSharedLockExists`
+* `AcquireSharedLock_ShouldWait_WhenExclusiveLockExists`
+* `ReleaseLock_ShouldFreeLockedResource`
+* `ReleaseAllLocks_ShouldReleaseTransactionLocks`
+* `DetectDeadlock_ShouldIdentifyCircularWait`
+* `DetectDeadlock_ShouldChooseVictimTransaction`
+
+### MVCCManager
+* `CreateVersion_ShouldCreateNewRecordVersion`
+* `Read_ShouldReturnCorrectVersionForTransaction`
+* `Update_ShouldGenerateNewVersion`
+* `Delete_ShouldMarkVersionAsDeleted`
+* `GarbageCollect_ShouldRemoveObsoleteVersions`
+* `Read_ShouldIgnoreUncommittedVersion`
+
+### DeadlockDetector
+* `DetectDeadlock_ShouldReturnFalse_WhenNoCycleExists`
+* `DetectDeadlock_ShouldReturnTrue_WhenCycleExists`
+* `SelectVictim_ShouldChooseLowestPriorityTransaction`
+* `ResolveDeadlock_ShouldAbortVictimTransaction`
+
+### Scheduler
+* `ScheduleTransaction_ShouldExecuteSerializableSchedule`
+* `ScheduleTransaction_ShouldAllowConcurrentReads`
+* `ScheduleTransaction_ShouldBlockConflictingWrites`
+* `ScheduleTransaction_ShouldResumeWaitingTransaction`
+
+### Integration
+* `ConcurrentRead_ShouldAllowMultipleReaders`
+* `ConcurrentWrite_ShouldAllowOnlyOneWriter`
+* `ReadWhileWrite_ShouldWaitForExclusiveLock`
+* `Deadlock_ShouldRollbackVictimTransaction`
+* `Rollback_ShouldUndoAllDataChanges`
+* `Commit_ShouldPersistChangesAndReleaseLocks`
+* `MVCC_ShouldAllowSnapshotReadDuringConcurrentUpdate`
+* `Transaction_ShouldRecoverCorrectlyAfterCrash`
+* `Checkpoint_ShouldCommitCompletedTransactionsOnly`
+
+### 5. Query Processor
+
+```mermaid
+classDiagram
+direction LR
+class SQLParser {
+    +Parse(sql : string) ASTNode
+    -Tokenize(sql : string) Token[]
+    -BuildAST(tokens : Token[]) ASTNode
+}
+note for SQLParser "Parse() throws SqlSyntaxException\non invalid input"
+class Lexer {
+    +Tokenize(sql : string) Token[]
+}
+class AST {
+    +Root : ASTNode
+    +ToLogicalPlan() LogicalPlan
+}
+class QueryOptimizer {
+    -costModel : CostModel
+    -catalog : CatalogManager
+    +Optimize(ast : ASTNode) PhysicalPlan
+}
+class LogicalPlan {
+    +Operators : List~Operator~
+}
+class PhysicalPlan {
+    +Operators : List~Operator~
+}
+class StatisticsManager {
+    +Collect(table : Table)
+    +GetStats(tableId : int) TableStats
+}
+class QueryExecutor {
+    +Execute(plan : PhysicalPlan, tx : Transaction) ResultCursor
+}
+class RuntimeContext {
+    +TransactionId : int
+    +SessionId : string
+}
+SQLParser --> Lexer
+SQLParser --> AST
+AST --> LogicalPlan
+QueryOptimizer --> LogicalPlan
+QueryOptimizer --> PhysicalPlan
+QueryOptimizer --> StatisticsManager
+QueryExecutor --> PhysicalPlan
+QueryExecutor --> RuntimeContext
+```
+
+## Query Processor
+
+### SQLParser
+* `ParseSelect_ShouldGenerateAST`
+* `ParseInsert_ShouldGenerateAST`
+* `ParseUpdate_ShouldGenerateAST`
+* `ParseDelete_ShouldGenerateAST`
+* `Parse_ShouldThrow_WhenSqlSyntaxIsInvalid`
+* `Parse_ShouldThrow_WhenStatementIsEmpty`
+
+### Lexer
+* `Tokenize_ShouldSplitSqlIntoTokens`
+* `Tokenize_ShouldRecognizeKeywords`
+* `Tokenize_ShouldRecognizeIdentifiers`
+* `Tokenize_ShouldRecognizeStringAndNumberLiterals`
+* `Tokenize_ShouldThrow_WhenInvalidCharacterExists`
+
+### AST
+* `BuildAST_ShouldCreateCorrectSyntaxTree`
+* `BuildAST_ShouldPreserveOperatorPrecedence`
+* `BuildAST_ShouldThrow_WhenTokenSequenceIsInvalid`
+
+### LogicalPlan
+* `GeneratePlan_ShouldCreateTableScan`
+* `GeneratePlan_ShouldCreateProjection`
+* `GeneratePlan_ShouldCreateFilter`
+* `GeneratePlan_ShouldCreateJoin`
+* `GeneratePlan_ShouldCreateAggregation`
+
+### QueryOptimizer
+* `Optimize_ShouldChooseIndexScan_WhenIndexExists`
+* `Optimize_ShouldChooseTableScan_WhenNoIndexExists`
+* `Optimize_ShouldOptimizeJoinOrder`
+* `Optimize_ShouldApplyPredicatePushdown`
+* `Optimize_ShouldApplyProjectionPushdown`
+* `Optimize_ShouldEstimateCostForExecutionPlan`
+
+### StatisticsManager
+* `CollectStatistics_ShouldUpdateTableStatistics`
+* `GetStatistics_ShouldReturnExistingStatistics`
+* `EstimateRowCount_ShouldReturnEstimatedRows`
+
+### PhysicalPlan
+* `GeneratePhysicalPlan_ShouldCreateExecutableOperators`
+* `GeneratePhysicalPlan_ShouldSelectBestExecutionStrategy`
+* `GeneratePhysicalPlan_ShouldRespectOptimizerDecision`
+
+### QueryExecutor
+* `ExecuteSelect_ShouldReturnMatchingRows`
+* `ExecuteInsert_ShouldInsertRecord`
+* `ExecuteUpdate_ShouldModifyExistingRows`
+* `ExecuteDelete_ShouldDeleteMatchingRows`
+* `ExecuteJoin_ShouldReturnJoinedRows`
+* `ExecuteAggregate_ShouldReturnAggregatedResult`
+* `ExecuteOrderBy_ShouldReturnSortedRows`
+* `Execute_ShouldThrow_WhenTableDoesNotExist`
+* `Execute_ShouldThrow_WhenExecutionPlanIsInvalid`
+
+### Integration
+* `ParseSelect_ShouldGenerateLogicalPlan`
+* `LogicalPlan_ShouldBeOptimizedBeforeExecution`
+* `Optimizer_ShouldGeneratePhysicalPlan`
+* `PhysicalPlan_ShouldExecuteSuccessfully`
+* `InsertQuery_ShouldUpdateIndexes`
+* `UpdateQuery_ShouldValidateConstraints`
+* `DeleteQuery_ShouldRespectForeignKeys`
+* `QueryExecution_ShouldRunInsideTransaction`
+* `ExecutionFailure_ShouldRollbackTransaction`
+* `Optimizer_ShouldUseLatestStatistics`
+* `ComplexQuery_ShouldExecuteSuccessfully`
+
+### 6. Catalog & Metadata
+
+```mermaid
+classDiagram
+direction LR
+class CatalogManager {
+    -sysTables : Map~string, object~
+    +RegisterTable(table : Table)
+    +GetTable(name : string) Table
+    +GetIndex(name : string) Index
+    +DeleteMeta(id : int)
+}
+note for CatalogManager "GetTable() / GetIndex() throws\nNotFoundException if not found"
+class Database
+class Schema
+class Table
+class Index
+CatalogManager --> Database
+CatalogManager --> Schema
+CatalogManager --> Table
+CatalogManager --> Index
+```
+
+## Catalog
+
+### CatalogManager
+* `RegisterDatabase_ShouldAddDatabaseMetadata`
+* `RegisterDatabase_ShouldRejectDuplicateDatabase`
+* `RemoveDatabase_ShouldDeleteDatabaseMetadata`
+* `GetDatabase_ShouldReturnExistingDatabase`
+* `GetDatabase_ShouldThrow_WhenDatabaseDoesNotExist`
+
+### Schema Metadata
+* `RegisterSchema_ShouldAddSchemaMetadata`
+* `RegisterSchema_ShouldRejectDuplicateSchema`
+* `RemoveSchema_ShouldDeleteSchemaMetadata`
+* `GetSchema_ShouldReturnExistingSchema`
+
+### Table Metadata
+* `RegisterTable_ShouldAddTableMetadata`
+* `RegisterTable_ShouldRejectDuplicateTable`
+* `RemoveTable_ShouldDeleteTableMetadata`
+* `GetTable_ShouldReturnExistingTable`
+
+### Column Metadata
+* `RegisterColumn_ShouldAddColumnMetadata`
+* `RemoveColumn_ShouldDeleteColumnMetadata`
+* `GetColumns_ShouldReturnTableColumns`
+
+### Index Metadata
+* `RegisterIndex_ShouldAddIndexMetadata`
+* `RemoveIndex_ShouldDeleteIndexMetadata`
+* `GetIndex_ShouldReturnExistingIndex`
+
+### Constraint Metadata
+* `RegisterConstraint_ShouldAddConstraintMetadata`
+* `RemoveConstraint_ShouldDeleteConstraintMetadata`
+* `GetConstraints_ShouldReturnTableConstraints`
+
+### Metadata Lookup
+* `FindTable_ShouldReturnQualifiedTable`
+* `FindColumn_ShouldReturnQualifiedColumn`
+* `ResolveObjectName_ShouldResolveSchemaObject`
+* `ObjectExists_ShouldReturnTrue_WhenObjectExists`
+* `ObjectExists_ShouldReturnFalse_WhenObjectDoesNotExist`
+
+### Dependency Management
+* `DropTable_ShouldReject_WhenReferencedByForeignKey`
+* `DropSchema_ShouldReject_WhenSchemaContainsObjects`
+* `DropDatabase_ShouldReject_WhenDatabaseContainsSchemas`
+
+### Integration
+* `CreateDatabase_ShouldRegisterMetadata`
+* `DropDatabase_ShouldRemoveMetadata`
+* `CreateSchema_ShouldRegisterMetadata`
+* `CreateTable_ShouldRegisterMetadata`
+* `DropTable_ShouldRemoveMetadata`
+* `CreateIndex_ShouldRegisterMetadata`
+* `DropIndex_ShouldRemoveMetadata`
+* `CreateConstraint_ShouldRegisterMetadata`
+* `CatalogLookup_ShouldSupportQueryProcessor`
+* `Catalog_ShouldRemainConsistentAfterRollback`
+
+### 7. Security
+
+```mermaid
+classDiagram
+direction LR
+class SecurityManager {
+    -userDb : Map~string, HashedCredential~
+    +Authenticate(username : string, password : string) Session
+    +CheckPermission(user : string, obj : int, action : string) bool
+    +GrantRole(user : string, role : string)
+    +RevokeRole(user : string, role : string)
+}
+note for SecurityManager "Authenticate() throws\nPermissionDeniedException if invalid"
+class User {
+    +UserId : int
+    +Username : string
+    +PasswordHash : string
+}
+class Role {
+    +RoleId : int
+    +Name : string
+}
+class Permission {
+    +Action : string
+    +ObjectId : int
+}
+SecurityManager --> User
+SecurityManager --> Role
+Role --> Permission
+```
+
+## Security & Access Control
+
+### AuthenticationManager
+* `Login_ShouldAuthenticateValidUser`
+* `Login_ShouldRejectInvalidUsernameOrPassword`
+* `Login_ShouldRejectLockedAccount`
+* `Logout_ShouldInvalidateSession`
+* `ValidateSession_ShouldReturnTrue_ForValidSession`
+* `ValidateSession_ShouldReturnFalse_ForExpiredSession`
+
+### UserManager
+* `CreateUser_ShouldCreateUserSuccessfully`
+* `CreateUser_ShouldRejectDuplicateUsername`
+* `DeleteUser_ShouldRemoveExistingUser`
+* `ChangePassword_ShouldUpdatePassword`
+* `ChangePassword_ShouldRejectIncorrectOldPassword`
+* `AssignRole_ShouldAssignRoleToUser`
+* `RemoveRole_ShouldRemoveRoleFromUser`
+
+### RoleManager
+* `CreateRole_ShouldCreateRoleSuccessfully`
+* `CreateRole_ShouldRejectDuplicateRole`
+* `DeleteRole_ShouldRemoveRole`
+* `AssignPermission_ShouldAddPermissionToRole`
+* `RemovePermission_ShouldRemovePermissionFromRole`
+* `GetPermissions_ShouldReturnAssignedPermissions`
+
+### PermissionManager
+* `GrantPermission_ShouldGrantPermission`
+* `RevokePermission_ShouldRemovePermission`
+* `HasPermission_ShouldReturnTrue_WhenPermissionExists`
+* `HasPermission_ShouldReturnFalse_WhenPermissionDoesNotExist`
+
+### AuthorizationManager
+* `Authorize_ShouldAllowAuthorizedUser`
+* `Authorize_ShouldRejectUnauthorizedUser`
+* `Authorize_ShouldCheckRolePermissions`
+* `Authorize_ShouldCheckObjectPermissions`
+* `Authorize_ShouldRejectAccessToNonExistingObject`
+
+### SecurityManager
+* `Authenticate_ShouldValidateUserCredentials`
+* `Authorize_ShouldVerifyUserPermission`
+* `CreateUser_ShouldDelegateToUserManager`
+* `CreateRole_ShouldDelegateToRoleManager`
+* `GrantPermission_ShouldDelegateToPermissionManager`
+* `AuditSecurityEvent_ShouldRecordSecurityEvent`
+
+### Integration
+* `Login_ShouldCreateAuthenticatedSession`
+* `Logout_ShouldInvalidateSession`
+* `UserWithRole_ShouldInheritRolePermissions`
+* `PermissionRevoked_ShouldImmediatelyDenyAccess`
+* `UnauthorizedAccess_ShouldBeRejected`
+* `AuthorizedQuery_ShouldExecuteSuccessfully`
+* `UnauthorizedQuery_ShouldThrowAccessDeniedException`
+* `DropDatabase_ShouldRequireAdminPermission`
+* `CreateTable_ShouldRequireCreatePermission`
+* `GrantPermission_ShouldTakeEffectImmediately`
+
