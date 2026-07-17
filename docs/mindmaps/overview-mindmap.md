@@ -1,3 +1,836 @@
+```mermaid
+classDiagram
+direction LR
+
+%% =====================================================
+%% Server
+%% =====================================================
+
+class DatabaseServer {
+    +ServerId : int
+    +Version : string
+    +Status : ServerStatus
+    +Start()
+    +Stop()
+    +Restart()
+}
+
+class DatabaseManager {
+    -catalog : CatalogManager
+    +CreateDatabase(name : string)
+    +DropDatabase(name : string)
+    +GetDatabase(name : string) Database
+    +ListDatabases() List~Database~
+}
+
+%% =====================================================
+%% Database Objects (Pure Domain Models)
+%% =====================================================
+
+class Database {
+    +DatabaseId : int
+    +Name : string
+    +Owner : string
+    +Schemas : List~Schema~
+}
+
+class Schema {
+    +SchemaId : int
+    +Name : string
+    +Tables : List~Table~
+    +Views : List~View~
+    +Procedures : List~StoredProcedure~
+    +Sequences : List~Sequence~
+}
+
+%% =====================================================
+%% Domain Services (Business Logic on Domain Objects)
+%% =====================================================
+
+class SchemaService {
+    -catalog : CatalogManager
+    -storage : StorageEngine
+    +CreateTable(schema : Schema, def : TableDef) Table
+    +DropTable(schema : Schema, name : string)
+    +CreateView(schema : Schema, name : string, query : string) View
+    +DropView(schema : Schema, name : string)
+}
+note for SchemaService "DDL service — orchestrates CatalogManager\n+ StorageEngine to create/drop objects"
+
+class RecordManager {
+    -storage : StorageEngine
+    -catalog : CatalogManager
+    +Insert(table : Table, row : Row) RID
+    +Update(table : Table, rid : RID, row : Row)
+    +Delete(table : Table, rid : RID)
+    +Read(table : Table, rid : RID) Row
+    +Scan(table : Table) List~Row~
+}
+note for RecordManager "DML service — translates Row operations\ninto StorageEngine page reads/writes"
+
+class Table {
+    +TableId : int
+    +Name : string
+    +Columns : List~Column~
+    +Constraints : List~Constraint~
+    +Indexes : List~Index~
+    +Partitions : List~Partition~
+    +Triggers : List~Trigger~
+}
+
+class Column {
+    +ColumnId : int
+    +Name : string
+    +DataType : DataType
+    +Nullable : bool
+    +DefaultValue : object
+}
+
+class Row {
+    +RowId : RID
+    +Data : RecordData
+    +Version : long
+}
+
+class RecordData {
+    <<value object>>
+    +Bytes : Byte[]
+    +Length : int
+}
+
+class RID {
+    <<value object>>
+    +PageId : int
+    +SlotNumber : int
+    +Equals(other : RID) bool
+}
+
+class DataType {
+    <<enumeration>>
+    INT
+    BIGINT
+    VARCHAR
+    BOOLEAN
+    FLOAT
+    DATETIME
+}
+
+%% =====================================================
+%% Constraints
+%% =====================================================
+
+class Constraint {
+    <<abstract>>
+    +Name : string
+    +Validate(row : Row) bool
+}
+
+class PrimaryKey {
+    +Columns : List~Column~
+}
+
+class ForeignKey {
+    +ReferenceTable : Table
+    +ReferenceColumns : List~Column~
+}
+
+class UniqueConstraint
+
+class CheckConstraint {
+    +Expression : string
+}
+
+%% =====================================================
+%% Indexes
+%% =====================================================
+
+class Index {
+    <<abstract>>
+    +IndexId : int
+    +Name : string
+    +Columns : List~Column~
+    +Search(key : object) RID
+    +InsertKey(key : object, rid : RID)
+    +DeleteKey(key : object)
+}
+
+class BTreeIndex
+class HashIndex
+class BitmapIndex
+
+%% =====================================================
+%% Other Database Objects (Pure Domain Models)
+%% =====================================================
+
+class Partition {
+    +PartitionKey : string
+    +PartitionType : PartitionType
+}
+
+class View {
+    +ViewId : int
+    +Name : string
+    +QueryDefinition : string
+}
+
+class StoredProcedure {
+    +Name : string
+    +Parameters : List~Column~
+    +Body : string
+}
+
+class Trigger {
+    +Name : string
+    +Event : TriggerEvent
+    +Timing : TriggerTiming
+    +Body : string
+}
+
+class Sequence {
+    +Name : string
+    +CurrentValue : long
+    +Increment : long
+    +NextValue() long
+}
+
+%% =====================================================
+%% Transaction
+%% =====================================================
+
+class Transaction {
+    +TransactionId : int
+    +Status : TxStatus
+    +Begin()
+    +Commit()
+    +Rollback()
+}
+
+class TransactionManager {
+    -txTable : TransactionTable
+    -lockMgr : LockManager
+    -walMgr : WALManager
+    -mvccMgr : MVCCManager
+    +Begin() Transaction
+    +Commit(txId : int)
+    +Abort(txId : int)
+}
+
+class LockManager {
+    -lockTable : Map~string, LockQueue~
+    -detector : DeadlockDetector
+    +AcquireLock(txId : int, resId : string, mode : LockMode)
+    +ReleaseLock(txId : int, resId : string)
+    +ReleaseAll(txId : int)
+}
+note for LockManager "AcquireLock() throws LockTimeoutException\nor DeadlockException on conflict"
+
+class MVCCManager {
+    +CreateVersion(rid : RID, txId : int, data : RecordData)
+    +ReadVersion(rid : RID, snapshotId : long) Row
+    +GarbageCollect(olderThan : long)
+}
+
+%% =====================================================
+%% Storage Engine
+%% =====================================================
+
+class StorageEngine {
+    +ReadPage(id : PageId) Byte[]
+    +WritePage(id : PageId, data : Byte[])
+    +AllocatePage(tableId : int) PageId
+}
+
+class BufferPool {
+    -frames : Page[]
+    -policy : ReplacementPolicy
+    +FetchPage(id : PageId) Page
+    +UnpinPage(id : PageId)
+    +FlushPage(id : PageId)
+    +MarkDirty(id : PageId)
+}
+
+class Page {
+    +PageId : int
+    +Data : Byte[]
+    +IsDirty : bool
+    +PinCount : int
+}
+
+class FileManager {
+    -dataDir : string
+    +Read(pageId : PageId) Byte[]
+    +Write(pageId : PageId, data : Byte[])
+    +AllocateFile(path : string) int
+}
+
+class WALManager {
+    -buffer : LogBuffer
+    +Append(record : LogRecord) long
+    +Flush(upToLSN : long)
+    +Truncate(beforeLSN : long)
+}
+
+class RecoveryManager {
+    -walMgr : WALManager
+    +Recover(checkpointLSN : long)
+}
+
+%% =====================================================
+%% Catalog
+%% =====================================================
+
+class CatalogManager {
+    -sysTables : Map~string, object~
+    +RegisterTable(table : Table)
+    +GetTable(name : string) Table
+    +GetIndex(name : string) Index
+    +DeleteMeta(id : int)
+}
+note for CatalogManager "GetTable() / GetIndex() throws\nNotFoundException if not found"
+
+%% =====================================================
+%% Query Processor
+%% =====================================================
+
+class SQLParser {
+    +Parse(sql : string) ASTNode
+    -Tokenize(sql : string) Token[]
+    -BuildAST(tokens : Token[]) ASTNode
+}
+note for SQLParser "Parse() throws SqlSyntaxException\non invalid input"
+
+class Lexer {
+    +Tokenize(sql : string) Token[]
+}
+
+class AST {
+    +Root : ASTNode
+    +ToLogicalPlan() LogicalPlan
+}
+
+class LogicalPlan {
+    +Operators : List~Operator~
+}
+
+class PhysicalPlan {
+    +Operators : List~Operator~
+}
+
+class QueryOptimizer {
+    -costModel : CostModel
+    -catalog : CatalogManager
+    +Optimize(ast : ASTNode) PhysicalPlan
+}
+
+class QueryExecutor {
+    +Execute(plan : PhysicalPlan, tx : Transaction) ResultCursor
+}
+
+class StatisticsManager {
+    +Collect(table : Table)
+    +GetStats(tableId : int) TableStats
+}
+
+%% =====================================================
+%% Security
+%% =====================================================
+
+class SecurityManager {
+    -userDb : Map~string, HashedCredential~
+    +Authenticate(username : string, password : string) Session
+    +CheckPermission(user : string, obj : int, action : string) bool
+    +GrantRole(user : string, role : string)
+    +RevokeRole(user : string, role : string)
+}
+note for SecurityManager "Authenticate() throws\nPermissionDeniedException if invalid"
+
+class User {
+    +UserId : int
+    +Username : string
+    +PasswordHash : string
+}
+
+class Role {
+    +RoleId : int
+    +Name : string
+}
+
+class Permission {
+    +Action : string
+    +ObjectId : int
+}
+
+%% =====================================================
+%% Relationships
+%% =====================================================
+
+DatabaseServer --> DatabaseManager
+DatabaseServer --> TransactionManager
+DatabaseServer --> StorageEngine
+DatabaseServer --> CatalogManager
+DatabaseServer --> SecurityManager
+
+DatabaseManager --> Database
+
+SchemaService --> CatalogManager
+SchemaService --> StorageEngine
+SchemaService --> Schema
+SchemaService --> Table
+
+RecordManager --> StorageEngine
+RecordManager --> CatalogManager
+RecordManager --> Table
+RecordManager --> Row
+
+Database "1" *-- "many" Schema
+
+Schema "1" *-- "many" Table
+Schema "1" *-- "many" View
+Schema "1" *-- "many" StoredProcedure
+Schema "1" *-- "many" Sequence
+
+Table "1" *-- "many" Column
+Table "1" *-- "many" Constraint
+Table "1" *-- "many" Index
+Table "1" *-- "many" Partition
+Table "1" *-- "many" Trigger
+Table "1" *-- "many" Row
+
+Row *-- RID
+Row *-- RecordData
+Column --> DataType
+
+Constraint <|-- PrimaryKey
+Constraint <|-- ForeignKey
+Constraint <|-- UniqueConstraint
+Constraint <|-- CheckConstraint
+
+ForeignKey --> Table
+
+Index <|-- BTreeIndex
+Index <|-- HashIndex
+Index <|-- BitmapIndex
+
+TransactionManager --> Transaction
+TransactionManager --> LockManager
+TransactionManager --> MVCCManager
+TransactionManager --> WALManager
+
+StorageEngine --> BufferPool
+StorageEngine --> FileManager
+
+BufferPool --> Page
+
+RecoveryManager --> WALManager
+
+CatalogManager --> Database
+CatalogManager --> Schema
+CatalogManager --> Table
+CatalogManager --> Index
+
+SQLParser --> Lexer
+SQLParser --> AST
+
+AST --> LogicalPlan
+
+QueryOptimizer --> LogicalPlan
+QueryOptimizer --> PhysicalPlan
+QueryOptimizer --> StatisticsManager
+
+StatisticsManager --> Table
+
+QueryExecutor --> PhysicalPlan
+QueryExecutor --> Transaction
+
+SecurityManager --> User
+SecurityManager --> Role
+
+Role --> Permission
+```
+
+---
+
+## Split Class Diagrams
+
+To avoid clutter in a single large diagram, the architecture can be broken down into 7 logical components.
+
+### 1. Server & Database Management
+
+```mermaid
+classDiagram
+direction LR
+
+class DatabaseServer {
+    +ServerId : int
+    +Version : string
+    +Status : ServerStatus
+    +Start()
+    +Stop()
+    +Restart()
+}
+class DatabaseManager {
+    -catalog : CatalogManager
+    +CreateDatabase(name : string)
+    +DropDatabase(name : string)
+    +GetDatabase(name : string) Database
+    +ListDatabases() List~Database~
+}
+class ConfigurationManager {
+    +Configure(key : string, value : string)
+    +Get(key : string) string
+}
+class SecurityManager {
+    -userDb : Map~string, HashedCredential~
+    +Authenticate(username : string, password : string) Session
+    +CheckPermission(user : string, obj : int, action : string) bool
+    +GrantRole(user : string, role : string)
+    +RevokeRole(user : string, role : string)
+}
+note for SecurityManager "Authenticate() throws\nPermissionDeniedException if invalid"
+class MonitoringManager {
+    +Monitor()
+    +GetMetrics() ServerMetrics
+}
+
+DatabaseServer --> DatabaseManager
+DatabaseServer --> ConfigurationManager
+DatabaseServer --> SecurityManager
+DatabaseServer --> MonitoringManager
+```
+
+### 2. Database Objects
+
+```mermaid
+classDiagram
+direction LR
+
+class Database {
+    +DatabaseId : int
+    +Name : string
+    +Owner : string
+    +Schemas : List~Schema~
+}
+
+class Schema {
+    +SchemaId : int
+    +Name : string
+    +Tables : List~Table~
+    +Views : List~View~
+    +Procedures : List~StoredProcedure~
+    +Sequences : List~Sequence~
+}
+
+class Table {
+    +TableId : int
+    +Name : string
+    +Columns : List~Column~
+    +Constraints : List~Constraint~
+    +Indexes : List~Index~
+    +Partitions : List~Partition~
+    +Triggers : List~Trigger~
+}
+
+class Column {
+    +ColumnId : int
+    +Name : string
+    +DataType : DataType
+    +Nullable : bool
+    +DefaultValue : object
+}
+
+class Row {
+    +RowId : RID
+    +Data : RecordData
+    +Version : long
+}
+
+class RecordData {
+    <<value object>>
+    +Bytes : Byte[]
+    +Length : int
+}
+
+class RID {
+    <<value object>>
+    +PageId : int
+    +SlotNumber : int
+    +Equals(other : RID) bool
+}
+
+class DataType {
+    <<enumeration>>
+    INT
+    BIGINT
+    VARCHAR
+    BOOLEAN
+    FLOAT
+    DATETIME
+}
+
+class Constraint {
+    <<abstract>>
+    +Name : string
+    +Validate(row : Row) bool
+}
+
+class PrimaryKey {
+    +Columns : List~Column~
+}
+
+class ForeignKey {
+    +ReferenceTable : Table
+    +ReferenceColumns : List~Column~
+}
+
+class UniqueConstraint
+class CheckConstraint {
+    +Expression : string
+}
+
+Database "1" *-- "many" Schema
+Schema "1" *-- "many" Table
+Table "1" *-- "many" Column
+Table "1" *-- "many" Constraint
+Table "1" *-- "many" Row
+Row *-- RID
+Row *-- RecordData
+Column --> DataType
+Constraint <|-- PrimaryKey
+Constraint <|-- ForeignKey
+Constraint <|-- UniqueConstraint
+Constraint <|-- CheckConstraint
+ForeignKey --> Table
+
+%% ── Domain Services ─────────────────────────────────
+
+class SchemaService {
+    -catalog : CatalogManager
+    -storage : StorageEngine
+    +CreateTable(schema : Schema, def : TableDef) Table
+    +DropTable(schema : Schema, name : string)
+    +CreateView(schema : Schema, name : string, query : string) View
+    +DropView(schema : Schema, name : string)
+}
+note for SchemaService "DDL service — orchestrates CatalogManager\n+ StorageEngine to create/drop objects"
+
+class RecordManager {
+    -storage : StorageEngine
+    -catalog : CatalogManager
+    +Insert(table : Table, row : Row) RID
+    +Update(table : Table, rid : RID, row : Row)
+    +Delete(table : Table, rid : RID)
+    +Read(table : Table, rid : RID) Row
+    +Scan(table : Table) List~Row~
+}
+note for RecordManager "DML service — translates Row operations\ninto StorageEngine page reads/writes"
+
+SchemaService --> Schema : manages DDL
+SchemaService --> Table : creates/drops
+RecordManager --> Table : reads schema from
+RecordManager --> Row : reads/writes
+```
+
+### 3. Storage Engine
+
+```mermaid
+classDiagram
+direction LR
+
+class StorageEngine {
+    +ReadPage(id : PageId) Byte[]
+    +WritePage(id : PageId, data : Byte[])
+    +AllocatePage(tableId : int) PageId
+}
+class BufferPool {
+    -frames : Page[]
+    -policy : ReplacementPolicy
+    +FetchPage(id : PageId) Page
+    +UnpinPage(id : PageId)
+    +FlushPage(id : PageId)
+    +MarkDirty(id : PageId)
+}
+class Page {
+    +PageId : int
+    +Data : Byte[]
+    +IsDirty : bool
+    +PinCount : int
+}
+class FileManager {
+    -dataDir : string
+    +Read(pageId : PageId) Byte[]
+    +Write(pageId : PageId, data : Byte[])
+    +AllocateFile(path : string) int
+}
+
+StorageEngine --> BufferPool
+StorageEngine --> FileManager
+BufferPool --> Page
+```
+
+### 4. Transaction & Concurrency
+
+```mermaid
+classDiagram
+direction LR
+
+class TransactionManager {
+    -txTable : TransactionTable
+    -lockMgr : LockManager
+    -walMgr : WALManager
+    -mvccMgr : MVCCManager
+    +Begin() Transaction
+    +Commit(txId : int)
+    +Abort(txId : int)
+}
+class Transaction {
+    +TransactionId : int
+    +Status : TxStatus
+    +Begin()
+    +Commit()
+    +Rollback()
+}
+class LockManager {
+    -lockTable : Map~string, LockQueue~
+    -detector : DeadlockDetector
+    +AcquireLock(txId : int, resId : string, mode : LockMode)
+    +ReleaseLock(txId : int, resId : string)
+    +ReleaseAll(txId : int)
+}
+note for LockManager "AcquireLock() throws LockTimeoutException\nor DeadlockException on conflict"
+class MVCCManager {
+    +CreateVersion(rid : RID, txId : int, data : RecordData)
+    +ReadVersion(rid : RID, snapshotId : long) Row
+    +GarbageCollect(olderThan : long)
+}
+class WALManager {
+    -buffer : LogBuffer
+    +Append(record : LogRecord) long
+    +Flush(upToLSN : long)
+    +Truncate(beforeLSN : long)
+}
+class RecoveryManager {
+    -walMgr : WALManager
+    +Recover(checkpointLSN : long)
+}
+
+TransactionManager --> Transaction
+TransactionManager --> LockManager
+TransactionManager --> MVCCManager
+TransactionManager --> WALManager
+RecoveryManager --> WALManager
+```
+
+### 5. Query Processor
+
+```mermaid
+classDiagram
+direction LR
+
+class SQLParser {
+    +Parse(sql : string) ASTNode
+    -Tokenize(sql : string) Token[]
+    -BuildAST(tokens : Token[]) ASTNode
+}
+note for SQLParser "Parse() throws SqlSyntaxException\non invalid input"
+class Lexer {
+    +Tokenize(sql : string) Token[]
+}
+class AST {
+    +Root : ASTNode
+    +ToLogicalPlan() LogicalPlan
+}
+class QueryOptimizer {
+    -costModel : CostModel
+    -catalog : CatalogManager
+    +Optimize(ast : ASTNode) PhysicalPlan
+}
+class LogicalPlan {
+    +Operators : List~Operator~
+}
+class PhysicalPlan {
+    +Operators : List~Operator~
+}
+class StatisticsManager {
+    +Collect(table : Table)
+    +GetStats(tableId : int) TableStats
+}
+class QueryExecutor {
+    +Execute(plan : PhysicalPlan, tx : Transaction) ResultCursor
+}
+class RuntimeContext {
+    +TransactionId : int
+    +SessionId : string
+}
+
+SQLParser --> Lexer
+SQLParser --> AST
+AST --> LogicalPlan
+QueryOptimizer --> LogicalPlan
+QueryOptimizer --> PhysicalPlan
+QueryOptimizer --> StatisticsManager
+QueryExecutor --> PhysicalPlan
+QueryExecutor --> RuntimeContext
+```
+
+### 6. Catalog & Metadata
+
+```mermaid
+classDiagram
+direction LR
+
+class CatalogManager {
+    -sysTables : Map~string, object~
+    +RegisterTable(table : Table)
+    +GetTable(name : string) Table
+    +GetIndex(name : string) Index
+    +DeleteMeta(id : int)
+}
+note for CatalogManager "GetTable() / GetIndex() throws\nNotFoundException if not found"
+class Database
+class Schema
+class Table
+class Index
+
+CatalogManager --> Database
+CatalogManager --> Schema
+CatalogManager --> Table
+CatalogManager --> Index
+```
+
+### 7. Security
+
+```mermaid
+classDiagram
+direction LR
+
+class SecurityManager {
+    -userDb : Map~string, HashedCredential~
+    +Authenticate(username : string, password : string) Session
+    +CheckPermission(user : string, obj : int, action : string) bool
+    +GrantRole(user : string, role : string)
+    +RevokeRole(user : string, role : string)
+}
+note for SecurityManager "Authenticate() throws\nPermissionDeniedException if invalid"
+class User {
+    +UserId : int
+    +Username : string
+    +PasswordHash : string
+}
+class Role {
+    +RoleId : int
+    +Name : string
+}
+class Permission {
+    +Action : string
+    +ObjectId : int
+}
+
+SecurityManager --> User
+SecurityManager --> Role
+Role --> Permission
+```
+
+
 # This overview of DBMS Mindmap
 
 ```mermaid
@@ -550,4 +1383,140 @@ graph LR
     am_ie --- am_ie4[Logical Dump Utility]:::layer3
     am_ie --- am_ie5[Restore Utility]:::layer3
     am_ie --- am_ie6[Data Export Manager]:::layer3
+```
+
+
+```mermaid
+flowchart LR
+    %% =====================================================
+    %% NODE DECLARATIONS & STYLING (Declared exactly once)
+    %% =====================================================
+    DBMS((DBMS)):::rootStyle
+    
+    %% Left-side Branches
+    Server["Database Server"]:::branchAdmin
+    Security["Security"]:::branchAdmin
+    Replication["Replication"]:::branchAdmin
+    Recovery["Recovery"]:::branchTx
+    
+    DatabaseServer["DatabaseServer"]:::leafStyle
+    DatabaseManager["DatabaseManager"]:::leafStyle
+    ConfigurationManager["ConfigurationManager"]:::leafStyle
+    SecurityManager["SecurityManager"]:::leafStyle
+    MonitoringManager["MonitoringManager"]:::leafStyle
+    
+    User["User"]:::leafStyle
+    Role["Role"]:::leafStyle
+    Permission["Permission"]:::leafStyle
+    ClusterNode["Cluster Node"]:::leafStyle
+    LogRecord["Log Record"]:::leafStyle
+
+    %% Right-side Branches
+    Database["Database"]:::branchCatalog
+    Storage["Storage Engine"]:::branchStorage
+    Query["Query Processing"]:::branchQuery
+    Transaction["Transaction"]:::branchTx
+    Metadata["Metadata"]:::branchCatalog
+    
+    Schema["Schema"]:::leafStyle
+    Table["Table"]:::leafStyle
+    Column["Column"]:::leafStyle
+    Row["Row"]:::leafStyle
+    Index["Index"]:::leafStyle
+    
+    BufferPool["Buffer Pool"]:::leafStyle
+    PageManager["Page Manager"]:::leafStyle
+    FileManager["File Manager"]:::leafStyle
+    
+    SQLParser["SQL Parser"]:::leafStyle
+    Lexer["Lexer"]:::leafStyle
+    AST["AST"]:::leafStyle
+    
+    QueryOptimizer["Query Optimizer"]:::leafStyle
+    LogicalPlan["Logical Plan"]:::leafStyle
+    PhysicalPlan["Physical Plan"]:::leafStyle
+    StatisticsManager["Statistics Manager"]:::leafStyle
+    
+    QueryExecutor["Query Executor"]:::leafStyle
+    RuntimeContext["Runtime Context"]:::leafStyle
+    
+    TransactionObject["Transaction Object"]:::leafStyle
+    TransactionManager["Transaction Manager"]:::leafStyle
+    LockManager["Lock Manager"]:::leafStyle
+    MVCCManager["MVCC Manager"]:::leafStyle
+    WALManager["WAL Manager"]:::leafStyle
+    
+    CatalogManager["Catalog Manager"]:::leafStyle
+
+    %% =====================================================
+    %% CONNECTIONS (Simple Node IDs only)
+    %% =====================================================
+    
+    %% Left Side Connections (pointing left-to-right into DBMS)
+    Server --> DBMS
+    Security --> DBMS
+    Replication --> DBMS
+    Recovery --> DBMS
+
+    DatabaseServer --> Server
+    DatabaseManager --> Server
+    ConfigurationManager --> Server
+    SecurityManager --> Server
+    MonitoringManager --> Server
+
+    User --> Security
+    Role --> Security
+    Permission --> Security
+
+    ClusterNode --> Replication
+    LogRecord --> Recovery
+
+    %% Right Side Connections (pointing right)
+    DBMS --> Database
+    DBMS --> Storage
+    DBMS --> Query
+    DBMS --> Transaction
+    DBMS --> Metadata
+
+    Database --> Schema
+    Database --> Table
+    Database --> Column
+    Database --> Row
+    Database --> Index
+
+    Storage --> BufferPool
+    Storage --> PageManager
+    Storage --> FileManager
+
+    Query --> SQLParser
+    SQLParser --> Lexer
+    SQLParser --> AST
+
+    Query --> QueryOptimizer
+    QueryOptimizer --> LogicalPlan
+    QueryOptimizer --> PhysicalPlan
+    QueryOptimizer --> StatisticsManager
+
+    Query --> QueryExecutor
+    QueryExecutor --> RuntimeContext
+    QueryExecutor --> PhysicalPlan
+
+    Transaction --> TransactionObject
+    Transaction --> TransactionManager
+    Transaction --> LockManager
+    Transaction --> MVCCManager
+    Transaction --> WALManager
+
+    Metadata --> CatalogManager
+
+    %% =====================================================
+    %% STYLING DEFINITIONS (HSL Colors)
+    %% =====================================================
+    classDef rootStyle fill:#1d3557,stroke:#457b9d,stroke-width:3px,color:#fff,font-weight:bold,font-size:16px;
+    classDef branchAdmin fill:#e1f5fe,stroke:#0288d1,stroke-width:2px,color:#01579b,font-weight:bold;
+    classDef branchQuery fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#e65100,font-weight:bold;
+    classDef branchCatalog fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#1b5e20,font-weight:bold;
+    classDef branchStorage fill:#e0f2f1,stroke:#00695c,stroke-width:2px,color:#004d40,font-weight:bold;
+    classDef branchTx fill:#ffebee,stroke:#c62828,stroke-width:2px,color:#842029,font-weight:bold;
+    classDef leafStyle fill:#ffffff,stroke:#b0bec5,stroke-width:1px,color:#37474f;
 ```
