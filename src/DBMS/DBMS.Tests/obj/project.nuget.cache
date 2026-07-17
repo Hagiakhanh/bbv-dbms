@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "6WEvIb/MP0w=",
+  "dgSpecHash": "SWk9QFk1OkM=",
   "success": true,
-  "projectFilePath": "D:\\Slide\\bbv-dbms\\src\\DBMS\\DBMS.Tests\\DBMS.Tests.csproj",
+  "projectFilePath": "d:\\Slide\\bbv-dbms\\src\\DBMS\\DBMS.Tests\\DBMS.Tests.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\HA GIA KHANH\\.nuget\\packages\\castle.core\\5.1.1\\castle.core.5.1.1.nupkg.sha512",
     "C:\\Users\\HA GIA KHANH\\.nuget\\packages\\coverlet.collector\\6.0.4\\coverlet.collector.6.0.4.nupkg.sha512",

@@ -166,7 +166,7 @@ classDiagram
     %% ── VALUE OBJECTS ──────────────────────────────────────
     class PageId {
         <<value object>>
-        +FileId fileId
+        +int fileId
         +Int pageNumber
         +equals(other PageId) Boolean
         +toString() String
@@ -188,23 +188,23 @@ classDiagram
         +Int slotNumber
         +equals(other RID) Boolean
     }
-    class DatabaseName {
+    class string {
         <<value object>>
         +String value
         +validate()
     }
-    class AbsolutePath {
+    class string {
         <<value object>>
         +String path
         +exists() Boolean
-        +resolve(child String) AbsolutePath
+        +resolve(child String) string
     }
-    class PoolSize {
+    class int {
         <<value object>>
         +Int value
         +validate()
     }
-    class BTreeDegree {
+    class int {
         <<value object>>
         +Int value
         +validate()
@@ -308,9 +308,9 @@ classDiagram
     }
     class ISnapshotProvider {
         <<interface>>
-        +createSnapshot(txId TransactionId) SnapshotId
-        +releaseSnapshot(id SnapshotId)
-        +isVisible(txId TransactionId, snapshotId SnapshotId) Boolean
+        +createSnapshot(txId TransactionId) long
+        +releaseSnapshot(id long)
+        +isVisible(txId TransactionId, snapshotId long) Boolean
     }
     class IAccessMethod {
         <<interface>>
@@ -343,7 +343,7 @@ classDiagram
         +truncateBefore(lsn LSN)
     }
     class LogWriter {
-        -AbsolutePath logFilePath
+        -string logFilePath
         -Long currentOffset
         +write(bytes Byte[])
         +fsync()
@@ -351,7 +351,7 @@ classDiagram
     }
     class BPlusTree {
         -PageId rootPageId
-        -BTreeDegree degree
+        -int degree
         -IBufferPool bufferPool
         -splitNode(nodeId PageId) PageId
         -propagateSplit(child PageId, parent PageId)
@@ -371,7 +371,7 @@ classDiagram
         +rangeScan(from Key, to Key) Iterator~RID~
     }
     class LRUPolicy {
-        -PoolSize frameCount
+        -int frameCount
         -LinkedHashMap~Int~ usageOrder
         +recordAccess(frameId Int)
         +evictFrame() Optional~Int~
@@ -379,7 +379,7 @@ classDiagram
         +unpin(frameId Int)
     }
     class ClockPolicy {
-        -PoolSize frameCount
+        -int frameCount
         -Boolean[] referenceBits
         -Int clockHand
         +recordAccess(frameId Int)
@@ -390,12 +390,12 @@ classDiagram
     class SnapshotManager {
         -List~Snapshot~ activeSnapshots
         -Snapshot buildSnapshot(txId TransactionId) Snapshot
-        +createSnapshot(txId TransactionId) SnapshotId
-        +releaseSnapshot(id SnapshotId)
-        +isVisible(txId TransactionId, snapshotId SnapshotId) Boolean
+        +createSnapshot(txId TransactionId) long
+        +releaseSnapshot(id long)
+        +isVisible(txId TransactionId, snapshotId long) Boolean
     }
     class TableScan {
-        -TableId tableId
+        -int tableId
         -RID currentRid
         -RecordManager recordMgr
         +open(ctx ScanContext)
@@ -403,7 +403,7 @@ classDiagram
         +close()
     }
     class IndexScan {
-        -IndexId indexId
+        -int indexId
         -Key searchKey
         -IIndexStructure index
         +open(ctx ScanContext)
@@ -489,27 +489,27 @@ classDiagram
 classDiagram
 
     class DiskManager {
-        -Map~FileId, FileHandle~ openFiles
-        -AbsolutePath dataDir
-        -ensureOpen(path AbsolutePath) FileHandle
+        -Map~int, FileHandle~ openFiles
+        -string dataDir
+        -ensureOpen(path string) FileHandle
         +readPage(id PageId) Byte[]
         +writePage(id PageId, data Byte[])
-        +allocateFile(path AbsolutePath) FileId
+        +allocateFile(path string) int
     }
     note for DiskManager "Throws StorageException if file does not exist"
 
     class TablespaceManager {
-        -Map~TablespaceId, Tablespace~ tablespaces
+        -Map~int, Tablespace~ tablespaces
         -IMetadataCatalog catalog
-        +createTablespace(name String, path AbsolutePath)
-        +getTablespace(id TablespaceId) Tablespace
-        +mapDatabaseToFile(db DatabaseName) AbsolutePath
+        +createTablespace(name String, path string)
+        +getTablespace(id int) Tablespace
+        +mapDatabaseToFile(db string) string
     }
 
     class PageManager {
         -DiskManager diskManager
         -SpaceManager spaceMgr
-        +allocatePage(tableId TableId) PageId
+        +allocatePage(tableId int) PageId
         +fetchPage(id PageId) RawPage
         +freePage(id PageId)
     }
@@ -518,7 +518,7 @@ classDiagram
         -formatHeader(page RawPage) PageHeader
         -computeFreeSpace(page RawPage) Int
         +formatSlottedPage(page RawPage) FormattedPage
-        +insertTuple(page FormattedPage, tuple Byte[]) SlotId
+        +insertTuple(page FormattedPage, tuple Byte[]) int
     }
     note for PageFormatter "insertTuple throw StorageException if does not have enough free space"
 
@@ -540,7 +540,7 @@ classDiagram
         -IBufferPool bufferPool
         -RecordLayoutManager layoutMgr
         -RIDGenerator ridGen
-        +insertRecord(tableId TableId, data Byte[]) RID
+        +insertRecord(tableId int, data Byte[]) RID
         +deleteRecord(rid RID)
         +updateRecord(rid RID, data Byte[])
         +readRecord(rid RID) Optional~Record~
@@ -548,7 +548,7 @@ classDiagram
 
     class RecordLayoutManager {
         -Schema schema
-        +getFieldOffset(colId ColId) Int
+        +getFieldOffset(colId int) Int
         +serialize(record Record) Byte[]
         +deserialize(data Byte[]) Record
     }
@@ -556,37 +556,37 @@ classDiagram
     class RIDGenerator {
         -PageId currentPageId
         -Int nextSlotId
-        +generateNextRID(tableId TableId) RID
+        +generateNextRID(tableId int) RID
     }
 
     class IndexManager {
         -IBufferPool bufferPool
         -IMetadataCatalog catalog
-        -Map~IndexId, IIndexStructure~ indexCache
-        +createIndex(def IndexDef) IndexId
-        +dropIndex(id IndexId)
-        +getIndex(id IndexId) IIndexStructure
+        -Map~int, IIndexStructure~ indexCache
+        +createIndex(def IndexDef) int
+        +dropIndex(id int)
+        +getIndex(id int) IIndexStructure
     }
 
     class SpaceManager {
         -ExtentManager extentMgr
-        +allocateSpace(size Int) ExtentId
-        +freeSpace(extent ExtentId)
+        +allocateSpace(size Int) int
+        +freeSpace(extent int)
         +availableSpace() Long
     }
 
     class ExtentManager {
-        -Map~ExtentId, ExtentInfo~ extents
+        -Map~int, ExtentInfo~ extents
         -SegmentManager segMgr
-        +allocateExtent(segId SegmentId) ExtentId
-        +freeExtent(id ExtentId)
+        +allocateExtent(segId int) int
+        +freeExtent(id int)
     }
 
     class SegmentManager {
-        -Map~SegmentId, SegmentInfo~ segments
-        +createSegment(tableId TableId) SegmentId
-        +growSegment(id SegmentId)
-        +dropSegment(id SegmentId)
+        -Map~int, SegmentInfo~ segments
+        +createSegment(tableId int) int
+        +growSegment(id int)
+        +dropSegment(id int)
     }
 
     RecordManager --> IBufferPool
@@ -622,7 +622,7 @@ classDiagram
     }
 
     class LogWriter {
-        -AbsolutePath logFilePath
+        -string logFilePath
         -Long currentOffset
         +write(bytes Byte[])
         +fsync()
@@ -667,18 +667,18 @@ classDiagram
     }
 
     class LockManager {
-        -Map~ResourceId, LockQueue~ lockTable
+        -Map~string, LockQueue~ lockTable
         -DeadlockDetector detector
-        -waitFor(txId TransactionId, resId ResourceId)
-        +acquireLock(txId TransactionId, resId ResourceId, mode LockMode)
-        +releaseLock(txId TransactionId, resId ResourceId)
+        -waitFor(txId TransactionId, resId string)
+        +acquireLock(txId TransactionId, resId string, mode LockMode)
+        +releaseLock(txId TransactionId, resId string)
         +releaseAll(txId TransactionId)
     }
     note for LockManager "acquireLock throw LockTimeoutException if wait for too long"
 
     class MVCCManager {
         -ISnapshotProvider snapshotProvider
-        +readVersion(rid RID, snapshotId SnapshotId) Optional~Record~
+        +readVersion(rid RID, snapshotId long) Optional~Record~
         +writeVersion(rid RID, txId TransactionId, data Byte[])
         +vacuum(olderThan LSN)
     }
@@ -719,14 +719,14 @@ classDiagram
     note for RecoveryManager "recover() = analyzePass + redoPass + undoPass\nEach step is a separate method — SRP"
 
     class BackupManager {
-        -AbsolutePath backupDir
+        -string backupDir
         -IWALManager walMgr
         -DiskManager diskManager
-        -snapshotFiles() List~AbsolutePath~
-        -verifyChecksum(file AbsolutePath) Boolean
-        +startFullBackup() BackupId
-        +startIncrementalBackup(since LSN) BackupId
-        +verifyBackup(id BackupId) Boolean
+        -snapshotFiles() List~string~
+        -verifyChecksum(file string) Boolean
+        +startFullBackup() int
+        +startIncrementalBackup(since LSN) int
+        +verifyBackup(id int) Boolean
     }
 
     RecoveryManager --> IWALManager
@@ -744,34 +744,34 @@ classDiagram
 
     class IMetadataCatalog {
         <<interface>>
-        +getTableMeta(name TableName) Optional~TableMeta~
-        +getIndexMeta(id IndexId) Optional~IndexMeta~
+        +getTableMeta(name string) Optional~TableMeta~
+        +getIndexMeta(id int) Optional~IndexMeta~
         +updateMeta(obj CatalogObject)
-        +deleteMeta(id ObjectId)
+        +deleteMeta(id int)
     }
 
     class MetadataCatalog {
         -Map~String, CatalogObject~ sysTables
         -IBufferPool bufferPool
-        -loadFromStorage(id ObjectId) CatalogObject
-        +getTableMeta(name TableName) Optional~TableMeta~
-        +getIndexMeta(id IndexId) Optional~IndexMeta~
+        -loadFromStorage(id int) CatalogObject
+        +getTableMeta(name string) Optional~TableMeta~
+        +getIndexMeta(id int) Optional~IndexMeta~
         +updateMeta(obj CatalogObject)
-        +deleteMeta(id ObjectId)
+        +deleteMeta(id int)
     }
 
     class DatabaseManager {
         -IMetadataCatalog catalog
         -TablespaceManager tablespaceMgr
-        +createDatabase(name DatabaseName)
-        +dropDatabase(name DatabaseName)
-        +getDatabase(name DatabaseName) Optional~DatabaseMeta~
+        +createDatabase(name string)
+        +dropDatabase(name string)
+        +getDatabase(name string) Optional~DatabaseMeta~
     }
 
     class SchemaManager {
         -IMetadataCatalog catalog
-        +createSchema(dbName DatabaseName, schemaName String)
-        +dropSchema(dbName DatabaseName, schemaName String)
+        +createSchema(dbName string, schemaName String)
+        +dropSchema(dbName string, schemaName String)
     }
 
     class TableManager {
@@ -779,8 +779,8 @@ classDiagram
         -IndexManager indexMgr
         -SpaceManager spaceMgr
         +createTable(def TableDef)
-        +alterTable(name TableName, patch TablePatch)
-        +dropTable(name TableName)
+        +alterTable(name string, patch TablePatch)
+        +dropTable(name string)
     }
 
     MetadataCatalog ..|> IMetadataCatalog
@@ -800,9 +800,9 @@ classDiagram
 
     class IAuthorizationManager {
         <<interface>>
-        +checkPermission(user UserId, obj ObjectId, action Action)
-        +grantRole(user UserId, role RoleId)
-        +revokeRole(user UserId, role RoleId)
+        +checkPermission(user string, obj int, action string)
+        +grantRole(user string, role string)
+        +revokeRole(user string, role string)
     }
 
     class AuthenticationManager {
@@ -814,10 +814,10 @@ classDiagram
 
     class AuthorizationManager {
         -IMetadataCatalog catalog
-        -resolveRoles(user UserId) Set~RoleId~
-        +checkPermission(user UserId, obj ObjectId, action Action)
-        +grantRole(user UserId, role RoleId)
-        +revokeRole(user UserId, role RoleId)
+        -resolveRoles(user string) Set~string~
+        +checkPermission(user string, obj int, action string)
+        +grantRole(user string, role string)
+        +revokeRole(user string, role string)
     }
 
     AuthorizationManager ..|> IAuthorizationManager
@@ -825,6 +825,135 @@ classDiagram
 ```
 
 # Unit Test Specifications
+
+## DatabaseServer
+* `StartServer_ShouldInitializeAllServices`
+* `StopServer_ShouldShutdownGracefully`
+* `RecoverAfterCrash_ShouldReplayWAL`
+* `RejectDuplicateDatabaseName`
+
+## Database
+* `CreateDatabase_ShouldRegisterInCatalog`
+* `DropDatabase_ShouldRemoveAllMetadata`
+* `OpenDatabase_ShouldLoadStorageAndCatalog`
+* `CloseDatabase_ShouldFlushAllDirtyBuffers`
+* `DatabaseExists_ReturnsTrueForExistingName`
+
+## Schema
+* `AddTable_ShouldAppearInTableList`
+* `DropTable_ShouldRemoveFromTableList`
+* `CreateView_ShouldRegisterViewInSchema`
+* `CreateProcedure_ShouldRegisterProcedureInSchema`
+* `ValidateDuplicateObjectName_ShouldThrow`
+
+## Table
+* `InsertRow_ShouldIncreaseRowCount`
+* `UpdateRow_ShouldModifyExistingData`
+* `DeleteRow_ShouldDecreaseRowCount`
+* `Truncate_ShouldRemoveAllRowsAndResetSpace`
+* `AddColumn_ShouldUpdateSchemaAndStorage`
+* `RemoveColumn_ShouldInvalidateDependentIndexes`
+* `AddConstraint_ShouldEnforceOnNextWrite`
+* `DropConstraint_ShouldAllowPreviouslyBlockedData`
+* `CreateIndex_ShouldBuildIndexStructureOnExistingData`
+* `DropIndex_ShouldRemoveIndexAndFreeSpace`
+* `CreatePartition_ShouldRouteDataToCorrectPartition`
+* `RebuildIndexes_ShouldProduceConsistentIndexState`
+
+## Column
+* `ValidateNullable_NullInNotNullColumn_ShouldThrow`
+* `ValidateDataType_MismatchedType_ShouldThrow`
+* `ValidateLength_ExceedsMaxLength_ShouldThrow`
+* `ApplyDefaultValue_WhenNoValueProvided_ShouldInsertDefault`
+* `ChangeDataType_ShouldMigrateExistingDataOrThrow`
+* `EvaluateComputedColumn_ShouldReturnDerivedValue`
+
+## Row
+* `CreateRow_ShouldAssignUniqueRID`
+* `CloneVersion_ShouldCreateIndependentMVCCVersion`
+* `Serialize_ThenDeserialize_ShouldProduceIdenticalRow`
+* `CalculateRowSize_ShouldMatchPhysicalStorageUsage`
+* `CompareRows_SameData_ShouldReturnEqual`
+
+## Constraint
+* `ValidatePrimaryKey_DuplicateValue_ShouldThrow`
+* `ValidateUnique_DuplicateValue_ShouldThrow`
+* `ValidateForeignKey_NoParentRow_ShouldThrow`
+* `ValidateCheckConstraint_ViolatedExpression_ShouldThrow`
+* `CascadeDelete_ShouldRemoveDependentChildRows`
+* `CascadeUpdate_ShouldPropagateKeyChange`
+* `DisableConstraint_ShouldAllowViolatingInsert`
+* `EnableConstraint_WithExistingViolation_ShouldThrow`
+
+## Index
+* `Search_ExistingKey_ShouldReturnCorrectRID`
+* `Search_NonExistingKey_ShouldReturnEmpty`
+* `InsertKey_CausingNodeSplit_ShouldMaintainOrder`
+* `DeleteKey_CausingUnderflow_ShouldRebalance`
+* `RangeScan_ShouldReturnAllKeysInRange`
+* `Rebuild_ShouldProduceConsistentStructure`
+* `EstimateSelectivity_ShouldReturnReasonableCardinality`
+
+## Partition
+* `RouteInsert_ShouldGoToCorrectPartition`
+* `MovePartition_ShouldRelocateDataWithoutLoss`
+* `QueryAcrossPartitions_ShouldMergeResults`
+
+## View
+* `CreateView_ValidDefinition_ShouldResolveAgainstBaseTables`
+* `QueryView_ShouldReturnLiveDataFromBaseTables`
+* `DropView_ShouldNotAffectBaseTables`
+* `ValidateDefinition_ReferencesNonExistentTable_ShouldThrow`
+
+## StoredProcedure
+* `Compile_ValidBody_ShouldCachePlan`
+* `Execute_WithValidParameters_ShouldReturnExpectedResult`
+* `Execute_WithInvalidParameters_ShouldThrow`
+* `HandleException_WithinBody_ShouldRollbackAndPropagate`
+
+## Trigger
+* `BeforeInsert_ShouldFireBeforeRowIsWritten`
+* `AfterInsert_ShouldFireAfterRowIsCommitted`
+* `BeforeUpdate_ShouldAllowModifyingNewValues`
+* `AfterDelete_ShouldCascadeToAuditLog`
+* `DisableTrigger_ShouldSkipFiringOnDML`
+* `EnableTrigger_ShouldResumeNormalFiring`
+
+## Transaction
+* `CommitChanges_ShouldPersistAllWrites`
+* `RollbackChanges_ShouldUndoAllWrites`
+* `CreateSavepoint_ShouldMarkPartialRollbackPoint`
+* `RollbackToSavepoint_ShouldUndoOnlyPostSavepointChanges`
+* `SetIsolationLevel_ShouldAffectVisibility`
+* `Timeout_ShouldAutoRollback`
+
+## StatisticsManager
+* `CollectStatistics_ShouldPopulateHistogram`
+* `EstimateCardinality_ShouldInfluenceOptimizerChoice`
+* `RefreshStatistics_AfterBulkInsert_ShouldUpdateRowCount`
+
+## BackupManager
+* `FullBackup_ShouldCopyAllDataAndCatalogFiles`
+* `RestoreBackup_ShouldProduceSameDatabaseState`
+* `IncrementalBackup_ShouldOnlyCopyChangedPages`
+* `VerifyBackup_CorruptedFile_ShouldThrow`
+
+## ReplicationManager
+* `ReplicateLog_ShouldApplyWALToReplica`
+* `Failover_ShouldPromoteReplicaToLeader`
+* `Heartbeat_WhenPrimaryDown_ShouldTriggerElection`
+* `SynchronizeReplica_ShouldCatchUpLaggedNode`
+
+## MonitoringManager
+* `CollectMetrics_AfterQuery_ShouldRecordExecutionTime`
+* `DetectSlowQuery_ExceedsThreshold_ShouldRaiseAlert`
+* `CaptureDeadlock_ShouldLogInvolvedTransactions`
+
+## ConnectionPool
+* `AcquireConnection_WhenPoolNotFull_ShouldReturnConnection`
+* `ReuseConnection_AfterRelease_ShouldNotCreateNew`
+* `EvictIdleConnection_ExceedsTimeout_ShouldClose`
+* `MaxPoolSize_AllConnectionsInUse_ShouldBlockOrThrow`
 
 ## DiskManager
 * `DiskManagerInitialize_NewDatabase_CreatesDataFiles`
