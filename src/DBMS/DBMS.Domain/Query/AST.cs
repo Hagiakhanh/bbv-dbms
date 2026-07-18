@@ -5,9 +5,10 @@ namespace DBMS.Domain.Query;
 
 public class AST
 {
-    public ASTNode Root { get; set; }
-    public LogicalPlan ToLogicalPlan() 
-    { 
-        throw new NotImplementedException(); 
+    public object Root { get; set; }
+
+    public LogicalPlan ToLogicalPlan()
+    {
+        throw new NotImplementedException();
     }
 }

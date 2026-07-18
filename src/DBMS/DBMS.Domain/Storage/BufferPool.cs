@@ -6,24 +6,25 @@ namespace DBMS.Domain.Storage;
 public class BufferPool
 {
     private Page[] frames;
-    private ReplacementPolicy policy;
-    public Page FetchPage(id : PageId) 
-    { 
-        throw new NotImplementedException(); 
+    private string policy;
+
+    public Page FetchPage(int pageId)
+    {
+        throw new NotImplementedException();
     }
 
-    public void UnpinPage(id : PageId) 
-    { 
-        throw new NotImplementedException(); 
+    public void UnpinPage(int pageId)
+    {
+        throw new NotImplementedException();
     }
 
-    public void FlushPage(id : PageId) 
-    { 
-        throw new NotImplementedException(); 
+    public void FlushPage(int pageId)
+    {
+        throw new NotImplementedException();
     }
-    
-    public void MarkDirty(id : PageId) 
-    { 
-        throw new NotImplementedException(); 
+
+    public void MarkDirty(int pageId)
+    {
+        throw new NotImplementedException();
     }
 }

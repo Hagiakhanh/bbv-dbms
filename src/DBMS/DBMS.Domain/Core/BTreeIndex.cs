@@ -3,7 +3,20 @@ using System.Collections.Generic;
 
 namespace DBMS.Domain.Core;
 
-public class BTreeIndex
+public class BTreeIndex : Index
 {
-    // Không có thuộc tính/phương thức nào được định nghĩa chi tiết
+    public override RID Search(object key)
+    {
+        throw new NotImplementedException();
+    }
+
+    public override void InsertKey(object key, RID rid)
+    {
+        throw new NotImplementedException();
+    }
+
+    public override void DeleteKey(object key)
+    {
+        throw new NotImplementedException();
+    }
 }

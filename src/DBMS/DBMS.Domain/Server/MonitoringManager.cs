@@ -5,13 +5,13 @@ namespace DBMS.Domain.Server;
 
 public class MonitoringManager
 {
-    public void Monitor() 
-    { 
-        throw new NotImplementedException(); 
+    public void Monitor()
+    {
+        throw new NotImplementedException();
     }
-    
-    public ServerMetrics GetMetrics() 
-    { 
-        throw new NotImplementedException(); 
+
+    public ServerMetrics GetMetrics()
+    {
+        throw new NotImplementedException();
     }
 }

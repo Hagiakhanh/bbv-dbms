@@ -7,28 +7,29 @@ public class RecordManager
 {
     private StorageEngine storage;
     private CatalogManager catalog;
-    public RID Insert(table : Table, row : Row) 
-    { 
-        throw new NotImplementedException(); 
+
+    public RID Insert(Table table, Row row)
+    {
+        throw new NotImplementedException();
     }
 
-    public void Update(table : Table, rid : RID, row : Row) 
-    { 
-        throw new NotImplementedException(); 
+    public void Update(Table table, RID rid, Row row)
+    {
+        throw new NotImplementedException();
     }
 
-    public void Delete(table : Table, rid : RID) 
-    { 
-        throw new NotImplementedException(); 
+    public void Delete(Table table, RID rid)
+    {
+        throw new NotImplementedException();
     }
 
-    public Row Read(table : Table, rid : RID) 
-    { 
-        throw new NotImplementedException(); 
+    public Row Read(Table table, RID rid)
+    {
+        throw new NotImplementedException();
     }
-    
-    public List<Row> Scan(table : Table) 
-    { 
-        throw new NotImplementedException(); 
+
+    public List<Row> Scan(Table table)
+    {
+        throw new NotImplementedException();
     }
 }

@@ -5,8 +5,8 @@ namespace DBMS.Domain.Query;
 
 public class Lexer
 {
-    public Token[] Tokenize(sql : string) 
-    { 
-        throw new NotImplementedException(); 
+    public object[] Tokenize(string sql)
+    {
+        throw new NotImplementedException();
     }
 }

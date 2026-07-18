@@ -8,4 +8,9 @@ public class StoredProcedure
     public string Name { get; set; }
     public List<Column> Parameters { get; set; }
     public string Body { get; set; }
+
+    public void Execute()
+    {
+        throw new NotImplementedException();
+    }
 }

@@ -5,20 +5,21 @@ namespace DBMS.Domain.Transactions;
 
 public class LockManager
 {
-    private Map<string, LockQueue> lockTable;
-    private DeadlockDetector detector;
-    public void AcquireLock(txId : int, resId : string, mode : LockMode) 
-    { 
-        throw new NotImplementedException(); 
+    private Dictionary<string, object> lockTable;
+    private object detector;
+
+    public void AcquireLock(int txId, string resId, string mode)
+    {
+        throw new NotImplementedException();
     }
-    
-    public void ReleaseLock(txId : int, resId : string) 
-    { 
-        throw new NotImplementedException(); 
+
+    public void ReleaseLock(int txId, string resId)
+    {
+        throw new NotImplementedException();
     }
-    
-    public void ReleaseAll(txId : int) 
-    { 
-        throw new NotImplementedException(); 
+
+    public void ReleaseAll(int txId)
+    {
+        throw new NotImplementedException();
     }
 }

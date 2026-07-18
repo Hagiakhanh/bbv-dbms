@@ -6,7 +6,11 @@ namespace DBMS.Domain.Core;
 public class Trigger
 {
     public string Name { get; set; }
-    public TriggerEvent Event { get; set; }
-    public TriggerTiming Timing { get; set; }
+    public string Event { get; set; }
     public string Body { get; set; }
+
+    public void Execute()
+    {
+        throw new NotImplementedException();
+    }
 }

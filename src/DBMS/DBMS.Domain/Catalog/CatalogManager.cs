@@ -5,23 +5,24 @@ namespace DBMS.Domain.Catalog;
 
 public class CatalogManager
 {
-    private Map<string, object> sysTables;
-    public void RegisterTable(table : Table) 
-    {
-        throw new NotImplementedException(); 
-    }
+    private Dictionary<string, object> sysTables;
 
-    public Table GetTable(name : string) 
+    public void RegisterTable(Table table)
     {
         throw new NotImplementedException();
     }
 
-    public Index GetIndex(name : string) 
+    public Table GetTable(string name)
     {
         throw new NotImplementedException();
     }
-    
-    public void DeleteMeta(id : int) 
+
+    public Core.Index GetIndex(string name)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void DeleteMeta(int id)
     {
         throw new NotImplementedException();
     }

@@ -3,13 +3,14 @@ using System.Collections.Generic;
 
 namespace DBMS.Domain.Core;
 
+// <<value object>>
 public class RID
 {
-    // <<value object>>
     public int PageId { get; set; }
     public int SlotNumber { get; set; }
-    public bool Equals(other : RID) 
-    { 
-        throw new NotImplementedException(); 
+
+    public bool Equals(RID other)
+    {
+        throw new NotImplementedException();
     }
 }

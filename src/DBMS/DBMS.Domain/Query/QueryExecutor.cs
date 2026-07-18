@@ -5,8 +5,8 @@ namespace DBMS.Domain.Query;
 
 public class QueryExecutor
 {
-    public ResultCursor Execute(plan : PhysicalPlan, tx : Transaction) 
-    { 
-        throw new NotImplementedException(); 
+    public object Execute(PhysicalPlan plan, Transaction tx)
+    {
+        throw new NotImplementedException();
     }
 }

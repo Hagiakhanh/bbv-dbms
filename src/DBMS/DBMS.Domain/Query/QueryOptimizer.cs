@@ -5,10 +5,11 @@ namespace DBMS.Domain.Query;
 
 public class QueryOptimizer
 {
-    private CostModel costModel;
+    private object costModel;
     private CatalogManager catalog;
-    public PhysicalPlan Optimize(ast : ASTNode) 
-    { 
-        throw new NotImplementedException(); 
+
+    public PhysicalPlan Optimize(object ast)
+    {
+        throw new NotImplementedException();
     }
 }

@@ -5,13 +5,13 @@ namespace DBMS.Domain.Server;
 
 public class ConfigurationManager
 {
-    public void Configure(key : string, value : string) 
-    { 
-        throw new NotImplementedException(); 
+    public void Configure(string key, string value)
+    {
+        throw new NotImplementedException();
     }
-    
-    public string Get(key : string) 
-    { 
-        throw new NotImplementedException(); 
+
+    public string Get(string key)
+    {
+        throw new NotImplementedException();
     }
 }

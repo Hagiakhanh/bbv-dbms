@@ -5,19 +5,20 @@ namespace DBMS.Domain.Storage;
 
 public class WALManager
 {
-    private LogBuffer buffer;
-    public long Append(record : LogRecord) 
-    { 
-        throw new NotImplementedException(); 
+    private object buffer;
+
+    public long Append(object record)
+    {
+        throw new NotImplementedException();
     }
-    
-    public void Flush(upToLSN : long) 
-    { 
-        throw new NotImplementedException(); 
+
+    public void Flush(long upToLSN)
+    {
+        throw new NotImplementedException();
     }
-    
-    public void Truncate(beforeLSN : long) 
-    { 
-        throw new NotImplementedException(); 
+
+    public void Truncate(long beforeLSN)
+    {
+        throw new NotImplementedException();
     }
 }

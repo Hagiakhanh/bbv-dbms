@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DBMS.Domain")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+905f023311d645c7bd946b2980b69f8879adad50")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+542374d5fcc9ba0b8bbaeb680ec25ada12f45502")]
 [assembly: System.Reflection.AssemblyProductAttribute("DBMS.Domain")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DBMS.Domain")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

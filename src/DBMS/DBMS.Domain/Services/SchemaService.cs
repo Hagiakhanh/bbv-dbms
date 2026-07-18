@@ -7,23 +7,24 @@ public class SchemaService
 {
     private CatalogManager catalog;
     private StorageEngine storage;
-    public Table CreateTable(schema : Schema, def : TableDef) 
-    { 
-        throw new NotImplementedException(); 
+
+    public Table CreateTable(Schema schema, TableDef def)
+    {
+        throw new NotImplementedException();
     }
-    
-    public void DropTable(schema : Schema, name : string) 
-    { 
-        throw new NotImplementedException(); 
+
+    public void DropTable(Schema schema, string name)
+    {
+        throw new NotImplementedException();
     }
-    
-    public View CreateView(schema : Schema, name : string, query : string) 
-    { 
-        throw new NotImplementedException(); 
+
+    public View CreateView(Schema schema, string name, string query)
+    {
+        throw new NotImplementedException();
     }
-    
-    public void DropView(schema : Schema, name : string) 
-    { 
-        throw new NotImplementedException(); 
+
+    public void DropView(Schema schema, string name)
+    {
+        throw new NotImplementedException();
     }
 }

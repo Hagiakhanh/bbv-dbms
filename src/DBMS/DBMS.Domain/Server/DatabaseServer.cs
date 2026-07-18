@@ -8,18 +8,19 @@ public class DatabaseServer
     public int ServerId { get; set; }
     public string Version { get; set; }
     public ServerStatus Status { get; set; }
-    public void Start() 
-    { 
-        throw new NotImplementedException(); 
+
+    public void Start()
+    {
+        throw new NotImplementedException();
     }
 
-    public void Stop() 
-    { 
-        throw new NotImplementedException(); 
+    public void Stop()
+    {
+        throw new NotImplementedException();
     }
-    
-    public void Restart() 
-    { 
-        throw new NotImplementedException(); 
+
+    public void Restart()
+    {
+        throw new NotImplementedException();
     }
 }

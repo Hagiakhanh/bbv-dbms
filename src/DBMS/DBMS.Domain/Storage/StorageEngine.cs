@@ -5,18 +5,18 @@ namespace DBMS.Domain.Storage;
 
 public class StorageEngine
 {
-    public Byte[] ReadPage(id : PageId) 
-    { 
-        throw new NotImplementedException(); 
+    public byte[] ReadPage(int pageId)
+    {
+        throw new NotImplementedException();
     }
 
-    public void WritePage(id : PageId, data : Byte[]) 
-    { 
-        throw new NotImplementedException(); 
+    public void WritePage(int pageId, byte[] data)
+    {
+        throw new NotImplementedException();
     }
 
-    public PageId AllocatePage(tableId : int) 
-    { 
-        throw new NotImplementedException(); 
+    public int AllocatePage(int tableId)
+    {
+        throw new NotImplementedException();
     }
 }

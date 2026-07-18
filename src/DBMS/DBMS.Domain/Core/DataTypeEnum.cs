@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace DBMS.Domain.Core;
 
-public enum DataType
+public enum DataTypeEnum
 {
     INT,
     BIGINT,

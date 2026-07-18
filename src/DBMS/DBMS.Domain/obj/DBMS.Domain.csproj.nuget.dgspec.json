@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "d:\\Slide\\bbv-dbms\\src\\DBMS\\DBMS.Domain\\DBMS.Domain.csproj": {}
+    "D:\\Slide\\bbv-dbms\\src\\DBMS\\DBMS.Domain\\DBMS.Domain.csproj": {}
   },
   "projects": {
-    "d:\\Slide\\bbv-dbms\\src\\DBMS\\DBMS.Domain\\DBMS.Domain.csproj": {
+    "D:\\Slide\\bbv-dbms\\src\\DBMS\\DBMS.Domain\\DBMS.Domain.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "d:\\Slide\\bbv-dbms\\src\\DBMS\\DBMS.Domain\\DBMS.Domain.csproj",
+        "projectUniqueName": "D:\\Slide\\bbv-dbms\\src\\DBMS\\DBMS.Domain\\DBMS.Domain.csproj",
         "projectName": "DBMS.Domain",
-        "projectPath": "d:\\Slide\\bbv-dbms\\src\\DBMS\\DBMS.Domain\\DBMS.Domain.csproj",
+        "projectPath": "D:\\Slide\\bbv-dbms\\src\\DBMS\\DBMS.Domain\\DBMS.Domain.csproj",
         "packagesPath": "C:\\Users\\HA GIA KHANH\\.nuget\\packages\\",
-        "outputPath": "d:\\Slide\\bbv-dbms\\src\\DBMS\\DBMS.Domain\\obj\\",
+        "outputPath": "D:\\Slide\\bbv-dbms\\src\\DBMS\\DBMS.Domain\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

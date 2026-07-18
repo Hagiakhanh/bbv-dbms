@@ -3,7 +3,10 @@ using System.Collections.Generic;
 
 namespace DBMS.Domain.Core;
 
-public class UniqueConstraint
+public class UniqueConstraint : Constraint
 {
-    // Không có thuộc tính/phương thức nào được định nghĩa chi tiết
+    public override bool Validate(Row row)
+    {
+        throw new NotImplementedException();
+    }
 }

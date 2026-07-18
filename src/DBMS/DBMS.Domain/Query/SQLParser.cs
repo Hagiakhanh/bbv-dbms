@@ -5,18 +5,18 @@ namespace DBMS.Domain.Query;
 
 public class SQLParser
 {
-    public ASTNode Parse(sql : string) 
-    { 
-        throw new NotImplementedException(); 
+    public object Parse(string sql)
+    {
+        throw new NotImplementedException();
     }
 
-    private Token[] Tokenize(sql : string) 
-    { 
-        throw new NotImplementedException(); 
+    private object[] Tokenize(string sql)
+    {
+        throw new NotImplementedException();
     }
-    
-    private ASTNode BuildAST(tokens : Token[]) 
-    { 
-        throw new NotImplementedException(); 
+
+    private object BuildAST(object[] tokens)
+    {
+        throw new NotImplementedException();
     }
 }
