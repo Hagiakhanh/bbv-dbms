@@ -536,21 +536,38 @@ DatabaseServer --> MonitoringManager
 
 ### DatabaseServer
 * `Start_ShouldInitializeAllServices`
+* `Start_ShouldOpenNetworkPortForConnections`
+* `Start_ShouldStartBackgroundWorkers`
+* `Start_ShouldStartInSafeMode_WhenConfigured`
 * `Start_ShouldReject_WhenServerAlreadyRunning`
 * `Stop_ShouldShutdownAllServices`
 * `Stop_ShouldFlushDirtyPagesBeforeShutdown`
+* `Stop_ShouldRejectNewConnections_WhileShuttingDown`
+* `Stop_ShouldWaitForActiveTransactions_WhenGraceful`
+* `Stop_ShouldTerminateActiveConnections_WhenForced`
 * `Restart_ShouldRestartServerSuccessfully`
 * `RecoverAfterCrash_ShouldReplayWAL`
+* `HandleSignal_ShouldInitiateGracefulShutdown`
+* `GetStatus_ShouldReturnCorrectServerState`
 
 ### DatabaseManager
 * `CreateDatabase_ShouldCreateDatabaseSuccessfully`
 * `CreateDatabase_ShouldRejectDuplicateDatabaseName`
+* `CreateDatabase_ShouldRejectInvalidName`
 * `DropDatabase_ShouldRemoveDatabaseSuccessfully`
 * `DropDatabase_ShouldRejectOpenDatabase`
+* `DropDatabase_ShouldForceCloseConnections_WhenCascade`
 * `OpenDatabase_ShouldLoadStorageAndCatalog`
+* `OpenDatabase_ShouldReject_WhenDatabaseIsOffline`
 * `CloseDatabase_ShouldFlushDirtyBuffers`
 * `GetDatabase_ShouldReturnExistingDatabase`
 * `ListDatabases_ShouldReturnAllDatabases`
+* `RenameDatabase_ShouldUpdateNameSuccessfully`
+* `RenameDatabase_ShouldRejectDuplicateName`
+* `SetDatabaseState_ShouldSetToReadOnly`
+* `SetDatabaseState_ShouldSetToOffline`
+* `AttachDatabase_ShouldRegisterExistingDatabaseFiles`
+* `DetachDatabase_ShouldUnregisterButKeepFiles`
 
 ### ConfigurationManager
 * `LoadConfiguration_ShouldLoadServerConfiguration`
