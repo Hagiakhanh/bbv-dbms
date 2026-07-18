@@ -698,6 +698,7 @@ RecordManager --> Row : reads/writes
 * `DropSchema_ShouldThrow_WhenSchemaDoesNotExist`
 * `GetSchema_ShouldReturnExistingSchema`
 * `GetSchema_ShouldThrow_WhenSchemaDoesNotExist`
+* `GetSchemas_ShouldReturnAllSchemas`
 * `Backup_ShouldCreateBackupSuccessfully`
 * `Restore_ShouldRestoreDatabaseSuccessfully`
 
@@ -706,6 +707,8 @@ RecordManager --> Row : reads/writes
 * `AddTable_ShouldRejectDuplicateTableName`
 * `DropTable_ShouldRemoveExistingTable`
 * `DropTable_ShouldThrow_WhenTableDoesNotExist`
+* `GetTable_ShouldReturnTable_WhenExists`
+* `GetTables_ShouldReturnAllTables`
 * `CreateView_ShouldRegisterView`
 * `DropView_ShouldRemoveView`
 * `CreateProcedure_ShouldRegisterProcedure`
@@ -716,10 +719,14 @@ RecordManager --> Row : reads/writes
 * `AddColumn_ShouldAddColumnSuccessfully`
 * `AddColumn_ShouldRejectDuplicateColumnName`
 * `RemoveColumn_ShouldRemoveExistingColumn`
+* `GetColumn_ShouldReturnColumn_WhenExists`
+* `GetColumns_ShouldReturnAllColumns`
 * `AddConstraint_ShouldRegisterConstraint`
 * `RemoveConstraint_ShouldRemoveConstraint`
 * `AddIndex_ShouldRegisterIndex`
 * `RemoveIndex_ShouldRemoveIndex`
+* `AddPartition_ShouldRegisterPartition`
+* `DropPartition_ShouldRemovePartition`
 * `AddTrigger_ShouldRegisterTrigger`
 * `RemoveTrigger_ShouldRemoveTrigger`
 
@@ -727,10 +734,13 @@ RecordManager --> Row : reads/writes
 * `SetDataType_ShouldUpdateDataType`
 * `SetNullable_ShouldUpdateNullableFlag`
 * `SetDefaultValue_ShouldUpdateDefaultValue`
+* `Rename_ShouldUpdateColumnName`
 * `ValidateValue_ShouldAcceptValidValue`
 * `ValidateValue_ShouldRejectInvalidValue`
 
 ### Row
+* `GetValue_ShouldReturnCorrectColumnValue`
+* `SetValue_ShouldUpdateCorrectColumnValue`
 * `UpdateValue_ShouldModifyColumnValue`
 * `UpdateValue_ShouldIncreaseVersion`
 * `UpdateValue_ShouldRejectInvalidColumn`
@@ -738,6 +748,7 @@ RecordManager --> Row : reads/writes
 ### RecordData
 * `Serialize_ShouldConvertRecordToBytes`
 * `Deserialize_ShouldRestoreRecordCorrectly`
+* `GetLength_ShouldReturnCorrectByteLength`
 
 ### RID
 * `Equals_ShouldReturnTrue_ForSamePageAndSlot`
@@ -746,6 +757,7 @@ RecordManager --> Row : reads/writes
 ### View
 * `Compile_ShouldGenerateExecutionPlan`
 * `Compile_ShouldRejectInvalidQuery`
+* `Execute_ShouldReturnExpectedResults`
 
 ### StoredProcedure
 * `Compile_ShouldCompileProcedure`
@@ -756,15 +768,20 @@ RecordManager --> Row : reads/writes
 * `NextValue_ShouldReturnIncrementedValue`
 * `NextValue_ShouldRespectCustomIncrement`
 * `NextValue_ShouldThrow_WhenOverflowOccurs`
+* `Reset_ShouldResetToInitialValue`
 
 ### Partition
 * `InsertRecord_ShouldRouteRecordToCorrectPartition`
 * `InsertRecord_ShouldRejectInvalidPartitionKey`
+* `DropPartition_ShouldRemovePartition`
+* `GetPartition_ShouldReturnPartition`
 
 ### Trigger
 * `Execute_ShouldRunBeforeInsertTrigger`
 * `Execute_ShouldRunAfterUpdateTrigger`
 * `Execute_ShouldRunAfterDeleteTrigger`
+* `Execute_ShouldThrow_WhenConditionFails`
+* `Execute_ShouldAbortTransaction_OnFailure`
 
 ### Integration
 * `Database_CreateSchema_ShouldRegisterSchema`
@@ -1175,6 +1192,9 @@ QueryExecutor --> RuntimeContext
 * `ParseInsert_ShouldGenerateAST`
 * `ParseUpdate_ShouldGenerateAST`
 * `ParseDelete_ShouldGenerateAST`
+* `ParseCreate_ShouldGenerateASTForDDL`
+* `ParseDrop_ShouldGenerateASTForDDL`
+* `ParseAlter_ShouldGenerateASTForDDL`
 * `Parse_ShouldThrow_WhenSqlSyntaxIsInvalid`
 * `Parse_ShouldThrow_WhenStatementIsEmpty`
 
@@ -1182,6 +1202,7 @@ QueryExecutor --> RuntimeContext
 * `Tokenize_ShouldSplitSqlIntoTokens`
 * `Tokenize_ShouldRecognizeKeywords`
 * `Tokenize_ShouldRecognizeIdentifiers`
+* `Tokenize_ShouldRecognizeOperators`
 * `Tokenize_ShouldRecognizeStringAndNumberLiterals`
 * `Tokenize_ShouldThrow_WhenInvalidCharacterExists`
 
@@ -1196,6 +1217,9 @@ QueryExecutor --> RuntimeContext
 * `GeneratePlan_ShouldCreateFilter`
 * `GeneratePlan_ShouldCreateJoin`
 * `GeneratePlan_ShouldCreateAggregation`
+* `GeneratePlan_ShouldCreateSort_ForOrderBy`
+* `GeneratePlan_ShouldCreateLimit_ForLimitClause`
+* `GeneratePlan_ShouldCreateGroupBy_ForAggregation`
 
 ### QueryOptimizer
 * `Optimize_ShouldChooseIndexScan_WhenIndexExists`
@@ -1203,17 +1227,23 @@ QueryExecutor --> RuntimeContext
 * `Optimize_ShouldOptimizeJoinOrder`
 * `Optimize_ShouldApplyPredicatePushdown`
 * `Optimize_ShouldApplyProjectionPushdown`
+* `Optimize_ShouldApplySubqueryFlattening`
+* `Optimize_ShouldChooseCoveringIndex_WhenApplicable`
+* `Optimize_ShouldEliminateRedundantConditions`
 * `Optimize_ShouldEstimateCostForExecutionPlan`
 
 ### StatisticsManager
 * `CollectStatistics_ShouldUpdateTableStatistics`
 * `GetStatistics_ShouldReturnExistingStatistics`
 * `EstimateRowCount_ShouldReturnEstimatedRows`
+* `UpdateHistogram_ShouldUpdateDataDistribution`
+* `InvalidateStatistics_ShouldClearOldStats`
 
 ### PhysicalPlan
 * `GeneratePhysicalPlan_ShouldCreateExecutableOperators`
 * `GeneratePhysicalPlan_ShouldSelectBestExecutionStrategy`
 * `GeneratePhysicalPlan_ShouldRespectOptimizerDecision`
+* `Execute_ShouldProduceCorrectPipeline`
 
 ### QueryExecutor
 * `ExecuteSelect_ShouldReturnMatchingRows`
@@ -1222,9 +1252,13 @@ QueryExecutor --> RuntimeContext
 * `ExecuteDelete_ShouldDeleteMatchingRows`
 * `ExecuteJoin_ShouldReturnJoinedRows`
 * `ExecuteAggregate_ShouldReturnAggregatedResult`
+* `ExecuteGroupBy_ShouldGroupAndAggregateCorrectly`
 * `ExecuteOrderBy_ShouldReturnSortedRows`
+* `ExecuteLimit_ShouldReturnLimitedRows`
+* `ExecuteSubquery_ShouldEvaluateAndReturnResults`
 * `Execute_ShouldThrow_WhenTableDoesNotExist`
 * `Execute_ShouldThrow_WhenExecutionPlanIsInvalid`
+* `Execute_ShouldThrow_WhenMemoryLimitExceeded`
 
 ### Integration
 * `ParseSelect_ShouldGenerateLogicalPlan`
@@ -1238,6 +1272,9 @@ QueryExecutor --> RuntimeContext
 * `ExecutionFailure_ShouldRollbackTransaction`
 * `Optimizer_ShouldUseLatestStatistics`
 * `ComplexQuery_ShouldExecuteSuccessfully`
+* `QueryExecutor_ShouldSpillToDisk_WhenMemoryExceeded`
+* `QueryExecutor_ShouldHandleConcurrentQueries_Correctly`
+* `Optimizer_ShouldReplan_WhenStatisticsChangeDrastically`
 
 ### 6. Catalog & Metadata
 
