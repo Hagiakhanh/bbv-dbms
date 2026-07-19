@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using DBMS.Domain.Core;
-using DBMS.Domain.Core;
 using DBMS.Domain.Catalog;
 using DBMS.Domain.Exceptions;
+using DBMS.Domain.Server;
 using FluentAssertions;
 using Moq;
 using Xunit;
