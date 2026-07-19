@@ -1,12 +1,61 @@
 using System;
 using System.Collections.Generic;
+using DBMS.Domain.Storage;
 
 namespace DBMS.Domain.Core;
 
 public class Database
 {
-    public int DatabaseId { get; set; }
-    public string Name { get; set; }
-    public string Owner { get; set; }
-    public List<Schema> Schemas { get; set; }
+    private readonly List<Schema> _schemas;
+
+    public int DatabaseId { get; private set; }
+    public string Name { get; private set; }
+    public string Owner { get; private set; }
+    public IReadOnlyList<Schema> Schemas => _schemas;
+
+    public Database(int id, string name, string owner)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Database name cannot be empty.", nameof(name));
+
+        DatabaseId = id;
+        Name = name;
+        Owner = owner;
+        _schemas = new List<Schema>();
+    }
+
+    public Database()
+    {
+        _schemas = new List<Schema>();
+    }
+
+    public Schema CreateSchema(string name)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void DropSchema(string name)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Schema GetSchema(string name)
+    {
+        throw new NotImplementedException();
+    }
+
+    public IReadOnlyList<Schema> GetSchemas()
+    {
+        throw new NotImplementedException();
+    }
+
+    public void Backup(string path, IFileManager fileManager)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void Restore(string path, IFileManager fileManager)
+    {
+        throw new NotImplementedException();
+    }
 }

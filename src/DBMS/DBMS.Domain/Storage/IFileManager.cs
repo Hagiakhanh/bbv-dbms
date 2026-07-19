@@ -10,4 +10,6 @@ public interface IFileManager
     void CreateDirectory(string path);
     void DeleteDirectory(string path, bool recursive);
     bool DirectoryExists(string path);
+    void WriteToFile(string path, byte[] data);
+    byte[] ReadFromFile(string path);
 }
