@@ -1,7 +1,11 @@
 using System;
 using System.Collections.Generic;
-using DBMS.Domain.Server;
+using DBMS.Domain.Core;
+using DBMS.Domain.Core;
+using DBMS.Domain.Catalog;
+using DBMS.Domain.Exceptions;
 using FluentAssertions;
+using Moq;
 using Xunit;
 
 namespace DBMS.Tests.Server;
@@ -11,170 +15,162 @@ public class DatabaseManagerTests
     [Fact]
     public void CreateDatabase_ShouldCreateDatabaseSuccessfully()
     {
-        // Arrange
+        var catalogMock = new Mock<ICatalogManager>();
+        var connPoolMock = new Mock<IConnectionPool>();
+        var manager = new DatabaseManager(catalogMock.Object, connPoolMock.Object);
+        var dbName = "TestDB";
         
-        // Act
+        catalogMock.Setup(c => c.CheckExists(dbName)).Returns(false);
 
-        // Assert
+        manager.CreateDatabase(dbName);
+
+        catalogMock.Verify(c => c.RegisterDatabase(dbName), Times.Once);
     }
 
     [Fact]
     public void CreateDatabase_ShouldRejectDuplicateDatabaseName()
     {
-        // Arrange
-        
-        // Act
+        var catalogMock = new Mock<ICatalogManager>();
+        var connPoolMock = new Mock<IConnectionPool>();
+        var manager = new DatabaseManager(catalogMock.Object, connPoolMock.Object);
+        var dbName = "TestDB";
 
-        // Assert
+        catalogMock.Setup(c => c.CheckExists(dbName)).Returns(true);
+        
+        Action act = () => manager.CreateDatabase(dbName);
+
+        act.Should().Throw<DuplicateNameException>();
+        catalogMock.Verify(c => c.RegisterDatabase(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
     public void CreateDatabase_ShouldRejectInvalidName()
     {
-        // Arrange
+        var catalogMock = new Mock<ICatalogManager>();
+        var connPoolMock = new Mock<IConnectionPool>();
+        var manager = new DatabaseManager(catalogMock.Object, connPoolMock.Object);
+        var invalidDbName = "";
         
-        // Act
+        Action act = () => manager.CreateDatabase(invalidDbName);
 
-        // Assert
+        act.Should().Throw<InvalidNameException>();
+        catalogMock.Verify(c => c.CheckExists(It.IsAny<string>()), Times.Never);
+        catalogMock.Verify(c => c.RegisterDatabase(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
     public void DropDatabase_ShouldRemoveDatabaseSuccessfully()
     {
-        // Arrange
+        var catalogMock = new Mock<ICatalogManager>();
+        var connPoolMock = new Mock<IConnectionPool>();
+        var manager = new DatabaseManager(catalogMock.Object, connPoolMock.Object);
+        var dbName = "TestDB";
         
-        // Act
+        catalogMock.Setup(c => c.CheckExists(dbName)).Returns(true);
+        connPoolMock.Setup(cp => cp.HasActiveConnections(dbName)).Returns(false);
+        
+        manager.DropDatabase(dbName, cascade: false);
 
-        // Assert
+        catalogMock.Verify(c => c.RemoveDatabase(dbName), Times.Once);
     }
 
     [Fact]
     public void DropDatabase_ShouldRejectOpenDatabase()
     {
-        // Arrange
+        var catalogMock = new Mock<ICatalogManager>();
+        var connPoolMock = new Mock<IConnectionPool>();
+        var manager = new DatabaseManager(catalogMock.Object, connPoolMock.Object);
+        var dbName = "TestDB";
         
-        // Act
+        catalogMock.Setup(c => c.CheckExists(dbName)).Returns(true);
+        connPoolMock.Setup(cp => cp.HasActiveConnections(dbName)).Returns(true); // Active connections > 0
+        
+        Action act = () => manager.DropDatabase(dbName, cascade: false);
 
-        // Assert
+        act.Should().Throw<DatabaseInUseException>();
+        catalogMock.Verify(c => c.RemoveDatabase(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
     public void DropDatabase_ShouldForceCloseConnections_WhenCascade()
     {
-        // Arrange
+        var catalogMock = new Mock<ICatalogManager>();
+        var connPoolMock = new Mock<IConnectionPool>();
+        var manager = new DatabaseManager(catalogMock.Object, connPoolMock.Object);
+        var dbName = "TestDB";
         
-        // Act
+        catalogMock.Setup(c => c.CheckExists(dbName)).Returns(true);
+        connPoolMock.Setup(cp => cp.HasActiveConnections(dbName)).Returns(true);
 
-        // Assert
+        manager.DropDatabase(dbName, cascade: true);
+
+        connPoolMock.Verify(cp => cp.ForceCloseConnections(dbName), Times.Once);
+        catalogMock.Verify(c => c.RemoveDatabase(dbName), Times.Once);
     }
 
     [Fact]
     public void OpenDatabase_ShouldLoadStorageAndCatalog()
     {
-        // Arrange
         
-        // Act
-
-        // Assert
     }
 
     [Fact]
     public void OpenDatabase_ShouldReject_WhenDatabaseIsOffline()
     {
-        // Arrange
         
-        // Act
-
-        // Assert
     }
 
     [Fact]
     public void CloseDatabase_ShouldFlushDirtyBuffers()
     {
-        // Arrange
         
-        // Act
-
-        // Assert
     }
 
     [Fact]
     public void GetDatabase_ShouldReturnExistingDatabase()
     {
-        // Arrange
         
-        // Act
-
-        // Assert
     }
 
     [Fact]
     public void ListDatabases_ShouldReturnAllDatabases()
     {
-        // Arrange
         
-        // Act
-
-        // Assert
     }
 
     [Fact]
     public void RenameDatabase_ShouldUpdateNameSuccessfully()
     {
-        // Arrange
         
-        // Act
-
-        // Assert
     }
 
     [Fact]
     public void RenameDatabase_ShouldRejectDuplicateName()
     {
-        // Arrange
         
-        // Act
-
-        // Assert
     }
 
     [Fact]
     public void SetDatabaseState_ShouldSetToReadOnly()
     {
-        // Arrange
         
-        // Act
-
-        // Assert
     }
 
     [Fact]
     public void SetDatabaseState_ShouldSetToOffline()
     {
-        // Arrange
         
-        // Act
-
-        // Assert
     }
 
     [Fact]
     public void AttachDatabase_ShouldRegisterExistingDatabaseFiles()
     {
-        // Arrange
         
-        // Act
-
-        // Assert
     }
 
     [Fact]
     public void DetachDatabase_ShouldUnregisterButKeepFiles()
     {
-        // Arrange
-        
-        // Act
 
-        // Assert
     }
 }
