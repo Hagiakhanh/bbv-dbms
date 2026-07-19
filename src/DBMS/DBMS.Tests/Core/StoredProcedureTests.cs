@@ -11,30 +11,18 @@ public class StoredProcedureTests
     [Fact]
     public void Compile_ShouldCompileProcedure()
     {
-        // Arrange
-        
-        // Act
-
-        // Assert
+        throw new NotImplementedException("Test not implemented yet.");
     }
 
     [Fact]
     public void Compile_ShouldRejectInvalidProcedure()
     {
-        // Arrange
-        
-        // Act
-
-        // Assert
+        throw new NotImplementedException("Test not implemented yet.");
     }
 
     [Fact]
     public void Execute_ShouldExecuteProcedureSuccessfully()
     {
-        // Arrange
-        
-        // Act
-
-        // Assert
+        throw new NotImplementedException("Test not implemented yet.");
     }
 }

@@ -11,20 +11,12 @@ public class RecordDataTests
     [Fact]
     public void Serialize_ShouldConvertRecordToBytes()
     {
-        // Arrange
-        
-        // Act
-
-        // Assert
+        throw new NotImplementedException("Test not implemented yet.");
     }
 
     [Fact]
     public void Deserialize_ShouldRestoreRecordCorrectly()
     {
-        // Arrange
-        
-        // Act
-
-        // Assert
+        throw new NotImplementedException("Test not implemented yet.");
     }
 }

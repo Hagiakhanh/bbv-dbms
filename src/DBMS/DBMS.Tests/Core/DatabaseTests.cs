@@ -11,80 +11,48 @@ public class DatabaseTests
     [Fact]
     public void CreateSchema_ShouldAddSchemaToDatabase()
     {
-        // Arrange
-        
-        // Act
-
-        // Assert
+        throw new NotImplementedException("Test not implemented yet.");
     }
 
     [Fact]
     public void CreateSchema_ShouldRejectDuplicateSchemaName()
     {
-        // Arrange
-        
-        // Act
-
-        // Assert
+        throw new NotImplementedException("Test not implemented yet.");
     }
 
     [Fact]
     public void DropSchema_ShouldRemoveExistingSchema()
     {
-        // Arrange
-        
-        // Act
-
-        // Assert
+        throw new NotImplementedException("Test not implemented yet.");
     }
 
     [Fact]
     public void DropSchema_ShouldThrow_WhenSchemaDoesNotExist()
     {
-        // Arrange
-        
-        // Act
-
-        // Assert
+        throw new NotImplementedException("Test not implemented yet.");
     }
 
     [Fact]
     public void GetSchema_ShouldReturnExistingSchema()
     {
-        // Arrange
-        
-        // Act
-
-        // Assert
+        throw new NotImplementedException("Test not implemented yet.");
     }
 
     [Fact]
     public void GetSchema_ShouldThrow_WhenSchemaDoesNotExist()
     {
-        // Arrange
-        
-        // Act
-
-        // Assert
+        throw new NotImplementedException("Test not implemented yet.");
     }
 
     [Fact]
     public void Backup_ShouldCreateBackupSuccessfully()
     {
-        // Arrange
-        
-        // Act
-
-        // Assert
+        throw new NotImplementedException("Test not implemented yet.");
     }
 
     [Fact]
     public void Restore_ShouldRestoreDatabaseSuccessfully()
     {
-        // Arrange
-        
-        // Act
-
-        // Assert
+        throw new NotImplementedException("Test not implemented yet.");
     }
 }

@@ -11,20 +11,12 @@ public class ViewTests
     [Fact]
     public void Compile_ShouldGenerateExecutionPlan()
     {
-        // Arrange
-        
-        // Act
-
-        // Assert
+        throw new NotImplementedException("Test not implemented yet.");
     }
 
     [Fact]
     public void Compile_ShouldRejectInvalidQuery()
     {
-        // Arrange
-        
-        // Act
-
-        // Assert
+        throw new NotImplementedException("Test not implemented yet.");
     }
 }

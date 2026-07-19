@@ -11,30 +11,18 @@ public class TriggerTests
     [Fact]
     public void Execute_ShouldRunBeforeInsertTrigger()
     {
-        // Arrange
-        
-        // Act
-
-        // Assert
+        throw new NotImplementedException("Test not implemented yet.");
     }
 
     [Fact]
     public void Execute_ShouldRunAfterUpdateTrigger()
     {
-        // Arrange
-        
-        // Act
-
-        // Assert
+        throw new NotImplementedException("Test not implemented yet.");
     }
 
     [Fact]
     public void Execute_ShouldRunAfterDeleteTrigger()
     {
-        // Arrange
-        
-        // Act
-
-        // Assert
+        throw new NotImplementedException("Test not implemented yet.");
     }
 }

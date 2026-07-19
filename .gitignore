@@ -327,3 +327,5 @@ FodyWeavers.xsd
 # Custom directories
 rules/
 
+[Bb]in/
+[Oo]bj/

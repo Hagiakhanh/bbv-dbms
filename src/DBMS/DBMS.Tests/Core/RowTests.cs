@@ -11,30 +11,18 @@ public class RowTests
     [Fact]
     public void UpdateValue_ShouldModifyColumnValue()
     {
-        // Arrange
-        
-        // Act
-
-        // Assert
+        throw new NotImplementedException("Test not implemented yet.");
     }
 
     [Fact]
     public void UpdateValue_ShouldIncreaseVersion()
     {
-        // Arrange
-        
-        // Act
-
-        // Assert
+        throw new NotImplementedException("Test not implemented yet.");
     }
 
     [Fact]
     public void UpdateValue_ShouldRejectInvalidColumn()
     {
-        // Arrange
-        
-        // Act
-
-        // Assert
+        throw new NotImplementedException("Test not implemented yet.");
     }
 }

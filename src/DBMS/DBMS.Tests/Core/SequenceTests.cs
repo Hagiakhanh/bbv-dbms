@@ -11,30 +11,18 @@ public class SequenceTests
     [Fact]
     public void NextValue_ShouldReturnIncrementedValue()
     {
-        // Arrange
-        
-        // Act
-
-        // Assert
+        throw new NotImplementedException("Test not implemented yet.");
     }
 
     [Fact]
     public void NextValue_ShouldRespectCustomIncrement()
     {
-        // Arrange
-        
-        // Act
-
-        // Assert
+        throw new NotImplementedException("Test not implemented yet.");
     }
 
     [Fact]
     public void NextValue_ShouldThrow_WhenOverflowOccurs()
     {
-        // Arrange
-        
-        // Act
-
-        // Assert
+        throw new NotImplementedException("Test not implemented yet.");
     }
 }

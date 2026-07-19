@@ -110,67 +110,68 @@ public class DatabaseManagerTests
 
     [Fact]
     public void OpenDatabase_ShouldLoadStorageAndCatalog()
-    {
-        
+    { 
+        throw new NotImplementedException("Test not implemented yet."); 
     }
 
     [Fact]
     public void OpenDatabase_ShouldReject_WhenDatabaseIsOffline()
-    {
-        
+    { 
+        throw new NotImplementedException("Test not implemented yet."); 
     }
 
     [Fact]
     public void CloseDatabase_ShouldFlushDirtyBuffers()
-    {
-        
+    { 
+        throw new NotImplementedException("Test not implemented yet."); 
     }
 
     [Fact]
     public void GetDatabase_ShouldReturnExistingDatabase()
-    {
-        
+    { 
+        throw new NotImplementedException("Test not implemented yet."); 
     }
 
     [Fact]
     public void ListDatabases_ShouldReturnAllDatabases()
-    {
-        
+    { 
+        throw new NotImplementedException("Test not implemented yet."); 
     }
 
     [Fact]
     public void RenameDatabase_ShouldUpdateNameSuccessfully()
-    {
-        
+    { 
+        throw new NotImplementedException("Test not implemented yet."); 
     }
 
     [Fact]
     public void RenameDatabase_ShouldRejectDuplicateName()
-    {
-        
+    { 
+        throw new NotImplementedException("Test not implemented yet."); 
     }
 
     [Fact]
     public void SetDatabaseState_ShouldSetToReadOnly()
-    {
-        
+    { 
+        throw new NotImplementedException("Test not implemented yet."); 
     }
 
     [Fact]
     public void SetDatabaseState_ShouldSetToOffline()
-    {
-        
+    { 
+        throw new NotImplementedException("Test not implemented yet."); 
     }
 
     [Fact]
     public void AttachDatabase_ShouldRegisterExistingDatabaseFiles()
-    {
-        
+    { 
+        throw new NotImplementedException("Test not implemented yet."); 
     }
 
     [Fact]
     public void DetachDatabase_ShouldUnregisterButKeepFiles()
-    {
-
+    { 
+        throw new NotImplementedException("Test not implemented yet."); 
     }
 }
+

@@ -11,20 +11,12 @@ public class RIDTests
     [Fact]
     public void Equals_ShouldReturnTrue_ForSamePageAndSlot()
     {
-        // Arrange
-        
-        // Act
-
-        // Assert
+        throw new NotImplementedException("Test not implemented yet.");
     }
 
     [Fact]
     public void Equals_ShouldReturnFalse_ForDifferentLocation()
     {
-        // Arrange
-        
-        // Act
-
-        // Assert
+        throw new NotImplementedException("Test not implemented yet.");
     }
 }
