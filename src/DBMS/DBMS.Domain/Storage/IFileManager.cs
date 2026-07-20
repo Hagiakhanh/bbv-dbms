@@ -12,4 +12,5 @@ public interface IFileManager
     bool DirectoryExists(string path);
     void WriteToFile(string path, byte[] data);
     byte[] ReadFromFile(string path);
+    bool ValidateFilesExist(string path);
 }
