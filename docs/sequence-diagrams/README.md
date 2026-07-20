@@ -1,3 +1,31 @@
+# Progress Summary
+
+| Class/Section | Total | Completed | Missing | Progress |
+| ------------- | ----- | --------- | ------- | -------- |
+| DatabaseServer | 3 | 3 | 0 | 100% |
+| DatabaseManager | 7 | 7 | 0 | 100% |
+| Database Operations | 6 | 6 | 0 | 100% |
+| Schema & Table Operations | 10 | 10 | 0 | 100% |
+| Primary & Unique Constraints | 7 | 0 | 7 | 0% |
+| Foreign Key Constraints | 8 | 0 | 8 | 0% |
+| Check Constraints | 4 | 0 | 4 | 0% |
+| Index & IndexManager | 8 | 0 | 8 | 0% |
+| Schema & Table Services | 9 | 3 | 6 | 33% |
+| RecordManager | 7 | 0 | 7 | 0% |
+| BufferPool Operations | 9 | 0 | 9 | 0% |
+| Page & FileManager | 7 | 0 | 7 | 0% |
+| Logging & Recovery | 8 | 0 | 8 | 0% |
+| Transaction Lifecycle & TransactionManager | 10 | 0 | 10 | 0% |
+| LockManager & MVCC | 9 | 0 | 9 | 0% |
+| SQL Parsing & Semantic Analysis | 7 | 0 | 7 | 0% |
+| Query Optimization | 6 | 0 | 6 | 0% |
+| Query Execution | 11 | 0 | 11 | 0% |
+| Catalog Registration (Database, Schema, Table) | 7 | 0 | 7 | 0% |
+| Metadata Lookup & Dependency Management | 4 | 1 | 3 | 25% |
+| Authentication | 3 | 0 | 3 | 0% |
+| Permission & Authorization | 8 | 0 | 8 | 0% |
+| **TOTAL** | **158** | **30** | **128** | **19%** |
+
 ## 1. Server & Database Management
 
 ```mermaid
@@ -57,6 +85,22 @@ DatabaseServer --> MonitoringManager
 ### DatabaseServer
 Covers: `Start_ShouldInitializeAllServices`, `Stop_ShouldFlushDirtyPagesBeforeShutdown`, `RecoverAfterCrash_ShouldReplayWAL`
 ```mermaid
+flowchart LR
+    ClassNode["DatabaseServer"]
+
+    ClassNode --> DatabaseServer_1["Start_ShouldInitializeAllServices"]
+    ClassNode --> DatabaseServer_2["Stop_ShouldFlushDirtyPagesBeforeShutdown"]
+    ClassNode --> DatabaseServer_3["RecoverAfterCrash_ShouldReplayWAL"]
+
+    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
+    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
+    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+
+    class ClassNode classNode
+    class DatabaseServer_1,DatabaseServer_2,DatabaseServer_3 completedTest
+```
+
+```mermaid
 sequenceDiagram
     autonumber
     actor Admin
@@ -80,6 +124,26 @@ sequenceDiagram
 
 ### DatabaseManager
 Covers: `CreateDatabase_ShouldCreateDatabaseSuccessfully`, `CreateDatabase_ShouldRejectDuplicateDatabaseName`, `CreateDatabase_ShouldReject_WhenPermissionDenied`, `DropDatabase_ShouldRemoveDatabaseSuccessfully`, `DropDatabase_ShouldReject_WhenDatabaseContainsSchemas`, `OpenDatabase_ShouldLoadStorageAndCatalog`, `CloseDatabase_ShouldFlushDirtyBuffers`
+```mermaid
+flowchart LR
+    ClassNode["DatabaseManager"]
+
+    ClassNode --> DatabaseManager_1["CreateDatabase_ShouldCreateDatabaseSuccessfully"]
+    ClassNode --> DatabaseManager_2["CreateDatabase_ShouldRejectDuplicateDatabaseName"]
+    ClassNode --> DatabaseManager_3["CreateDatabase_ShouldReject_WhenPermissionDenied"]
+    ClassNode --> DatabaseManager_4["DropDatabase_ShouldRemoveDatabaseSuccessfully"]
+    ClassNode --> DatabaseManager_5["DropDatabase_ShouldReject_WhenDatabaseContainsSchemas"]
+    ClassNode --> DatabaseManager_6["OpenDatabase_ShouldLoadStorageAndCatalog"]
+    ClassNode --> DatabaseManager_7["CloseDatabase_ShouldFlushDirtyBuffers"]
+
+    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
+    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
+    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+
+    class ClassNode classNode
+    class DatabaseManager_1,DatabaseManager_2,DatabaseManager_3,DatabaseManager_4,DatabaseManager_5,DatabaseManager_6,DatabaseManager_7 completedTest
+```
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -313,26 +377,79 @@ RecordManager --> Row : reads/writes
 ### Database Operations
 Covers: `CreateSchema_ShouldAddSchemaToDatabase`, `CreateSchema_ShouldRejectDuplicateSchemaName`, `CreateSchema_ShouldReject_WhenPermissionDenied`, `CreateSchema_ShouldRollback_WhenCatalogRegistrationFails`, `DropSchema_ShouldRemoveExistingSchema`, `GetSchema_ShouldReturnExistingSchema`
 ```mermaid
+flowchart LR
+    ClassNode["Database Operations"]
+
+    ClassNode --> Database_Operations_1["CreateSchema_ShouldAddSchemaToDatabase"]
+    ClassNode --> Database_Operations_2["CreateSchema_ShouldRejectDuplicateSchemaName"]
+    ClassNode --> Database_Operations_3["CreateSchema_ShouldReject_WhenPermissionDenied"]
+    ClassNode --> Database_Operations_4["CreateSchema_ShouldRollback_WhenCatalogRegistrationFails"]
+    ClassNode --> Database_Operations_5["DropSchema_ShouldRemoveExistingSchema"]
+    ClassNode --> Database_Operations_6["GetSchema_ShouldReturnExistingSchema"]
+
+    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
+    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
+    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+
+    class ClassNode classNode
+    class Database_Operations_1,Database_Operations_2,Database_Operations_3,Database_Operations_4,Database_Operations_5,Database_Operations_6 completedTest
+```
+
+```mermaid
 sequenceDiagram
     autonumber
     actor User
     participant DB as Database
     
+    %% Create Schema
     User->>DB: CreateSchema("dbo")
-    alt Schema Exists
+    alt Permission Denied
+        DB-->>User: throws PermissionDeniedException
+    else Catalog Registration Fails
+        DB->>DB: Rollback Schemas state
+        DB-->>User: throws CatalogException
+    else Schema Exists
         DB-->>User: throws DuplicateSchemaException
-    else
+    else Success
         DB->>DB: Schemas.Add(Schema)
         DB-->>User: return Schema
     end
     
+    %% Drop Schema
     User->>DB: DropSchema("dbo")
     DB->>DB: Schemas.Remove("dbo")
     DB-->>User: Success
+
+    %% Get Schema
+    User->>DB: GetSchema("dbo")
+    DB-->>User: return Schema
 ```
 
 ### Schema & Table Operations
 Covers: `AddTable_ShouldAddTableSuccessfully`, `AddTable_ShouldRejectDuplicateTableName`, `DropTable_ShouldRemoveExistingTable`, `DropTable_ShouldReject_WhenReferencedByForeignKey`, `GetTable_ShouldReturnTable_WhenExists`, `AddColumn_ShouldAddColumnSuccessfully`, `AddColumn_ShouldRejectDuplicateColumnName`, `DropColumn_ShouldReject_WhenReferencedByConstraint`, `AddConstraint_ShouldRegisterConstraint`, `AddIndex_ShouldRegisterIndex`
+```mermaid
+flowchart LR
+    ClassNode["Schema & Table Operations"]
+
+    ClassNode --> Schema___Table_Operations_1["AddTable_ShouldAddTableSuccessfully"]
+    ClassNode --> Schema___Table_Operations_2["AddTable_ShouldRejectDuplicateTableName"]
+    ClassNode --> Schema___Table_Operations_3["DropTable_ShouldRemoveExistingTable"]
+    ClassNode --> Schema___Table_Operations_4["DropTable_ShouldReject_WhenReferencedByForeignKey"]
+    ClassNode --> Schema___Table_Operations_5["GetTable_ShouldReturnTable_WhenExists"]
+    ClassNode --> Schema___Table_Operations_6["AddColumn_ShouldAddColumnSuccessfully"]
+    ClassNode --> Schema___Table_Operations_7["AddColumn_ShouldRejectDuplicateColumnName"]
+    ClassNode --> Schema___Table_Operations_8["DropColumn_ShouldReject_WhenReferencedByConstraint"]
+    ClassNode --> Schema___Table_Operations_9["AddConstraint_ShouldRegisterConstraint"]
+    ClassNode --> Schema___Table_Operations_10["AddIndex_ShouldRegisterIndex"]
+
+    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
+    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
+    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+
+    class ClassNode classNode
+    class Schema___Table_Operations_1,Schema___Table_Operations_2,Schema___Table_Operations_3,Schema___Table_Operations_4,Schema___Table_Operations_5,Schema___Table_Operations_6,Schema___Table_Operations_7,Schema___Table_Operations_8,Schema___Table_Operations_9,Schema___Table_Operations_10 completedTest
+```
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -340,40 +457,190 @@ sequenceDiagram
     participant Sch as Schema
     participant Tbl as Table
     
+    %% Schema Operations (Table Management)
     User->>Sch: AddTable(Table)
-    Sch->>Sch: Tables.Add(Table)
-    Sch-->>User: Success
+    alt Duplicate Table Name
+        Sch-->>User: throws DuplicateTableException
+    else Success
+        Sch->>Sch: Tables.Add(Table)
+        Sch-->>User: Success
+    end
     
+    User->>Sch: DropTable("Users")
+    alt Referenced By Foreign Key
+        Sch-->>User: throws ForeignKeyReferenceException
+    else Success
+        Sch->>Sch: Tables.Remove("Users")
+        Sch-->>User: Success
+    end
+    
+    User->>Sch: GetTable("Users")
+    Sch-->>User: return Table
+    
+    %% Table Operations (Column & Constraint Management)
     User->>Tbl: AddColumn(Column)
-    Tbl->>Tbl: Columns.Add(Column)
-    Tbl-->>User: Success
+    alt Duplicate Column Name
+        Tbl-->>User: throws DuplicateColumnException
+    else Success
+        Tbl->>Tbl: Columns.Add(Column)
+        Tbl-->>User: Success
+    end
+    
+    User->>Tbl: RemoveColumn("Age")
+    alt Referenced By Constraint
+        Tbl-->>User: throws ColumnReferencedByConstraintException
+    else Success
+        Tbl->>Tbl: Columns.Remove("Age")
+        Tbl-->>User: Success
+    end
     
     User->>Tbl: AddConstraint(Constraint)
     Tbl->>Tbl: Constraints.Add(Constraint)
+    Tbl-->>User: Success
+    
+    User->>Tbl: AddIndex(Index)
+    Tbl->>Tbl: Indexes.Add(Index)
     Tbl-->>User: Success
 ```
 
 ## Constraint & Index
 
-### Constraints Validation
-Covers: `Validate_ShouldAcceptUniqueKey`, `Validate_ShouldRejectDuplicateKey`, `Validate_ShouldAcceptExistingReferencedRow`, `Validate_ShouldRejectMissingReferencedRow`, `Validate_ShouldCascadeDelete_WhenCascadeEnabled`, `Validate_ShouldRejectDuplicateValue`, `Validate_ShouldRejectInvalidExpression`
+### Primary & Unique Constraints
+Covers: `Validate_ShouldAcceptUniqueKey`, `Validate_ShouldRejectDuplicateKey`, `Validate_ShouldRejectDuplicateValue`, `PrimaryKey_ShouldRejectNullValues`, `PrimaryKey_ShouldEnforceUniqueness`, `UniqueConstraint_ShouldAllowSingleNull`, `UniqueConstraint_ShouldRejectDuplicateValues`
+```mermaid
+flowchart LR
+    ClassNode["Primary & Unique Constraints"]
+
+    ClassNode --> Primary___Unique_Constraints_1["Validate_ShouldAcceptUniqueKey"]
+    ClassNode --> Primary___Unique_Constraints_2["Validate_ShouldRejectDuplicateKey"]
+    ClassNode --> Primary___Unique_Constraints_3["Validate_ShouldRejectDuplicateValue"]
+    ClassNode --> Primary___Unique_Constraints_4["PrimaryKey_ShouldRejectNullValues"]
+    ClassNode --> Primary___Unique_Constraints_5["PrimaryKey_ShouldEnforceUniqueness"]
+    ClassNode --> Primary___Unique_Constraints_6["UniqueConstraint_ShouldAllowSingleNull"]
+    ClassNode --> Primary___Unique_Constraints_7["UniqueConstraint_ShouldRejectDuplicateValues"]
+
+    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
+    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
+    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+
+    class ClassNode classNode
+    class Primary___Unique_Constraints_1,Primary___Unique_Constraints_2,Primary___Unique_Constraints_3,Primary___Unique_Constraints_4,Primary___Unique_Constraints_5,Primary___Unique_Constraints_6,Primary___Unique_Constraints_7 missingTest
+```
+
 ```mermaid
 sequenceDiagram
     autonumber
     participant RecordMgr as RecordManager
-    participant Constr as Constraint (Primary/Foreign/Unique/Check)
-    participant Tbl as Table
+    participant Constr as PrimaryKey/UniqueConstraint
     
     RecordMgr->>Constr: Validate(Row)
-    alt Validation Failed (Duplicate, Missing FK, Invalid Expr)
-        Constr-->>RecordMgr: throws ConstraintViolationException
-    else Validation Passed
+    Constr->>Constr: Check Uniqueness & Nullability
+    alt Validation Failed (Duplicate or Null)
+        Constr-->>RecordMgr: throws UniqueConstraintViolationException
+    else Success
+        Constr-->>RecordMgr: return true
+    end
+```
+
+### Foreign Key Constraints
+Covers: `Validate_ShouldAcceptExistingReferencedRow`, `Validate_ShouldRejectMissingReferencedRow`, `Validate_ShouldCascadeDelete_WhenCascadeEnabled`, `ForeignKey_ShouldAcceptExistingReference`, `ForeignKey_ShouldRejectMissingReference`, `ForeignKey_ShouldCascadeDelete`, `ForeignKey_ShouldCascadeUpdate`, `ForeignKey_ShouldSetNullOnDelete`
+```mermaid
+flowchart LR
+    ClassNode["Foreign Key Constraints"]
+
+    ClassNode --> Foreign_Key_Constraints_1["Validate_ShouldAcceptExistingReferencedRow"]
+    ClassNode --> Foreign_Key_Constraints_2["Validate_ShouldRejectMissingReferencedRow"]
+    ClassNode --> Foreign_Key_Constraints_3["Validate_ShouldCascadeDelete_WhenCascadeEnabled"]
+    ClassNode --> Foreign_Key_Constraints_4["ForeignKey_ShouldAcceptExistingReference"]
+    ClassNode --> Foreign_Key_Constraints_5["ForeignKey_ShouldRejectMissingReference"]
+    ClassNode --> Foreign_Key_Constraints_6["ForeignKey_ShouldCascadeDelete"]
+    ClassNode --> Foreign_Key_Constraints_7["ForeignKey_ShouldCascadeUpdate"]
+    ClassNode --> Foreign_Key_Constraints_8["ForeignKey_ShouldSetNullOnDelete"]
+
+    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
+    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
+    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+
+    class ClassNode classNode
+    class Foreign_Key_Constraints_1,Foreign_Key_Constraints_2,Foreign_Key_Constraints_3,Foreign_Key_Constraints_4,Foreign_Key_Constraints_5,Foreign_Key_Constraints_6,Foreign_Key_Constraints_7,Foreign_Key_Constraints_8 missingTest
+```
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant RecordMgr as RecordManager
+    participant Constr as ForeignKey
+    participant RefTbl as ReferenceTable
+    
+    RecordMgr->>Constr: Validate(Row)
+    Constr->>RefTbl: Lookup Referenced Row
+    alt Missing Reference
+        Constr-->>RecordMgr: throws ForeignKeyReferenceException
+    else Reference Exists
+        alt Cascade Triggered (Update/Delete)
+            Constr->>RecordMgr: CascadeAction(ReferencedRows)
+        end
+        Constr-->>RecordMgr: return true
+    end
+```
+
+### Check Constraints
+Covers: `Validate_ShouldRejectInvalidExpression`, `CheckConstraint_ShouldEvaluateExpressionTrue`, `CheckConstraint_ShouldRejectWhenExpressionFalse`, `CheckConstraint_ShouldHandleNullValues`
+```mermaid
+flowchart LR
+    ClassNode["Check Constraints"]
+
+    ClassNode --> Check_Constraints_1["Validate_ShouldRejectInvalidExpression"]
+    ClassNode --> Check_Constraints_2["CheckConstraint_ShouldEvaluateExpressionTrue"]
+    ClassNode --> Check_Constraints_3["CheckConstraint_ShouldRejectWhenExpressionFalse"]
+    ClassNode --> Check_Constraints_4["CheckConstraint_ShouldHandleNullValues"]
+
+    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
+    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
+    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+
+    class ClassNode classNode
+    class Check_Constraints_1,Check_Constraints_2,Check_Constraints_3,Check_Constraints_4 missingTest
+```
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant RecordMgr as RecordManager
+    participant Constr as CheckConstraint
+    
+    RecordMgr->>Constr: Validate(Row)
+    Constr->>Constr: Evaluate Expression
+    alt Expression Evaluates to False
+        Constr-->>RecordMgr: throws CheckConstraintViolationException
+    else Expression Evaluates to True (or Null allowed)
         Constr-->>RecordMgr: return true
     end
 ```
 
 ### Index & IndexManager
-Covers: `Insert_ShouldKeepTreeBalanced`, `Search_ShouldFindExistingKey`, `Delete_ShouldRebalanceTreeAfterDeletion`, `CreateIndex_ShouldRegisterIndex`, `CreateIndex_ShouldRejectDuplicateIndexName`, `FindBestIndex_ShouldReturnOptimalIndexForQuery`
+Covers: `Insert_ShouldKeepTreeBalanced`, `Search_ShouldFindExistingKey`, `Delete_ShouldRebalanceTreeAfterDeletion`, `CreateIndex_ShouldRegisterIndex`, `CreateIndex_ShouldRejectDuplicateIndexName`, `FindBestIndex_ShouldReturnOptimalIndexForQuery`, `Insert_ShouldSplitNode_WhenNodeIsFull`, `Delete_ShouldMergeNode_WhenNodeIsUnderflow`
+```mermaid
+flowchart LR
+    ClassNode["Index & IndexManager"]
+
+    ClassNode --> Index___IndexManager_1["Insert_ShouldKeepTreeBalanced"]
+    ClassNode --> Index___IndexManager_2["Search_ShouldFindExistingKey"]
+    ClassNode --> Index___IndexManager_3["Delete_ShouldRebalanceTreeAfterDeletion"]
+    ClassNode --> Index___IndexManager_4["CreateIndex_ShouldRegisterIndex"]
+    ClassNode --> Index___IndexManager_5["CreateIndex_ShouldRejectDuplicateIndexName"]
+    ClassNode --> Index___IndexManager_6["FindBestIndex_ShouldReturnOptimalIndexForQuery"]
+    ClassNode --> Index___IndexManager_7["Insert_ShouldSplitNode_WhenNodeIsFull"]
+    ClassNode --> Index___IndexManager_8["Delete_ShouldMergeNode_WhenNodeIsUnderflow"]
+
+    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
+    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
+    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+
+    class ClassNode classNode
+    class Index___IndexManager_1,Index___IndexManager_2,Index___IndexManager_3,Index___IndexManager_4,Index___IndexManager_5,Index___IndexManager_6,Index___IndexManager_7,Index___IndexManager_8 missingTest
+```
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -381,12 +648,26 @@ sequenceDiagram
     participant IdxMgr as IndexManager
     participant BTree as BTreeIndex
     
+    %% Create Index
     Engine->>IdxMgr: CreateIndex(Name)
-    IdxMgr->>IdxMgr: Register Index
-    IdxMgr-->>Engine: Success
+    alt Duplicate Index Name
+        IdxMgr-->>Engine: throws DuplicateIndexException
+    else Success
+        IdxMgr->>IdxMgr: Register Index
+        IdxMgr-->>Engine: Success
+    end
     
+    %% Find Best Index
+    Engine->>IdxMgr: FindBestIndex(Query)
+    IdxMgr-->>Engine: return Optimal Index
+    
+    %% Insert/Delete/Search Key
     Engine->>BTree: Insert(Key, RID)
     BTree->>BTree: Insert & Rebalance
+    BTree-->>Engine: Success
+    
+    Engine->>BTree: Delete(Key)
+    BTree->>BTree: Delete & Rebalance
     BTree-->>Engine: Success
     
     Engine->>BTree: Search(Key)
@@ -398,6 +679,29 @@ sequenceDiagram
 ### Schema & Table Services
 Covers: `CreateSchema_ShouldCreateSchemaSuccessfully`, `CreateSchema_ShouldRejectDuplicateSchemaName`, `CreateSchema_ShouldCheckPermissionBeforeCreation`, `CreateSchema_ShouldRollback_WhenStorageFails`, `CreateSchema_ShouldRollback_WhenCatalogFails`, `DropSchema_ShouldRemoveExistingSchema`, `CreateTable_ShouldCreateTableSuccessfully`, `CreateTable_ShouldRejectDuplicateTableName`, `DropTable_ShouldRemoveExistingTable`
 ```mermaid
+flowchart LR
+    ClassNode["Schema & Table Services"]
+
+    ClassNode --> Schema___Table_Services_1["CreateSchema_ShouldCreateSchemaSuccessfully"]
+    ClassNode --> Schema___Table_Services_2["CreateSchema_ShouldRejectDuplicateSchemaName"]
+    ClassNode --> Schema___Table_Services_3["CreateSchema_ShouldCheckPermissionBeforeCreation"]
+    ClassNode --> Schema___Table_Services_4["CreateSchema_ShouldRollback_WhenStorageFails"]
+    ClassNode --> Schema___Table_Services_5["CreateSchema_ShouldRollback_WhenCatalogFails"]
+    ClassNode --> Schema___Table_Services_6["DropSchema_ShouldRemoveExistingSchema"]
+    ClassNode --> Schema___Table_Services_7["CreateTable_ShouldCreateTableSuccessfully"]
+    ClassNode --> Schema___Table_Services_8["CreateTable_ShouldRejectDuplicateTableName"]
+    ClassNode --> Schema___Table_Services_9["DropTable_ShouldRemoveExistingTable"]
+
+    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
+    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
+    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+
+    class ClassNode classNode
+    class Schema___Table_Services_2,Schema___Table_Services_6,Schema___Table_Services_9 completedTest
+    class Schema___Table_Services_1,Schema___Table_Services_3,Schema___Table_Services_4,Schema___Table_Services_5,Schema___Table_Services_7,Schema___Table_Services_8 missingTest
+```
+
+```mermaid
 sequenceDiagram
     autonumber
     actor Client
@@ -405,19 +709,67 @@ sequenceDiagram
     participant CatMgr as CatalogManager
     participant Storage as StorageEngine
     
+    %% Create Schema
+    Client->>Svc: CreateSchema(Name)
+    Svc->>Svc: CheckPermission()
+    alt Permission Denied
+        Svc-->>Client: throws PermissionDeniedException
+    else Duplicate Schema
+        Svc-->>Client: throws DuplicateSchemaException
+    else
+        Svc->>CatMgr: RegisterSchema()
+        Svc->>Storage: AllocateStorage()
+        alt Storage/Catalog Fails
+            Svc->>Svc: Rollback()
+            Svc-->>Client: throws Exception
+        else Success
+            Svc-->>Client: return Schema
+        end
+    end
+    
+    %% Drop Schema
+    Client->>Svc: DropSchema(Name)
+    Svc->>CatMgr: RemoveSchema()
+    Svc-->>Client: Success
+
+    %% Create Table
     Client->>Svc: CreateTable(Schema, TableDef)
-    Svc->>CatMgr: RegisterTable()
-    Svc->>Storage: AllocateStorage()
-    alt Storage/Catalog Fails
-        Svc->>Svc: Rollback()
-        Svc-->>Client: throws Exception
-    else Success
+    alt Duplicate Table Name
+        Svc-->>Client: throws DuplicateTableException
+    else
+        Svc->>CatMgr: RegisterTable()
+        Svc->>Storage: AllocateStorage()
         Svc-->>Client: return Table
     end
+    
+    %% Drop Table
+    Client->>Svc: DropTable(Schema, TableName)
+    Svc->>CatMgr: RemoveTable()
+    Svc-->>Client: Success
 ```
 
 ### RecordManager
 Covers: `InsertRecord_ShouldValidateConstraintsBeforeInsert`, `InsertRecord_ShouldUpdateIndexes`, `InsertRecord_ShouldRollback_WhenConstraintValidationFails`, `UpdateRecord_ShouldValidateConstraints`, `UpdateRecord_ShouldRollback_WhenIndexUpdateFails`, `DeleteRecord_ShouldValidateForeignKeyConstraints`, `DeleteRecord_ShouldRollback_WhenForeignKeyValidationFails`
+```mermaid
+flowchart LR
+    ClassNode["RecordManager"]
+
+    ClassNode --> RecordManager_1["InsertRecord_ShouldValidateConstraintsBeforeInsert"]
+    ClassNode --> RecordManager_2["InsertRecord_ShouldUpdateIndexes"]
+    ClassNode --> RecordManager_3["InsertRecord_ShouldRollback_WhenConstraintValidationFails"]
+    ClassNode --> RecordManager_4["UpdateRecord_ShouldValidateConstraints"]
+    ClassNode --> RecordManager_5["UpdateRecord_ShouldRollback_WhenIndexUpdateFails"]
+    ClassNode --> RecordManager_6["DeleteRecord_ShouldValidateForeignKeyConstraints"]
+    ClassNode --> RecordManager_7["DeleteRecord_ShouldRollback_WhenForeignKeyValidationFails"]
+
+    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
+    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
+    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+
+    class ClassNode classNode
+    class RecordManager_1,RecordManager_2,RecordManager_3,RecordManager_4,RecordManager_5,RecordManager_6,RecordManager_7 missingTest
+```
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -427,20 +779,33 @@ sequenceDiagram
     participant Constr as Constraint
     participant Idx as Index
     
-    Client->>RecMgr: InsertRecord(Table, Row)
+    %% Insert/Update Record
+    Client->>RecMgr: Insert/Update Record(Table, Row)
     RecMgr->>Constr: Validate(Row)
-    alt Validation Fails
+    alt Constraint Validation Fails
         RecMgr->>RecMgr: Rollback()
         RecMgr-->>Client: throws ConstraintViolationException
     else
-        RecMgr->>Tbl: Insert Row
+        RecMgr->>Tbl: Insert/Update Row Data
         RecMgr->>Idx: UpdateIndexes(Row)
         alt Index Update Fails
             RecMgr->>RecMgr: Rollback()
             RecMgr-->>Client: throws IndexUpdateException
         else
-            RecMgr-->>Client: Success (RID)
+            RecMgr-->>Client: Success
         end
+    end
+    
+    %% Delete Record
+    Client->>RecMgr: DeleteRecord(Table, RID)
+    RecMgr->>Constr: ValidateForeignKeyConstraints(RID)
+    alt Foreign Key Validation Fails
+        RecMgr->>RecMgr: Rollback()
+        RecMgr-->>Client: throws ForeignKeyReferenceException
+    else
+        RecMgr->>Tbl: Delete Row Data
+        RecMgr->>Idx: UpdateIndexes()
+        RecMgr-->>Client: Success
     end
 ```
 
@@ -495,7 +860,29 @@ RecoveryManager --> WALManager
 ```
 
 ### BufferPool Operations
-Covers: `FetchPage_ShouldLoadPageIntoBuffer`, `FetchPage_ShouldReturnCachedPage_WhenAlreadyLoaded`, `FlushPage_ShouldWriteDirtyPageToDisk`, `FlushDirtyPage_ShouldWriteWALBeforeDisk`, `EvictPage_ShouldUseReplacementPolicy`, `EvictPage_ShouldNotEvictPinnedPage`
+Covers: `FetchPage_ShouldLoadPageIntoBuffer`, `FetchPage_ShouldReturnCachedPage_WhenAlreadyLoaded`, `FlushPage_ShouldWriteDirtyPageToDisk`, `FlushDirtyPage_ShouldWriteWALBeforeDisk`, `EvictPage_ShouldUseReplacementPolicy`, `EvictPage_ShouldNotEvictPinnedPage`, `FetchPage_ShouldPinPageWhileInUse`, `UnpinPage_ShouldDecreasePinCount`, `FlushAll_ShouldSyncAllDirtyPagesToDisk`
+```mermaid
+flowchart LR
+    ClassNode["BufferPool Operations"]
+
+    ClassNode --> BufferPool_Operations_1["FetchPage_ShouldLoadPageIntoBuffer"]
+    ClassNode --> BufferPool_Operations_2["FetchPage_ShouldReturnCachedPage_WhenAlreadyLoaded"]
+    ClassNode --> BufferPool_Operations_3["FlushPage_ShouldWriteDirtyPageToDisk"]
+    ClassNode --> BufferPool_Operations_4["FlushDirtyPage_ShouldWriteWALBeforeDisk"]
+    ClassNode --> BufferPool_Operations_5["EvictPage_ShouldUseReplacementPolicy"]
+    ClassNode --> BufferPool_Operations_6["EvictPage_ShouldNotEvictPinnedPage"]
+    ClassNode --> BufferPool_Operations_7["FetchPage_ShouldPinPageWhileInUse"]
+    ClassNode --> BufferPool_Operations_8["UnpinPage_ShouldDecreasePinCount"]
+    ClassNode --> BufferPool_Operations_9["FlushAll_ShouldSyncAllDirtyPagesToDisk"]
+
+    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
+    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
+    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+
+    class ClassNode classNode
+    class BufferPool_Operations_1,BufferPool_Operations_2,BufferPool_Operations_3,BufferPool_Operations_4,BufferPool_Operations_5,BufferPool_Operations_6,BufferPool_Operations_7,BufferPool_Operations_8,BufferPool_Operations_9 missingTest
+```
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -509,7 +896,14 @@ sequenceDiagram
     alt Page in Cache
         Buffer-->>System: return Cached Page
     else Page not in Cache
-        Buffer->>Buffer: EvictPage() (if full)
+        alt Buffer is Full
+            Buffer->>Buffer: EvictPage()
+            alt Page is Pinned
+                Buffer->>Buffer: Skip (Should Not Evict Pinned Page)
+            else Use Replacement Policy
+                Buffer->>Buffer: Select Victim Page
+            end
+        end
         Buffer->>Disk: Read(PageId)
         Disk-->>Buffer: Page Data
         Buffer-->>System: return Page
@@ -526,13 +920,35 @@ sequenceDiagram
 ```
 
 ### Page & FileManager
-Covers: `InsertRecord_ShouldReject_WhenPageIsFull`, `DeleteRecord_ShouldRemoveRecord`, `Compact_ShouldReclaimFreeSpace`, `ReadPage_ShouldReturnRequestedPage`, `WritePage_ShouldPersistPageData`
+Covers: `InsertRecord_ShouldReject_WhenPageIsFull`, `DeleteRecord_ShouldRemoveRecord`, `Compact_ShouldReclaimFreeSpace`, `ReadPage_ShouldReturnRequestedPage`, `WritePage_ShouldPersistPageData`, `AllocatePage_ShouldExtendFile_WhenNoFreePagesExist`, `DeleteRecord_ShouldUpdateFreeSpaceCorrectly`
+```mermaid
+flowchart LR
+    ClassNode["Page & FileManager"]
+
+    ClassNode --> Page___FileManager_1["InsertRecord_ShouldReject_WhenPageIsFull"]
+    ClassNode --> Page___FileManager_2["DeleteRecord_ShouldRemoveRecord"]
+    ClassNode --> Page___FileManager_3["Compact_ShouldReclaimFreeSpace"]
+    ClassNode --> Page___FileManager_4["ReadPage_ShouldReturnRequestedPage"]
+    ClassNode --> Page___FileManager_5["WritePage_ShouldPersistPageData"]
+    ClassNode --> Page___FileManager_6["AllocatePage_ShouldExtendFile_WhenNoFreePagesExist"]
+    ClassNode --> Page___FileManager_7["DeleteRecord_ShouldUpdateFreeSpaceCorrectly"]
+
+    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
+    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
+    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+
+    class ClassNode classNode
+    class Page___FileManager_1,Page___FileManager_2,Page___FileManager_3,Page___FileManager_4,Page___FileManager_5,Page___FileManager_6,Page___FileManager_7 missingTest
+```
+
 ```mermaid
 sequenceDiagram
     autonumber
     participant Storage as StorageEngine
     participant Pg as Page
+    participant Disk as FileManager
     
+    %% Insert Record
     Storage->>Pg: InsertRecord(record)
     alt FreeSpace < record.Length
         Pg-->>Storage: throws PageFullException
@@ -541,13 +957,47 @@ sequenceDiagram
         Pg-->>Storage: Success (RID)
     end
     
+    %% Delete Record
+    Storage->>Pg: DeleteRecord(RID)
+    Pg->>Pg: Remove record
+    Pg-->>Storage: Success
+    
+    %% Compact
     Storage->>Pg: Compact()
     Pg->>Pg: Reclaim Free Space (shift bytes)
     Pg-->>Storage: Success
+    
+    %% Read/Write Page
+    Storage->>Disk: ReadPage(PageId)
+    Disk-->>Storage: return Page Data
+    
+    Storage->>Disk: WritePage(PageId, data)
+    Disk-->>Storage: Success
 ```
 
 ### Logging & Recovery
-Covers: `WriteLog_ShouldAssignIncreasingLSN`, `Recover_ShouldReplayCommittedTransactions`, `Recover_ShouldUndoUncommittedTransactions`, `Recover_ShouldRestoreConsistentDatabase`
+Covers: `WriteLog_ShouldAssignIncreasingLSN`, `Recover_ShouldReplayCommittedTransactions`, `Recover_ShouldUndoUncommittedTransactions`, `Recover_ShouldRestoreConsistentDatabase`, `Recover_ShouldHandleCorruptWALRecord`, `Truncate_ShouldRemoveLogsBeforeCheckpoint`, `Checkpoint_ShouldRecordActiveTransactions`, `Checkpoint_ShouldFlushDirtyPages`
+```mermaid
+flowchart LR
+    ClassNode["Logging & Recovery"]
+
+    ClassNode --> Logging___Recovery_1["WriteLog_ShouldAssignIncreasingLSN"]
+    ClassNode --> Logging___Recovery_2["Recover_ShouldReplayCommittedTransactions"]
+    ClassNode --> Logging___Recovery_3["Recover_ShouldUndoUncommittedTransactions"]
+    ClassNode --> Logging___Recovery_4["Recover_ShouldRestoreConsistentDatabase"]
+    ClassNode --> Logging___Recovery_5["Recover_ShouldHandleCorruptWALRecord"]
+    ClassNode --> Logging___Recovery_6["Truncate_ShouldRemoveLogsBeforeCheckpoint"]
+    ClassNode --> Logging___Recovery_7["Checkpoint_ShouldRecordActiveTransactions"]
+    ClassNode --> Logging___Recovery_8["Checkpoint_ShouldFlushDirtyPages"]
+
+    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
+    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
+    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+
+    class ClassNode classNode
+    class Logging___Recovery_1,Logging___Recovery_2,Logging___Recovery_3,Logging___Recovery_4,Logging___Recovery_5,Logging___Recovery_6,Logging___Recovery_7,Logging___Recovery_8 missingTest
+```
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -626,7 +1076,30 @@ TransactionManager --> WALManager
 ```
 
 ### Transaction Lifecycle & TransactionManager
-Covers: `Begin_ShouldCreateActiveTransaction`, `Commit_ShouldPersistChanges`, `Commit_ShouldWriteWALBeforePersistingData`, `Commit_ShouldFail_WhenWALWriteFails`, `Rollback_ShouldUndoAllChanges`, `Rollback_ShouldRestoreOriginalPageState`, `RollbackToSavepoint_ShouldRestorePreviousState`, `CommitTransaction_ShouldReleaseAllLocks`, `RollbackTransaction_ShouldReleaseAllLocks`
+Covers: `Begin_ShouldCreateActiveTransaction`, `Commit_ShouldPersistChanges`, `Commit_ShouldWriteWALBeforePersistingData`, `Commit_ShouldFail_WhenWALWriteFails`, `Rollback_ShouldUndoAllChanges`, `Rollback_ShouldRestoreOriginalPageState`, `RollbackToSavepoint_ShouldRestorePreviousState`, `CommitTransaction_ShouldReleaseAllLocks`, `RollbackTransaction_ShouldReleaseAllLocks`, `DetectDeadlock_ShouldAbortTransactionWithLowestPriority`
+```mermaid
+flowchart LR
+    ClassNode["Transaction Lifecycle & TransactionManager"]
+
+    ClassNode --> Transaction_Lifecycle___TransactionManager_1["Begin_ShouldCreateActiveTransaction"]
+    ClassNode --> Transaction_Lifecycle___TransactionManager_2["Commit_ShouldPersistChanges"]
+    ClassNode --> Transaction_Lifecycle___TransactionManager_3["Commit_ShouldWriteWALBeforePersistingData"]
+    ClassNode --> Transaction_Lifecycle___TransactionManager_4["Commit_ShouldFail_WhenWALWriteFails"]
+    ClassNode --> Transaction_Lifecycle___TransactionManager_5["Rollback_ShouldUndoAllChanges"]
+    ClassNode --> Transaction_Lifecycle___TransactionManager_6["Rollback_ShouldRestoreOriginalPageState"]
+    ClassNode --> Transaction_Lifecycle___TransactionManager_7["RollbackToSavepoint_ShouldRestorePreviousState"]
+    ClassNode --> Transaction_Lifecycle___TransactionManager_8["CommitTransaction_ShouldReleaseAllLocks"]
+    ClassNode --> Transaction_Lifecycle___TransactionManager_9["RollbackTransaction_ShouldReleaseAllLocks"]
+    ClassNode --> Transaction_Lifecycle___TransactionManager_10["DetectDeadlock_ShouldAbortTransactionWithLowestPriority"]
+
+    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
+    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
+    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+
+    class ClassNode classNode
+    class Transaction_Lifecycle___TransactionManager_1,Transaction_Lifecycle___TransactionManager_2,Transaction_Lifecycle___TransactionManager_3,Transaction_Lifecycle___TransactionManager_4,Transaction_Lifecycle___TransactionManager_5,Transaction_Lifecycle___TransactionManager_6,Transaction_Lifecycle___TransactionManager_7,Transaction_Lifecycle___TransactionManager_8,Transaction_Lifecycle___TransactionManager_9,Transaction_Lifecycle___TransactionManager_10 missingTest
+```
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -656,14 +1129,41 @@ sequenceDiagram
     
     %% Rollback
     Client->>TxMgr: Rollback(txId)
-    TxMgr->>Tx: UndoAllChanges() / RestorePageState()
+    TxMgr->>Tx: UndoAllChanges() / RestoreOriginalPageState()
     TxMgr->>Tx: Status = Aborted
     TxMgr->>LockMgr: ReleaseAll(txId)
     TxMgr-->>Client: Rolled Back
+    
+    %% RollbackToSavepoint
+    Client->>TxMgr: RollbackToSavepoint(txId, "Savepoint1")
+    TxMgr->>Tx: RestorePreviousState()
+    TxMgr-->>Client: Rolled Back To Savepoint
 ```
 
 ### LockManager & MVCC
-Covers: `AcquireSharedLock_ShouldGrantLock_WhenNoConflict`, `AcquireExclusiveLock_ShouldWait_WhenSharedLockExists`, `DetectDeadlock_ShouldIdentifyCircularWait`, `Read_ShouldIgnoreUncommittedVersion`
+Covers: `AcquireSharedLock_ShouldGrantLock_WhenNoConflict`, `AcquireExclusiveLock_ShouldWait_WhenSharedLockExists`, `DetectDeadlock_ShouldIdentifyCircularWait`, `Read_ShouldIgnoreUncommittedVersion`, `AcquireLock_ShouldTimeout_WhenWaitExceedsLimit`, `CreateVersion_ShouldMaintainVersionChain`, `GarbageCollect_ShouldRemoveVersionsOlderThanOldestActiveSnapshot`, `ReadVersion_ShouldReturnLatestCommittedVersion`, `ReadVersion_ShouldReturnOldVersion_ForRepeatableRead`
+```mermaid
+flowchart LR
+    ClassNode["LockManager & MVCC"]
+
+    ClassNode --> LockManager___MVCC_1["AcquireSharedLock_ShouldGrantLock_WhenNoConflict"]
+    ClassNode --> LockManager___MVCC_2["AcquireExclusiveLock_ShouldWait_WhenSharedLockExists"]
+    ClassNode --> LockManager___MVCC_3["DetectDeadlock_ShouldIdentifyCircularWait"]
+    ClassNode --> LockManager___MVCC_4["Read_ShouldIgnoreUncommittedVersion"]
+    ClassNode --> LockManager___MVCC_5["AcquireLock_ShouldTimeout_WhenWaitExceedsLimit"]
+    ClassNode --> LockManager___MVCC_6["CreateVersion_ShouldMaintainVersionChain"]
+    ClassNode --> LockManager___MVCC_7["GarbageCollect_ShouldRemoveVersionsOlderThanOldestActiveSnapshot"]
+    ClassNode --> LockManager___MVCC_8["ReadVersion_ShouldReturnLatestCommittedVersion"]
+    ClassNode --> LockManager___MVCC_9["ReadVersion_ShouldReturnOldVersion_ForRepeatableRead"]
+
+    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
+    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
+    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+
+    class ClassNode classNode
+    class LockManager___MVCC_1,LockManager___MVCC_2,LockManager___MVCC_3,LockManager___MVCC_4,LockManager___MVCC_5,LockManager___MVCC_6,LockManager___MVCC_7,LockManager___MVCC_8,LockManager___MVCC_9 missingTest
+```
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -751,6 +1251,26 @@ QueryExecutor --> RuntimeContext
 ### SQL Parsing & Semantic Analysis
 Covers: `ParseSelect_ShouldGenerateAST`, `ParseInsert_ShouldGenerateAST`, `ParseCreate_ShouldGenerateASTForDDL`, `Parse_ShouldThrow_WhenSqlSyntaxIsInvalid`, `Bind_ShouldResolveTableNames`, `Bind_ShouldThrow_WhenTableDoesNotExist`, `Bind_ShouldThrow_WhenColumnDoesNotExist`
 ```mermaid
+flowchart LR
+    ClassNode["SQL Parsing & Semantic Analysis"]
+
+    ClassNode --> SQL_Parsing___Semantic_Analysis_1["ParseSelect_ShouldGenerateAST"]
+    ClassNode --> SQL_Parsing___Semantic_Analysis_2["ParseInsert_ShouldGenerateAST"]
+    ClassNode --> SQL_Parsing___Semantic_Analysis_3["ParseCreate_ShouldGenerateASTForDDL"]
+    ClassNode --> SQL_Parsing___Semantic_Analysis_4["Parse_ShouldThrow_WhenSqlSyntaxIsInvalid"]
+    ClassNode --> SQL_Parsing___Semantic_Analysis_5["Bind_ShouldResolveTableNames"]
+    ClassNode --> SQL_Parsing___Semantic_Analysis_6["Bind_ShouldThrow_WhenTableDoesNotExist"]
+    ClassNode --> SQL_Parsing___Semantic_Analysis_7["Bind_ShouldThrow_WhenColumnDoesNotExist"]
+
+    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
+    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
+    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+
+    class ClassNode classNode
+    class SQL_Parsing___Semantic_Analysis_1,SQL_Parsing___Semantic_Analysis_2,SQL_Parsing___Semantic_Analysis_3,SQL_Parsing___Semantic_Analysis_4,SQL_Parsing___Semantic_Analysis_5,SQL_Parsing___Semantic_Analysis_6,SQL_Parsing___Semantic_Analysis_7 missingTest
+```
+
+```mermaid
 sequenceDiagram
     autonumber
     participant Client
@@ -777,7 +1297,26 @@ sequenceDiagram
 ```
 
 ### Query Optimization
-Covers: `Optimize_ShouldChooseIndexScan_WhenIndexExists`, `Optimize_ShouldChooseTableScan_WhenNoIndexExists`, `Optimize_ShouldOptimizeJoinOrder`, `Optimize_ShouldApplyPredicatePushdown`
+Covers: `Optimize_ShouldChooseIndexScan_WhenIndexExists`, `Optimize_ShouldChooseTableScan_WhenNoIndexExists`, `Optimize_ShouldOptimizeJoinOrder`, `Optimize_ShouldApplyPredicatePushdown`, `Optimize_ShouldUseCoveringIndex_WhenPossible`, `Optimize_ShouldChooseHashJoin_ForEquiJoins`
+```mermaid
+flowchart LR
+    ClassNode["Query Optimization"]
+
+    ClassNode --> Query_Optimization_1["Optimize_ShouldChooseIndexScan_WhenIndexExists"]
+    ClassNode --> Query_Optimization_2["Optimize_ShouldChooseTableScan_WhenNoIndexExists"]
+    ClassNode --> Query_Optimization_3["Optimize_ShouldOptimizeJoinOrder"]
+    ClassNode --> Query_Optimization_4["Optimize_ShouldApplyPredicatePushdown"]
+    ClassNode --> Query_Optimization_5["Optimize_ShouldUseCoveringIndex_WhenPossible"]
+    ClassNode --> Query_Optimization_6["Optimize_ShouldChooseHashJoin_ForEquiJoins"]
+
+    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
+    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
+    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+
+    class ClassNode classNode
+    class Query_Optimization_1,Query_Optimization_2,Query_Optimization_3,Query_Optimization_4,Query_Optimization_5,Query_Optimization_6 missingTest
+```
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -801,7 +1340,31 @@ sequenceDiagram
 ```
 
 ### Query Execution
-Covers: `ExecuteSelect_ShouldReturnMatchingRows`, `ExecuteInsert_ShouldInsertRecord`, `ExecuteUpdate_ShouldModifyExistingRows`, `ExecuteDelete_ShouldDeleteMatchingRows`, `ExecuteJoin_ShouldReturnJoinedRows`, `ExecuteAggregate_ShouldReturnAggregatedResult`, `Execute_ShouldThrow_WhenExecutionPlanIsInvalid`
+Covers: `ExecuteSelect_ShouldReturnMatchingRows`, `ExecuteInsert_ShouldInsertRecord`, `ExecuteUpdate_ShouldModifyExistingRows`, `ExecuteDelete_ShouldDeleteMatchingRows`, `ExecuteJoin_ShouldReturnJoinedRows`, `ExecuteAggregate_ShouldReturnAggregatedResult`, `Execute_ShouldThrow_WhenExecutionPlanIsInvalid`, `ExecuteAggregate_ShouldHandleEmptyTables`, `ExecuteJoin_ShouldReturnEmpty_WhenNoMatches`, `ExecuteLimit_ShouldReturnOnlySpecifiedRows`, `ExecuteOrderBy_ShouldSortResultsCorrectly`
+```mermaid
+flowchart LR
+    ClassNode["Query Execution"]
+
+    ClassNode --> Query_Execution_1["ExecuteSelect_ShouldReturnMatchingRows"]
+    ClassNode --> Query_Execution_2["ExecuteInsert_ShouldInsertRecord"]
+    ClassNode --> Query_Execution_3["ExecuteUpdate_ShouldModifyExistingRows"]
+    ClassNode --> Query_Execution_4["ExecuteDelete_ShouldDeleteMatchingRows"]
+    ClassNode --> Query_Execution_5["ExecuteJoin_ShouldReturnJoinedRows"]
+    ClassNode --> Query_Execution_6["ExecuteAggregate_ShouldReturnAggregatedResult"]
+    ClassNode --> Query_Execution_7["Execute_ShouldThrow_WhenExecutionPlanIsInvalid"]
+    ClassNode --> Query_Execution_8["ExecuteAggregate_ShouldHandleEmptyTables"]
+    ClassNode --> Query_Execution_9["ExecuteJoin_ShouldReturnEmpty_WhenNoMatches"]
+    ClassNode --> Query_Execution_10["ExecuteLimit_ShouldReturnOnlySpecifiedRows"]
+    ClassNode --> Query_Execution_11["ExecuteOrderBy_ShouldSortResultsCorrectly"]
+
+    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
+    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
+    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+
+    class ClassNode classNode
+    class Query_Execution_1,Query_Execution_2,Query_Execution_3,Query_Execution_4,Query_Execution_5,Query_Execution_6,Query_Execution_7,Query_Execution_8,Query_Execution_9,Query_Execution_10,Query_Execution_11 missingTest
+```
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -858,6 +1421,26 @@ CatalogManager --> Index
 ### Catalog Registration (Database, Schema, Table)
 Covers: `RegisterDatabase_ShouldAddDatabaseMetadata`, `RegisterDatabase_ShouldRejectDuplicateDatabase`, `RegisterSchema_ShouldAddSchemaMetadata`, `RegisterSchema_ShouldRejectDuplicateSchema`, `RegisterTable_ShouldAddTableMetadata`, `RegisterTable_ShouldRejectDuplicateTable`, `RegisterTable_ShouldRollback_WhenStorageFails`
 ```mermaid
+flowchart LR
+    ClassNode["Catalog Registration (Database, Schema, Table)"]
+
+    ClassNode --> Catalog_Registration__Database__Schema__Table__1["RegisterDatabase_ShouldAddDatabaseMetadata"]
+    ClassNode --> Catalog_Registration__Database__Schema__Table__2["RegisterDatabase_ShouldRejectDuplicateDatabase"]
+    ClassNode --> Catalog_Registration__Database__Schema__Table__3["RegisterSchema_ShouldAddSchemaMetadata"]
+    ClassNode --> Catalog_Registration__Database__Schema__Table__4["RegisterSchema_ShouldRejectDuplicateSchema"]
+    ClassNode --> Catalog_Registration__Database__Schema__Table__5["RegisterTable_ShouldAddTableMetadata"]
+    ClassNode --> Catalog_Registration__Database__Schema__Table__6["RegisterTable_ShouldRejectDuplicateTable"]
+    ClassNode --> Catalog_Registration__Database__Schema__Table__7["RegisterTable_ShouldRollback_WhenStorageFails"]
+
+    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
+    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
+    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+
+    class ClassNode classNode
+    class Catalog_Registration__Database__Schema__Table__1,Catalog_Registration__Database__Schema__Table__2,Catalog_Registration__Database__Schema__Table__3,Catalog_Registration__Database__Schema__Table__4,Catalog_Registration__Database__Schema__Table__5,Catalog_Registration__Database__Schema__Table__6,Catalog_Registration__Database__Schema__Table__7 missingTest
+```
+
+```mermaid
 sequenceDiagram
     autonumber
     participant Engine as Engine
@@ -892,6 +1475,24 @@ sequenceDiagram
 
 ### Metadata Lookup & Dependency Management
 Covers: `FindTable_ShouldReturnQualifiedTable`, `ResolveObjectName_ShouldResolveSchemaObject`, `DropTable_ShouldReject_WhenReferencedByForeignKey`, `DropSchema_ShouldReject_WhenSchemaContainsObjects`
+```mermaid
+flowchart LR
+    ClassNode["Metadata Lookup & Dependency Management"]
+
+    ClassNode --> Metadata_Lookup___Dependency_Management_1["FindTable_ShouldReturnQualifiedTable"]
+    ClassNode --> Metadata_Lookup___Dependency_Management_2["ResolveObjectName_ShouldResolveSchemaObject"]
+    ClassNode --> Metadata_Lookup___Dependency_Management_3["DropTable_ShouldReject_WhenReferencedByForeignKey"]
+    ClassNode --> Metadata_Lookup___Dependency_Management_4["DropSchema_ShouldReject_WhenSchemaContainsObjects"]
+
+    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
+    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
+    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+
+    class ClassNode classNode
+    class Metadata_Lookup___Dependency_Management_3 completedTest
+    class Metadata_Lookup___Dependency_Management_1,Metadata_Lookup___Dependency_Management_2,Metadata_Lookup___Dependency_Management_4 missingTest
+```
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -961,6 +1562,22 @@ Role --> Permission
 ### Authentication
 Covers: `Login_ShouldAuthenticateValidUser`, `Login_ShouldRejectInvalidUsernameOrPassword`, `Authenticate_ShouldValidateUserCredentials`
 ```mermaid
+flowchart LR
+    ClassNode["Authentication"]
+
+    ClassNode --> Authentication_1["Login_ShouldAuthenticateValidUser"]
+    ClassNode --> Authentication_2["Login_ShouldRejectInvalidUsernameOrPassword"]
+    ClassNode --> Authentication_3["Authenticate_ShouldValidateUserCredentials"]
+
+    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
+    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
+    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+
+    class ClassNode classNode
+    class Authentication_1,Authentication_2,Authentication_3 missingTest
+```
+
+```mermaid
 sequenceDiagram
     autonumber
     actor Client
@@ -978,7 +1595,28 @@ sequenceDiagram
 ```
 
 ### Permission & Authorization
-Covers: `HasPermission_ShouldReturnTrue_WhenPermissionExists`, `HasPermission_ShouldReturnFalse_WhenPermissionDoesNotExist`, `Authorize_ShouldAllowAuthorizedUser`, `Authorize_ShouldRejectUnauthorizedUser`, `Authorize_ShouldCheckObjectPermissions`, `Authorize_ShouldVerifyUserPermission`
+Covers: `HasPermission_ShouldReturnTrue_WhenPermissionExists`, `HasPermission_ShouldReturnFalse_WhenPermissionDoesNotExist`, `Authorize_ShouldAllowAuthorizedUser`, `Authorize_ShouldRejectUnauthorizedUser`, `Authorize_ShouldCheckObjectPermissions`, `Authorize_ShouldVerifyUserPermission`, `GrantRole_ShouldAssignRoleToUser`, `RevokeRole_ShouldRemoveRoleFromUser`
+```mermaid
+flowchart LR
+    ClassNode["Permission & Authorization"]
+
+    ClassNode --> Permission___Authorization_1["HasPermission_ShouldReturnTrue_WhenPermissionExists"]
+    ClassNode --> Permission___Authorization_2["HasPermission_ShouldReturnFalse_WhenPermissionDoesNotExist"]
+    ClassNode --> Permission___Authorization_3["Authorize_ShouldAllowAuthorizedUser"]
+    ClassNode --> Permission___Authorization_4["Authorize_ShouldRejectUnauthorizedUser"]
+    ClassNode --> Permission___Authorization_5["Authorize_ShouldCheckObjectPermissions"]
+    ClassNode --> Permission___Authorization_6["Authorize_ShouldVerifyUserPermission"]
+    ClassNode --> Permission___Authorization_7["GrantRole_ShouldAssignRoleToUser"]
+    ClassNode --> Permission___Authorization_8["RevokeRole_ShouldRemoveRoleFromUser"]
+
+    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
+    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
+    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+
+    class ClassNode classNode
+    class Permission___Authorization_1,Permission___Authorization_2,Permission___Authorization_3,Permission___Authorization_4,Permission___Authorization_5,Permission___Authorization_6,Permission___Authorization_7,Permission___Authorization_8 missingTest
+```
+
 ```mermaid
 sequenceDiagram
     autonumber

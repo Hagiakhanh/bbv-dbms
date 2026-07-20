@@ -37,6 +37,30 @@ public class DatabaseTests
     }
 
     [Fact]
+    public void CreateSchema_ShouldReject_WhenPermissionDenied()
+    {
+        var db = new Database(1, "TestDB", "Admin");
+        
+        // Arrange (Assuming some SecurityContext or SecurityManager integration will be added)
+        // For red phase, this will fail or throw NotImplementedException
+        Action act = () => db.CreateSchema("dbo");
+
+        act.Should().Throw<PermissionDeniedException>();
+    }
+
+    [Fact]
+    public void CreateSchema_ShouldRollback_WhenCatalogRegistrationFails()
+    {
+        var db = new Database(1, "TestDB", "Admin");
+        
+        // Arrange: mock catalog to fail
+        Action act = () => db.CreateSchema("dbo");
+
+        act.Should().Throw<CatalogException>();
+        db.Schemas.Should().BeEmpty(); // Verify rollback
+    }
+
+    [Fact]
     public void DropSchema_ShouldRemoveExistingSchema()
     {
         var db = new Database(1, "TestDB", "Admin");

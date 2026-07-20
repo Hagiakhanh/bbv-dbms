@@ -57,7 +57,23 @@ public class SchemaTests
     }
 
     [Fact]
-    public void GetTable_ShouldReturnTable_WhenTableExists()
+    public void DropTable_ShouldReject_WhenReferencedByForeignKey()
+    {
+        var table1 = new Table("Users");
+        var table2 = new Table("Orders");
+        _schema.AddTable(table1);
+        _schema.AddTable(table2);
+
+        var fk = new ForeignKey { ReferenceTable = table1 };
+        table2.AddConstraint(fk);
+
+        Action act = () => _schema.DropTable("Users");
+
+        act.Should().Throw<ForeignKeyReferenceException>();
+    }
+
+    [Fact]
+    public void GetTable_ShouldReturnTable_WhenExists()
     {
         var table = new Table("Users");
         _schema.AddTable(table);
