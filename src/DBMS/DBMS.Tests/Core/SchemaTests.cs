@@ -8,57 +8,123 @@ namespace DBMS.Tests.Core;
 
 public class SchemaTests
 {
+    private readonly Schema _schema;
+
+    public SchemaTests()
+    {
+        _schema = new Schema("TestSchema");
+    }
+
     [Fact]
     public void AddTable_ShouldAddTableSuccessfully()
     {
-        throw new NotImplementedException("Test not implemented yet.");
+        var table = new Table("Users");
+
+        _schema.AddTable(table);
+
+        _schema.Tables.Should().Contain(table);
     }
 
     [Fact]
     public void AddTable_ShouldRejectDuplicateTableName()
     {
-        throw new NotImplementedException("Test not implemented yet.");
+        var table1 = new Table("Users");
+        var table2 = new Table("Users");
+
+        _schema.AddTable(table1);
+        Action act = () => _schema.AddTable(table2);
+
+        act.Should().Throw<Exception>().WithMessage("*Duplicate*");
     }
 
     [Fact]
     public void DropTable_ShouldRemoveExistingTable()
     {
-        throw new NotImplementedException("Test not implemented yet.");
+        var table = new Table("OldTable");
+        _schema.AddTable(table);
+
+        _schema.DropTable("OldTable");
+        _schema.Tables.Should().NotContain(table);
     }
 
     [Fact]
     public void DropTable_ShouldThrow_WhenTableDoesNotExist()
     {
-        throw new NotImplementedException("Test not implemented yet.");
+        Action act = () => _schema.DropTable("NonExistentTable");
+
+        act.Should().Throw<Exception>().WithMessage("*not found*");
+    }
+
+    [Fact]
+    public void GetTable_ShouldReturnTable_WhenTableExists()
+    {
+        var table = new Table("Users");
+        _schema.AddTable(table);
+        
+        var result = _schema.GetTable("Users");
+        
+        result.Should().Be(table);
+    }
+    
+    [Fact]
+    public void GetTables_ShouldReturnAllTables()
+    {
+        var table = new Table("Users");
+        _schema.AddTable(table);
+        
+        var result = _schema.GetTables();
+        
+        result.Should().Contain(table);
     }
 
     [Fact]
     public void CreateView_ShouldRegisterView()
     {
-        throw new NotImplementedException("Test not implemented yet.");
+        var view = new View("UserView");
+
+        _schema.CreateView(view);
+
+        _schema.Views.Should().Contain(view);
     }
 
     [Fact]
     public void DropView_ShouldRemoveView()
     {
-        throw new NotImplementedException("Test not implemented yet.");
+        var view = new View("OldView");
+        _schema.CreateView(view);
+
+        _schema.DropView("OldView");
+        _schema.Views.Should().NotContain(view);
     }
 
     [Fact]
     public void CreateProcedure_ShouldRegisterProcedure()
     {
-        throw new NotImplementedException("Test not implemented yet.");
+        var proc = new StoredProcedure("GetUsers");
+
+        _schema.CreateProcedure(proc);
+
+        _schema.Procedures.Should().Contain(proc);
     }
 
     [Fact]
     public void DropProcedure_ShouldRemoveProcedure()
     {
-        throw new NotImplementedException("Test not implemented yet.");
+        var proc = new StoredProcedure("OldProc");
+        _schema.CreateProcedure(proc);
+
+        _schema.DropProcedure("OldProc");
+
+        _schema.Procedures.Should().NotContain(proc);
     }
 
     [Fact]
     public void CreateSequence_ShouldRegisterSequence()
     {
-        throw new NotImplementedException("Test not implemented yet.");
+        var seq = new Sequence("UserSeq");
+
+        _schema.CreateSequence(seq);
+
+        _schema.Sequences.Should().Contain(seq);
     }
 }
