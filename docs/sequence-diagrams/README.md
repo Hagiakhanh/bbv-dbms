@@ -6,7 +6,8 @@
 | DatabaseManager | 7 | 7 | 0 | 100% |
 | Database Operations | 6 | 6 | 0 | 100% |
 | Schema & Table Operations | 10 | 10 | 0 | 100% |
-| Primary & Unique Constraints | 7 | 0 | 7 | 0% |
+| Primary Key Constraints | 3 | 3 | 0 | 100% |
+| Unique Constraints | 3 | 3 | 0 | 100% |
 | Foreign Key Constraints | 8 | 0 | 8 | 0% |
 | Check Constraints | 4 | 0 | 4 | 0% |
 | Index & IndexManager | 8 | 0 | 8 | 0% |
@@ -24,7 +25,7 @@
 | Metadata Lookup & Dependency Management | 4 | 1 | 3 | 25% |
 | Authentication | 3 | 0 | 3 | 0% |
 | Permission & Authorization | 8 | 0 | 8 | 0% |
-| **TOTAL** | **158** | **30** | **128** | **19%** |
+| **TOTAL** | **157** | **36** | **121** | **23%** |
 
 ## 1. Server & Database Management
 
@@ -283,14 +284,25 @@ class Constraint {
     +Name : string
     +Validate(row : Row) bool
 }
+class IRowKeyExtractor {
+    <<interface>>
+    +ExtractKey(row : Row, columns : List~Column~) object
+    +HasNullValue(row : Row, columns : List~Column~) bool
+}
 class PrimaryKey {
     +Columns : List~Column~
+    -Index _index
+    -IRowKeyExtractor _extractor
 }
 class ForeignKey {
     +ReferenceTable : Table
     +ReferenceColumns : List~Column~
 }
-class UniqueConstraint
+class UniqueConstraint {
+    +Columns : List~Column~
+    -Index _index
+    -IRowKeyExtractor _extractor
+}
 class CheckConstraint {
     +Expression : string
 }
@@ -350,6 +362,8 @@ Constraint <|-- ForeignKey
 Constraint <|-- UniqueConstraint
 Constraint <|-- CheckConstraint
 ForeignKey --> Table
+PrimaryKey --> IRowKeyExtractor
+UniqueConstraint --> IRowKeyExtractor
 %% ── Domain Services ─────────────────────────────────
 class SchemaService {
     -catalog : CatalogManager
@@ -505,42 +519,98 @@ sequenceDiagram
 
 ## Constraint & Index
 
-### Primary & Unique Constraints
-Covers: `Validate_ShouldAcceptUniqueKey`, `Validate_ShouldRejectDuplicateKey`, `Validate_ShouldRejectDuplicateValue`, `PrimaryKey_ShouldRejectNullValues`, `PrimaryKey_ShouldEnforceUniqueness`, `UniqueConstraint_ShouldAllowSingleNull`, `UniqueConstraint_ShouldRejectDuplicateValues`
+### Primary Key Constraints
+Covers: `PrimaryKey_ShouldRejectNullValues`, `PrimaryKey_ShouldRejectDuplicateValues`, `PrimaryKey_ShouldAcceptUniqueValues`
 ```mermaid
 flowchart LR
-    ClassNode["Primary & Unique Constraints"]
+    ClassNode["Primary Key Constraints"]
 
-    ClassNode --> Primary___Unique_Constraints_1["Validate_ShouldAcceptUniqueKey"]
-    ClassNode --> Primary___Unique_Constraints_2["Validate_ShouldRejectDuplicateKey"]
-    ClassNode --> Primary___Unique_Constraints_3["Validate_ShouldRejectDuplicateValue"]
-    ClassNode --> Primary___Unique_Constraints_4["PrimaryKey_ShouldRejectNullValues"]
-    ClassNode --> Primary___Unique_Constraints_5["PrimaryKey_ShouldEnforceUniqueness"]
-    ClassNode --> Primary___Unique_Constraints_6["UniqueConstraint_ShouldAllowSingleNull"]
-    ClassNode --> Primary___Unique_Constraints_7["UniqueConstraint_ShouldRejectDuplicateValues"]
+    ClassNode --> Primary_Key_Constraints_1["PrimaryKey_ShouldRejectNullValues"]
+    ClassNode --> Primary_Key_Constraints_2["PrimaryKey_ShouldRejectDuplicateValues"]
+    ClassNode --> Primary_Key_Constraints_3["PrimaryKey_ShouldAcceptUniqueValues"]
 
     classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
     classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
     classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
 
     class ClassNode classNode
-    class Primary___Unique_Constraints_1,Primary___Unique_Constraints_2,Primary___Unique_Constraints_3,Primary___Unique_Constraints_4,Primary___Unique_Constraints_5,Primary___Unique_Constraints_6,Primary___Unique_Constraints_7 missingTest
+    class Primary_Key_Constraints_1,Primary_Key_Constraints_2,Primary_Key_Constraints_3 completedTest
 ```
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant RecordMgr as RecordManager
-    participant Constr as PrimaryKey/UniqueConstraint
+    participant Constr as PrimaryKey
+    participant Extractor as IRowKeyExtractor
+    participant Idx as Index
     
     RecordMgr->>Constr: Validate(Row)
-    Constr->>Constr: Check Uniqueness & Nullability
-    alt Validation Failed (Duplicate or Null)
+    Constr->>Extractor: HasNullValue(Row, Columns)
+    alt Has Null
+        Extractor-->>Constr: true
         Constr-->>RecordMgr: throws UniqueConstraintViolationException
-    else Success
-        Constr-->>RecordMgr: return true
+    else No Null
+        Extractor-->>Constr: false
+        Constr->>Extractor: ExtractKey(Row, Columns)
+        Extractor-->>Constr: KeyValue
+        Constr->>Idx: Search(KeyValue)
+        alt Key Found
+            Idx-->>Constr: RID
+            Constr-->>RecordMgr: throws UniqueConstraintViolationException
+        else Key Not Found
+            Idx-->>Constr: null
+            Constr-->>RecordMgr: return true
+        end
     end
 ```
+
+### Unique Constraints
+Covers: `UniqueConstraint_ShouldAllowNullValues`, `UniqueConstraint_ShouldRejectDuplicateValues`, `UniqueConstraint_ShouldAcceptUniqueValues`
+```mermaid
+flowchart LR
+    ClassNode["Unique Constraints"]
+
+    ClassNode --> Unique_Constraints_1["UniqueConstraint_ShouldAllowNullValues"]
+    ClassNode --> Unique_Constraints_2["UniqueConstraint_ShouldRejectDuplicateValues"]
+    ClassNode --> Unique_Constraints_3["UniqueConstraint_ShouldAcceptUniqueValues"]
+
+    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
+    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
+    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+
+    class ClassNode classNode
+    class Unique_Constraints_1,Unique_Constraints_2,Unique_Constraints_3 completedTest
+```
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant RecordMgr as RecordManager
+    participant Constr as UniqueConstraint
+    participant Extractor as IRowKeyExtractor
+    participant Idx as Index
+    
+    RecordMgr->>Constr: Validate(Row)
+    Constr->>Extractor: HasNullValue(Row, Columns)
+    alt Has Null
+        Extractor-->>Constr: true
+        Constr-->>RecordMgr: return true
+    else No Null
+        Extractor-->>Constr: false
+        Constr->>Extractor: ExtractKey(Row, Columns)
+        Extractor-->>Constr: KeyValue
+        Constr->>Idx: Search(KeyValue)
+        alt Key Found
+            Idx-->>Constr: RID
+            Constr-->>RecordMgr: throws UniqueConstraintViolationException
+        else Key Not Found
+            Idx-->>Constr: null
+            Constr-->>RecordMgr: return true
+        end
+    end
+```
+
 
 ### Foreign Key Constraints
 Covers: `Validate_ShouldAcceptExistingReferencedRow`, `Validate_ShouldRejectMissingReferencedRow`, `Validate_ShouldCascadeDelete_WhenCascadeEnabled`, `ForeignKey_ShouldAcceptExistingReference`, `ForeignKey_ShouldRejectMissingReference`, `ForeignKey_ShouldCascadeDelete`, `ForeignKey_ShouldCascadeUpdate`, `ForeignKey_ShouldSetNullOnDelete`
