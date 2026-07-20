@@ -10,4 +10,10 @@ public interface ICatalogManager
     Database GetDatabase(string name);
     IEnumerable<Database> ListDatabases();
     bool CheckExists(string name);
+    DatabaseState GetDatabaseState(string name);
+    void LoadCatalog(string name);
+    void UpdateDatabaseName(string oldName, string newName);
+    void UpdateState(string name, DatabaseState state);
+    void RegisterExistingDatabaseFiles(string name, string filePath);
+    void Unregister(string name);
 }

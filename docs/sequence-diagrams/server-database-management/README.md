@@ -15,12 +15,13 @@ class DatabaseServer {
     +GetStatus() ServerStatus
 }
 class DatabaseManager {
-    -catalog : CatalogManager
-    -storage : StorageEngine
+    -_catalog : ICatalogManager
+    -_connectionPool : IConnectionPool
+    +DatabaseManager(catalog : ICatalogManager, connectionPool : IConnectionPool)
     +CreateDatabase(name : string)
     +DropDatabase(name : string, cascade : bool)
     +GetDatabase(name : string) Database
-    +ListDatabases() List~Database~
+    +ListDatabases() IEnumerable~Database~
     +OpenDatabase(name : string)
     +CloseDatabase(name : string)
     +RenameDatabase(oldName : string, newName : string)

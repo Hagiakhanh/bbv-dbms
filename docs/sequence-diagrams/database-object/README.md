@@ -7,25 +7,27 @@ class Database {
     +DatabaseId : int
     +Name : string
     +Owner : string
-    +Schemas : List~Schema~
+    +Schemas : IReadOnlyList~Schema~
+    +Database(id : int, name : string, owner : string)
     +CreateSchema(name : string) Schema
     +DropSchema(name : string)
     +GetSchema(name : string) Schema
-    +GetSchemas() List~Schema~
-    +Backup(path : string)
-    +Restore(path : string)
+    +GetSchemas() IReadOnlyList~Schema~
+    +Backup(path : string, fileManager : IFileManager)
+    +Restore(path : string, fileManager : IFileManager)
 }
 class Schema {
     +SchemaId : int
     +Name : string
-    +Tables : List~Table~
-    +Views : List~View~
-    +Procedures : List~StoredProcedure~
-    +Sequences : List~Sequence~
+    +Tables : IReadOnlyCollection~Table~
+    +Views : IReadOnlyCollection~View~
+    +Procedures : IReadOnlyCollection~StoredProcedure~
+    +Sequences : IReadOnlyCollection~Sequence~
+    +Schema(name : string)
     +AddTable(table : Table)
     +DropTable(name : string)
     +GetTable(name : string) Table
-    +GetTables() List~Table~
+    +GetTables() IReadOnlyCollection~Table~
     +CreateView(view : View)
     +DropView(name : string)
     +CreateProcedure(proc : StoredProcedure)
@@ -35,15 +37,16 @@ class Schema {
 class Table {
     +TableId : int
     +Name : string
-    +Columns : List~Column~
-    +Constraints : List~Constraint~
-    +Indexes : List~Index~
-    +Partitions : List~Partition~
-    +Triggers : List~Trigger~
+    +Columns : IReadOnlyCollection~Column~
+    +Constraints : IReadOnlyCollection~Constraint~
+    +Indexes : IReadOnlyCollection~Index~
+    +Partitions : IReadOnlyCollection~Partition~
+    +Triggers : IReadOnlyCollection~Trigger~
+    +Table(name : string)
     +AddColumn(col : Column)
     +RemoveColumn(name : string)
     +GetColumn(name : string) Column
-    +GetColumns() List~Column~
+    +GetColumns() IReadOnlyCollection~Column~
     +AddConstraint(constraint : Constraint)
     +RemoveConstraint(name : string)
     +AddIndex(index : Index)
@@ -116,13 +119,15 @@ class View {
     +ViewId : int
     +Name : string
     +QueryDefinition : string
+    +View(name : string)
     +Compile() ExecutionPlan
     +Execute() ResultCursor
 }
 class StoredProcedure {
     +Name : string
-    +Parameters : List~Column~
+    +Parameters : IReadOnlyCollection~Column~
     +Body : string
+    +StoredProcedure(name : string)
     +Compile()
     +Execute(args : object[]) ResultCursor
 }
@@ -130,6 +135,7 @@ class Sequence {
     +Name : string
     +CurrentValue : long
     +Increment : long
+    +Sequence(name : string)
     +NextValue() long
     +Reset()
 }
