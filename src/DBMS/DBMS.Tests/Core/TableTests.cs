@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using DBMS.Domain.Core;
 using DBMS.Domain.Exceptions;
 using FluentAssertions;
+using Moq;
 using Xunit;
 
 namespace DBMS.Tests.Core;
@@ -56,7 +57,7 @@ public class TableTests
         var col = new Column { Name = "Id" };
         _table.AddColumn(col);
 
-        var pk = new PrimaryKey { Columns = new List<Column> { col } };
+        var pk = new PrimaryKey("PK", new List<Column> { col }, new Mock<DBMS.Domain.Core.Index>().Object, new Mock<IRowKeyExtractor>().Object);
         _table.AddConstraint(pk);
 
         Action act = () => _table.RemoveColumn("Id");
@@ -67,7 +68,7 @@ public class TableTests
     [Fact]
     public void AddConstraint_ShouldRegisterConstraint()
     {
-        var constraint = new PrimaryKey { Columns = new List<Column> { new Column { Name = "Id" } } };
+        var constraint = new PrimaryKey("PK", new List<Column> { new Column { Name = "Id" } }, new Mock<DBMS.Domain.Core.Index>().Object, new Mock<IRowKeyExtractor>().Object);
 
         _table.AddConstraint(constraint);
 
@@ -77,7 +78,7 @@ public class TableTests
     [Fact]
     public void RemoveConstraint_ShouldRemoveConstraint()
     {
-        var constraint = new PrimaryKey { Columns = new List<Column>() };
+        var constraint = new PrimaryKey("PK", new List<Column>(), new Mock<DBMS.Domain.Core.Index>().Object, new Mock<IRowKeyExtractor>().Object);
         _table.AddConstraint(constraint);
 
         _table.RemoveConstraint(constraint.Name);
