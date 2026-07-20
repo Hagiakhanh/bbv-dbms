@@ -46,3 +46,23 @@ public class TableNotFoundException : Exception
 {
     public TableNotFoundException(string message) : base(message) { }
 }
+
+public class ForeignKeyReferenceException : Exception
+{
+    public ForeignKeyReferenceException(string message) : base(message) { }
+}
+
+public class DuplicateColumnException : Exception
+{
+    public DuplicateColumnException(string message) : base(message) { }
+}
+
+public class ColumnReferencedByConstraintException : Exception
+{
+    public ColumnReferencedByConstraintException(string message) : base(message) { }
+}
+
+public class CatalogException : Exception
+{
+    public CatalogException(string message) : base(message) { }
+}
