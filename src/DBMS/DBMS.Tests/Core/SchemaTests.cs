@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using DBMS.Domain.Core;
+using DBMS.Domain.Exceptions;
 using FluentAssertions;
 using Xunit;
 
@@ -34,7 +35,7 @@ public class SchemaTests
         _schema.AddTable(table1);
         Action act = () => _schema.AddTable(table2);
 
-        act.Should().Throw<Exception>().WithMessage("*Duplicate*");
+        act.Should().Throw<DuplicateTableException>();
     }
 
     [Fact]
@@ -52,7 +53,7 @@ public class SchemaTests
     {
         Action act = () => _schema.DropTable("NonExistentTable");
 
-        act.Should().Throw<Exception>().WithMessage("*not found*");
+        act.Should().Throw<TableNotFoundException>();
     }
 
     [Fact]

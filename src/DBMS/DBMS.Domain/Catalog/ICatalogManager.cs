@@ -11,6 +11,7 @@ public interface ICatalogManager
     IEnumerable<Database> ListDatabases();
     bool CheckExists(string name);
     DatabaseState GetDatabaseState(string name);
+    bool HasSchemas(string name);
     void LoadCatalog(string name);
     void UpdateDatabaseName(string oldName, string newName);
     void UpdateState(string name, DatabaseState state);

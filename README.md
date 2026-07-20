@@ -1,4 +1,4 @@
-﻿# DBMS Core Architecture Flowchart
+# DBMS Core Architecture Flowchart
 
 ```mermaid
 flowchart LR
@@ -581,6 +581,30 @@ DatabaseServer --> MonitoringManager
 * `CollectMetrics_ShouldCollectTransactionStatistics`
 * `GetMetrics_ShouldReturnLatestMetrics`
 
+### SessionManager
+* `CreateSession_ShouldInitializeContextForUser`
+* `CloseSession_ShouldReleaseAllSessionResources`
+* `SessionTimeout_ShouldCloseIdleConnection`
+* `ExecuteQuery_ShouldUseSessionContext`
+* `SetSessionVariable_ShouldUpdateSessionState`
+* `KillSession_ShouldTerminateActiveQueryAndRollback`
+
+### ConnectionManager
+* `AcceptConnection_ShouldCreateNewConnectionHandler`
+* `CloseConnection_ShouldReleaseSocketResources`
+* `GetActiveConnections_ShouldReturnCurrentConnectionCount`
+* `ConnectionPool_ShouldReuseIdleConnections`
+
+### WorkerPool
+* `SubmitTask_ShouldExecuteTaskInBackground`
+* `Worker_ShouldProcessQueueContinuously`
+* `Shutdown_ShouldWaitForActiveTasksToComplete`
+
+### BackupManager
+* `CreateFullBackup_ShouldExportEntireDatabase`
+* `CreateIncrementalBackup_ShouldExportOnlyChangedData`
+* `RestoreBackup_ShouldRecoverDatabaseFromBackupFile`
+
 ### Integration
 * `StartServer_ShouldLoadConfigurationBeforeInitializingServices`
 * `StartServer_ShouldInitializeDatabaseManager`
@@ -709,7 +733,11 @@ RecordManager --> Row : reads/writes
 ## Database Objects
 
 ### Database
+* `Constructor_ShouldInitializeDatabaseWithValidData`
+* `Constructor_ShouldThrow_WhenNameIsNullOrWhiteSpace`
+* `ChangeOwner_ShouldUpdateOwnerCorrectly`
 * `CreateSchema_ShouldAddSchemaToDatabase`
+* `CreateSchema_ShouldThrow_WhenSchemaNameIsNullOrWhiteSpace`
 * `CreateSchema_ShouldRejectDuplicateSchemaName`
 * `DropSchema_ShouldRemoveExistingSchema`
 * `DropSchema_ShouldThrow_WhenSchemaDoesNotExist`
@@ -720,25 +748,37 @@ RecordManager --> Row : reads/writes
 * `Restore_ShouldRestoreDatabaseSuccessfully`
 
 ### Schema
+* `Constructor_ShouldInitializeSchemaWithValidName`
+* `Constructor_ShouldThrow_WhenNameIsNullOrWhiteSpace`
 * `AddTable_ShouldAddTableSuccessfully`
+* `AddTable_ShouldThrow_WhenTableIsNull`
 * `AddTable_ShouldRejectDuplicateTableName`
 * `DropTable_ShouldRemoveExistingTable`
 * `DropTable_ShouldThrow_WhenTableDoesNotExist`
 * `GetTable_ShouldReturnTable_WhenExists`
+* `GetTable_ShouldReturnNull_WhenTableDoesNotExist`
 * `GetTables_ShouldReturnAllTables`
 * `CreateView_ShouldRegisterView`
+* `CreateView_ShouldThrow_WhenViewIsNull`
 * `DropView_ShouldRemoveView`
 * `CreateProcedure_ShouldRegisterProcedure`
+* `CreateProcedure_ShouldThrow_WhenProcedureIsNull`
 * `DropProcedure_ShouldRemoveProcedure`
 * `CreateSequence_ShouldRegisterSequence`
+* `CreateSequence_ShouldThrow_WhenSequenceIsNull`
 
 ### Table
+* `Constructor_ShouldInitializeTableWithValidName`
+* `Constructor_ShouldThrow_WhenNameIsNullOrWhiteSpace`
 * `AddColumn_ShouldAddColumnSuccessfully`
+* `AddColumn_ShouldThrow_WhenColumnIsNull`
 * `AddColumn_ShouldRejectDuplicateColumnName`
 * `RemoveColumn_ShouldRemoveExistingColumn`
 * `GetColumn_ShouldReturnColumn_WhenExists`
+* `GetColumn_ShouldReturnNull_WhenColumnDoesNotExist`
 * `GetColumns_ShouldReturnAllColumns`
 * `AddConstraint_ShouldRegisterConstraint`
+* `AddConstraint_ShouldThrow_WhenConstraintIsNull`
 * `RemoveConstraint_ShouldRemoveConstraint`
 * `AddIndex_ShouldRegisterIndex`
 * `RemoveIndex_ShouldRemoveIndex`
@@ -799,6 +839,16 @@ RecordManager --> Row : reads/writes
 * `Execute_ShouldRunAfterDeleteTrigger`
 * `Execute_ShouldThrow_WhenConditionFails`
 * `Execute_ShouldAbortTransaction_OnFailure`
+
+### UserDefinedFunction
+* `CreateFunction_ShouldRegisterUDF`
+* `DropFunction_ShouldRemoveUDF`
+* `Execute_ShouldEvaluateFunctionLogic`
+
+### Cursor
+* `Open_ShouldInitializeResultSet`
+* `FetchNext_ShouldReturnNextRow`
+* `Close_ShouldReleaseResources`
 
 ### Integration
 * `Database_CreateSchema_ShouldRegisterSchema`
@@ -1104,12 +1154,20 @@ RecoveryManager --> WALManager
 
 ### TransactionManager
 * `BeginTransaction_ShouldReturnNewTransaction`
+* `BeginTransaction_ShouldRespectIsolationLevel`
 * `CommitTransaction_ShouldCommitSuccessfully`
 * `RollbackTransaction_ShouldRollbackSuccessfully`
 * `CommitTransaction_ShouldReleaseAllLocks`
 * `RollbackTransaction_ShouldReleaseAllLocks`
 * `GetTransaction_ShouldReturnActiveTransaction`
 * `CleanupCompletedTransactions_ShouldRemoveCompletedTransactions`
+
+### IsolationLevels
+* `ReadUncommitted_ShouldAllowDirtyReads`
+* `ReadCommitted_ShouldPreventDirtyReads`
+* `RepeatableRead_ShouldPreventNonRepeatableReads`
+* `Serializable_ShouldPreventPhantomReads`
+* `SnapshotIsolation_ShouldReadFromConsistentSnapshot`
 
 ### LockManager
 * `AcquireSharedLock_ShouldGrantLock_WhenNoConflict`
@@ -1228,6 +1286,13 @@ QueryExecutor --> RuntimeContext
 * `BuildAST_ShouldPreserveOperatorPrecedence`
 * `BuildAST_ShouldThrow_WhenTokenSequenceIsInvalid`
 
+### SemanticAnalyzer (Binder)
+* `Bind_ShouldResolveTableNames`
+* `Bind_ShouldResolveColumnNames`
+* `Bind_ShouldThrow_WhenTableDoesNotExist`
+* `Bind_ShouldThrow_WhenColumnDoesNotExist`
+* `Bind_ShouldValidateDataTypesForOperators`
+
 ### LogicalPlan
 * `GeneratePlan_ShouldCreateTableScan`
 * `GeneratePlan_ShouldCreateProjection`
@@ -1256,6 +1321,12 @@ QueryExecutor --> RuntimeContext
 * `UpdateHistogram_ShouldUpdateDataDistribution`
 * `InvalidateStatistics_ShouldClearOldStats`
 
+### PlanCache
+* `GetCachedPlan_ShouldReturnOptimizedPlan_ForIdenticalQuery`
+* `CachePlan_ShouldStoreOptimizedPlan`
+* `EvictPlan_ShouldRemoveLeastRecentlyUsedPlan`
+* `InvalidateCache_ShouldClearAllPlans_WhenSchemaChanges`
+
 ### PhysicalPlan
 * `GeneratePhysicalPlan_ShouldCreateExecutableOperators`
 * `GeneratePhysicalPlan_ShouldSelectBestExecutionStrategy`
@@ -1276,6 +1347,24 @@ QueryExecutor --> RuntimeContext
 * `Execute_ShouldThrow_WhenTableDoesNotExist`
 * `Execute_ShouldThrow_WhenExecutionPlanIsInvalid`
 * `Execute_ShouldThrow_WhenMemoryLimitExceeded`
+
+### Physical Operators
+* `NestedLoopJoin_ShouldReturnJoinedRows`
+* `HashJoin_ShouldReturnJoinedRows`
+* `SortMergeJoin_ShouldReturnJoinedRows`
+* `IndexScan_ShouldRetrieveRowsUsingIndex`
+* `TableScan_ShouldRetrieveAllRows`
+* `SortOperator_ShouldSortRowsAccordingToKeys`
+
+### Expressions & Built-in Functions
+* `EvaluateMathExpression_ShouldReturnCorrectResult`
+* `EvaluateLogicalExpression_ShouldReturnCorrectResult`
+* `EvaluateStringFunction_ShouldReturnCorrectResult`
+* `EvaluateDateFunction_ShouldReturnCorrectResult`
+* `AggregateFunction_Count_ShouldReturnNumberOfRows`
+* `AggregateFunction_Sum_ShouldReturnSumOfValues`
+* `CastExpression_ShouldConvertDataTypes`
+* `Expression_ShouldThrow_WhenTypeMismatch`
 
 ### Integration
 * `ParseSelect_ShouldGenerateLogicalPlan`
@@ -1466,4 +1555,45 @@ Role --> Permission
 * `DropDatabase_ShouldRequireAdminPermission`
 * `CreateTable_ShouldRequireCreatePermission`
 * `GrantPermission_ShouldTakeEffectImmediately`
+
+### 8. Replication & High Availability
+
+```mermaid
+classDiagram
+direction LR
+class ReplicationManager {
+    +AddNode(node : ClusterNode)
+    +RemoveNode(nodeId : int)
+    +ReplicateLog(record : LogRecord)
+    +HandleHeartbeat(nodeId : int)
+}
+class ClusterNode {
+    +NodeId : int
+    +Address : string
+    +Role : NodeRole
+    +Status : NodeStatus
+}
+ReplicationManager --> ClusterNode
+```
+
+## Replication & High Availability
+
+### ReplicationManager
+* `AddNode_ShouldRegisterNewReplica`
+* `RemoveNode_ShouldUnregisterReplica`
+* `LeaderElection_ShouldElectNewLeader_WhenCurrentLeaderFails`
+* `ReplicateLog_ShouldSendLogToAllFollowers`
+* `ReplicateLog_ShouldWaitForQuorum_WhenSynchronous`
+* `HandleHeartbeat_ShouldUpdateNodeStatusToActive`
+* `DetectFailure_ShouldMarkNodeOffline_WhenHeartbeatMissed`
+
+### ClusterNode
+* `SyncState_ShouldCatchUpWithLeader`
+* `PromoteToLeader_ShouldChangeRoleAndStartAcceptingWrites`
+* `DemoteToFollower_ShouldChangeRoleAndStopAcceptingWrites`
+
+### Integration
+* `Replication_ShouldKeepFollowerDataConsistentWithLeader`
+* `Failover_ShouldAutomaticallySwitchToStandby`
+* `NetworkPartition_ShouldPreventSplitBrain`
 
