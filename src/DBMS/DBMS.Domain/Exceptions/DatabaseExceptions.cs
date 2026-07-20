@@ -12,6 +12,16 @@ public class DuplicateNameException : Exception
     public DuplicateNameException(string message) : base(message) { }
 }
 
+public class PermissionDeniedException : Exception
+{
+    public PermissionDeniedException(string message) : base(message) { }
+}
+
+public class DatabaseContainsSchemasException : Exception
+{
+    public DatabaseContainsSchemasException(string message) : base(message) { }
+}
+
 public class DatabaseInUseException : Exception
 {
     public DatabaseInUseException(string message) : base(message) { }
@@ -25,4 +35,14 @@ public class DuplicateSchemaException : Exception
 public class SchemaNotFoundException : Exception
 {
     public SchemaNotFoundException(string message) : base(message) { }
+}
+
+public class DuplicateTableException : Exception
+{
+    public DuplicateTableException(string message) : base(message) { }
+}
+
+public class TableNotFoundException : Exception
+{
+    public TableNotFoundException(string message) : base(message) { }
 }
