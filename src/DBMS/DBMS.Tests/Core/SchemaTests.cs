@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using DBMS.Domain.Core;
 using DBMS.Domain.Exceptions;
 using FluentAssertions;
+using Moq;
 using Xunit;
 
 namespace DBMS.Tests.Core;
@@ -63,8 +64,8 @@ public class SchemaTests
         var table2 = new Table("Orders");
         _schema.AddTable(table1);
         _schema.AddTable(table2);
-
-        var fk = new ForeignKey { ReferenceTable = table1 };
+        var mockRecordManager = new Mock<IRecordManager>();
+        var fk = new ForeignKey("FK_Users", table1, new List<Column>(), mockRecordManager.Object);
         table2.AddConstraint(fk);
 
         Action act = () => _schema.DropTable("Users");

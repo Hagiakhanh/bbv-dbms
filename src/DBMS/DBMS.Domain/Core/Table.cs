@@ -41,4 +41,5 @@ public class Table
     public void DropPartition(string name) { throw new NotImplementedException(); }
     public void AddTrigger(Trigger trigger) { throw new NotImplementedException(); }
     public void RemoveTrigger(string name) { throw new NotImplementedException(); }
+    public virtual Row LookupReferencedRow(Row row) { throw new NotImplementedException(); }
 }
