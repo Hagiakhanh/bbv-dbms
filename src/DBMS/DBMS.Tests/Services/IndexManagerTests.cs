@@ -9,32 +9,29 @@ namespace DBMS.Tests.Services;
 public class IndexManagerTests
 {
     [Fact]
-    public void CreateIndex_ShouldRegisterIndex()
+    public void Register_ShouldRegisterIndex()
     {
         // Arrange
         var indexManager = new IndexManager();
-        var indexName = "Idx_Test";
+        var index = new BTreeIndex { Name = "Idx_Test" };
 
         // Act
-        indexManager.CreateIndex(indexName);
+        indexManager.Register(index);
 
         // Assert
-        // In a real scenario, we might verify via an internal list or another method if it exists,
-        // or by trying to find it using FindBestIndex or getting it. 
-        // For now, since IndexManager doesn't expose the index directly, we can just ensure it doesn't throw.
         Assert.True(true);
     }
 
     [Fact]
-    public void CreateIndex_ShouldRejectDuplicateIndexName()
+    public void Register_ShouldRejectDuplicateIndexName()
     {
         // Arrange
         var indexManager = new IndexManager();
-        var indexName = "Idx_Test";
-        indexManager.CreateIndex(indexName);
+        var index = new BTreeIndex { Name = "Idx_Test" };
+        indexManager.Register(index);
 
         // Act & Assert
-        Assert.Throws<DuplicateIndexException>(() => indexManager.CreateIndex(indexName));
+        Assert.Throws<DuplicateIndexException>(() => indexManager.Register(index));
     }
 
     [Fact]

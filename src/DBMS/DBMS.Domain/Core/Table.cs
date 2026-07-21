@@ -7,6 +7,7 @@ public class Table
 {
     public int TableId { get; private set; }
     public string Name { get; private set; }
+    public Schema Parent { get; set; }
     
     private readonly List<Column> _columns = new();
     public IReadOnlyCollection<Column> Columns => _columns.AsReadOnly();

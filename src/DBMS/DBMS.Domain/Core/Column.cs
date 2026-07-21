@@ -7,6 +7,7 @@ public class Column
 {
     public int ColumnId { get; set; }
     public string Name { get; set; }
+    public Table Parent { get; set; }
     public DataTypeEnum DataType { get; set; }
     public bool Nullable { get; set; }
     public object DefaultValue { get; set; }

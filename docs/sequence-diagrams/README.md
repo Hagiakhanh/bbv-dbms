@@ -183,6 +183,11 @@ sequenceDiagram
 ```mermaid
 classDiagram
 direction LR
+
+%% =====================================================
+%% Composite Hierarchy & DB Objects
+%% =====================================================
+
 class Database {
     +DatabaseId : int
     +Name : string
@@ -193,12 +198,16 @@ class Database {
     +DropSchema(name : string)
     +GetSchema(name : string) Schema
     +GetSchemas() IReadOnlyList~Schema~
+    +AddSchema(schema : Schema)
+    +RemoveSchema(schema : Schema)
     +Backup(path : string, fileManager : IFileManager)
     +Restore(path : string, fileManager : IFileManager)
 }
+
 class Schema {
     +SchemaId : int
     +Name : string
+    +Parent : Database
     +Tables : IReadOnlyCollection~Table~
     +Views : IReadOnlyCollection~View~
     +Procedures : IReadOnlyCollection~StoredProcedure~
@@ -214,9 +223,11 @@ class Schema {
     +DropProcedure(name : string)
     +CreateSequence(seq : Sequence)
 }
+
 class Table {
     +TableId : int
     +Name : string
+    +Parent : Schema
     +Columns : IReadOnlyCollection~Column~
     +Constraints : IReadOnlyCollection~Constraint~
     +Indexes : IReadOnlyCollection~Index~
@@ -236,9 +247,11 @@ class Table {
     +AddTrigger(trigger : Trigger)
     +RemoveTrigger(name : string)
 }
+
 class Column {
     +ColumnId : int
     +Name : string
+    +Parent : Table
     +DataType : DataType
     +Nullable : bool
     +DefaultValue : object
@@ -248,28 +261,7 @@ class Column {
     +Rename(newName : string)
     +ValidateValue(value : object) bool
 }
-class Row {
-    +RowId : RID
-    +Data : RecordData
-    +Version : long
-    +GetValue(colId : int) object
-    +SetValue(colId : int, value : object)
-    +UpdateValue(colId : int, value : object)
-}
-class RecordData {
-    <<value object>>
-    +Bytes : Byte[]
-    +Length : int
-    +Serialize() Byte[]
-    +Deserialize(bytes : Byte[])
-    +GetLength() int
-}
-class RID {
-    <<value object>>
-    +PageId : int
-    +SlotNumber : int
-    +Equals(other : RID) bool
-}
+
 class DataType {
     <<enumeration>>
     INT
@@ -279,33 +271,40 @@ class DataType {
     FLOAT
     DATETIME
 }
+
 class Constraint {
     <<abstract>>
     +Name : string
     +Validate(row : Row) bool
 }
+
 class IRowKeyExtractor {
     <<interface>>
     +ExtractKey(row : Row, columns : List~Column~) object
     +HasNullValue(row : Row, columns : List~Column~) bool
 }
+
 class PrimaryKey {
     +Columns : List~Column~
     -Index _index
     -IRowKeyExtractor _extractor
 }
+
 class ForeignKey {
     +ReferenceTable : Table
     +ReferenceColumns : List~Column~
 }
+
 class UniqueConstraint {
     +Columns : List~Column~
     -Index _index
     -IRowKeyExtractor _extractor
 }
+
 class CheckConstraint {
     +Expression : string
 }
+
 class View {
     +ViewId : int
     +Name : string
@@ -314,6 +313,7 @@ class View {
     +Compile() ExecutionPlan
     +Execute() ResultCursor
 }
+
 class StoredProcedure {
     +Name : string
     +Parameters : IReadOnlyCollection~Column~
@@ -322,6 +322,7 @@ class StoredProcedure {
     +Compile()
     +Execute(args : object[]) ResultCursor
 }
+
 class Sequence {
     +Name : string
     +CurrentValue : long
@@ -330,6 +331,7 @@ class Sequence {
     +NextValue() long
     +Reset()
 }
+
 class Partition {
     +PartitionKey : string
     +PartitionType : string
@@ -337,6 +339,7 @@ class Partition {
     +DropPartition(name : string)
     +GetPartition(key : object) Partition
 }
+
 class Trigger {
     +Name : string
     +Event : TriggerEvent
@@ -344,16 +347,47 @@ class Trigger {
     +Body : string
     +Execute(context : TriggerContext)
 }
-Database "1" *-- "many" Schema
-Schema "1" *-- "many" Table
-Schema "1" *-- "many" View
-Schema "1" *-- "many" StoredProcedure
-Schema "1" *-- "many" Sequence
-Table "1" *-- "many" Column
-Table "1" *-- "many" Constraint
-Table "1" *-- "many" Row
-Table "1" *-- "many" Partition
-Table "1" *-- "many" Trigger
+
+class Row {
+    +RowId : RID
+    +Data : RecordData
+    +Version : long
+    +GetValue(colId : int) object
+    +SetValue(colId : int, value : object)
+    +UpdateValue(colId : int, value : object)
+}
+
+class RecordData {
+    <<value object>>
+    +Bytes : Byte[]
+    +Length : int
+    +Serialize() Byte[]
+    +Deserialize(bytes : Byte[])
+    +GetLength() int
+}
+
+class RID {
+    <<value object>>
+    +PageId : int
+    +SlotNumber : int
+    +Equals(other : RID) bool
+}
+
+class Index {
+}
+
+Database "1" *-- "*" Schema
+Schema "1" *-- "*" Table
+Table "1" *-- "*" Column
+Table "1" *-- "*" Constraint
+Table "1" *-- "*" Index
+Table "1" *-- "*" Partition
+Table "1" *-- "*" Trigger
+Schema "1" *-- "*" View
+Schema "1" *-- "*" StoredProcedure
+Schema "1" *-- "*" Sequence
+Table "1" *-- "*" Row
+
 Row *-- RID
 Row *-- RecordData
 Column --> DataType
@@ -364,15 +398,54 @@ Constraint <|-- CheckConstraint
 ForeignKey --> Table
 PrimaryKey --> IRowKeyExtractor
 UniqueConstraint --> IRowKeyExtractor
-%% ── Domain Services ─────────────────────────────────
+PrimaryKey --> Index
+UniqueConstraint --> Index
+
+
+%% =====================================================
+%% Builder Pattern
+%% =====================================================
+
+class ITableBuilder {
+    <<interface>>
+    +Reset(name : string)
+    +AddColumn(def : ColumnDef)
+    +AddConstraint(def : ConstraintDef)
+    +AddIndex(def : IndexDef)
+    +AddPartition(def : PartitionDef)
+    +AddTrigger(def : TriggerDef)
+    +Build() Table
+}
+
+class TableBuilder {
+    -currentTable : Table
+    +Reset(name : string)
+    +AddColumn(def : ColumnDef)
+    +AddConstraint(def : ConstraintDef)
+    +AddIndex(def : IndexDef)
+    +AddPartition(def : PartitionDef)
+    +AddTrigger(def : TriggerDef)
+    +Build() Table
+}
+
+ITableBuilder <|.. TableBuilder
+TableBuilder --> Table : builds
+
+
+%% =====================================================
+%% Domain Services
+%% =====================================================
+
 class SchemaService {
     -catalog : CatalogManager
     -storage : StorageEngine
-    +CreateTable(schema : Schema, def : TableDef) Table
+    -builder : ITableBuilder
+    +CreateTable(schema : Schema, name : string) Table
     +DropTable(schema : Schema, name : string)
     +CreateView(schema : Schema, name : string, query : string) View
     +DropView(schema : Schema, name : string)
 }
+
 class RecordManager {
     -storage : StorageEngine
     -catalog : CatalogManager
@@ -382,13 +455,17 @@ class RecordManager {
     +Read(table : Table, rid : RID) Row
     +Scan(table : Table) List~Row~
 }
+
 class IndexManager {
     -indexes : Dictionary~string, Index~
     +CreateIndex(name : string)
     +FindBestIndex(query : Query) Index
 }
+
 class Query {
 }
+
+SchemaService --> ITableBuilder : uses
 SchemaService --> Schema : manages DDL
 SchemaService --> Table : creates/drops
 RecordManager --> Table : reads schema from

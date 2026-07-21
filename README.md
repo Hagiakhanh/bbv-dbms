@@ -621,52 +621,85 @@ DatabaseServer --> MonitoringManager
 ```mermaid
 classDiagram
 direction LR
+
+%% =====================================================
+%% Composite Hierarchy & DB Objects
+%% =====================================================
+
 class Database {
     +DatabaseId : int
     +Name : string
     +Owner : string
-    +Schemas : List~Schema~
+    +Schemas : IReadOnlyList~Schema~
+    +Database(id : int, name : string, owner : string)
+    +CreateSchema(name : string) Schema
+    +DropSchema(name : string)
+    +GetSchema(name : string) Schema
+    +GetSchemas() IReadOnlyList~Schema~
+    +AddSchema(schema : Schema)
+    +RemoveSchema(schema : Schema)
+    +Backup(path : string, fileManager : IFileManager)
+    +Restore(path : string, fileManager : IFileManager)
 }
+
 class Schema {
     +SchemaId : int
     +Name : string
-    +Tables : List~Table~
-    +Views : List~View~
-    +Procedures : List~StoredProcedure~
-    +Sequences : List~Sequence~
+    +Parent : Database
+    +Tables : IReadOnlyCollection~Table~
+    +Views : IReadOnlyCollection~View~
+    +Procedures : IReadOnlyCollection~StoredProcedure~
+    +Sequences : IReadOnlyCollection~Sequence~
+    +Schema(name : string)
+    +AddTable(table : Table)
+    +DropTable(name : string)
+    +GetTable(name : string) Table
+    +GetTables() IReadOnlyCollection~Table~
+    +CreateView(view : View)
+    +DropView(name : string)
+    +CreateProcedure(proc : StoredProcedure)
+    +DropProcedure(name : string)
+    +CreateSequence(seq : Sequence)
 }
+
 class Table {
     +TableId : int
     +Name : string
-    +Columns : List~Column~
-    +Constraints : List~Constraint~
-    +Indexes : List~Index~
-    +Partitions : List~Partition~
-    +Triggers : List~Trigger~
+    +Parent : Schema
+    +Columns : IReadOnlyCollection~Column~
+    +Constraints : IReadOnlyCollection~Constraint~
+    +Indexes : IReadOnlyCollection~Index~
+    +Partitions : IReadOnlyCollection~Partition~
+    +Triggers : IReadOnlyCollection~Trigger~
+    +Table(name : string)
+    +AddColumn(col : Column)
+    +RemoveColumn(name : string)
+    +GetColumn(name : string) Column
+    +GetColumns() IReadOnlyCollection~Column~
+    +AddConstraint(constraint : Constraint)
+    +RemoveConstraint(name : string)
+    +AddIndex(index : Index)
+    +RemoveIndex(name : string)
+    +AddPartition(partition : Partition)
+    +DropPartition(name : string)
+    +AddTrigger(trigger : Trigger)
+    +RemoveTrigger(name : string)
 }
+
 class Column {
     +ColumnId : int
     +Name : string
+    +Parent : Table
     +DataType : DataType
     +Nullable : bool
     +DefaultValue : object
+    +SetDataType(type : DataType)
+    +SetNullable(nullable : bool)
+    +SetDefaultValue(value : object)
+    +Rename(newName : string)
+    +ValidateValue(value : object) bool
 }
-class Row {
-    +RowId : RID
-    +Data : RecordData
-    +Version : long
-}
-class RecordData {
-    <<value object>>
-    +Bytes : Byte[]
-    +Length : int
-}
-class RID {
-    <<value object>>
-    +PageId : int
-    +SlotNumber : int
-    +Equals(other : RID) bool
-}
+
 class DataType {
     <<enumeration>>
     INT
@@ -676,27 +709,123 @@ class DataType {
     FLOAT
     DATETIME
 }
+
 class Constraint {
     <<abstract>>
     +Name : string
     +Validate(row : Row) bool
 }
+
+class IRowKeyExtractor {
+    <<interface>>
+    +ExtractKey(row : Row, columns : List~Column~) object
+    +HasNullValue(row : Row, columns : List~Column~) bool
+}
+
 class PrimaryKey {
     +Columns : List~Column~
+    -Index _index
+    -IRowKeyExtractor _extractor
 }
+
 class ForeignKey {
     +ReferenceTable : Table
     +ReferenceColumns : List~Column~
 }
-class UniqueConstraint
+
+class UniqueConstraint {
+    +Columns : List~Column~
+    -Index _index
+    -IRowKeyExtractor _extractor
+}
+
 class CheckConstraint {
     +Expression : string
 }
-Database "1" *-- "many" Schema
-Schema "1" *-- "many" Table
-Table "1" *-- "many" Column
-Table "1" *-- "many" Constraint
-Table "1" *-- "many" Row
+
+class View {
+    +ViewId : int
+    +Name : string
+    +QueryDefinition : string
+    +View(name : string)
+    +Compile() ExecutionPlan
+    +Execute() ResultCursor
+}
+
+class StoredProcedure {
+    +Name : string
+    +Parameters : IReadOnlyCollection~Column~
+    +Body : string
+    +StoredProcedure(name : string)
+    +Compile()
+    +Execute(args : object[]) ResultCursor
+}
+
+class Sequence {
+    +Name : string
+    +CurrentValue : long
+    +Increment : long
+    +Sequence(name : string)
+    +NextValue() long
+    +Reset()
+}
+
+class Partition {
+    +PartitionKey : string
+    +PartitionType : string
+    +InsertRecord(row : Row)
+    +DropPartition(name : string)
+    +GetPartition(key : object) Partition
+}
+
+class Trigger {
+    +Name : string
+    +Event : TriggerEvent
+    +Timing : TriggerTiming
+    +Body : string
+    +Execute(context : TriggerContext)
+}
+
+class Row {
+    +RowId : RID
+    +Data : RecordData
+    +Version : long
+    +GetValue(colId : int) object
+    +SetValue(colId : int, value : object)
+    +UpdateValue(colId : int, value : object)
+}
+
+class RecordData {
+    <<value object>>
+    +Bytes : Byte[]
+    +Length : int
+    +Serialize() Byte[]
+    +Deserialize(bytes : Byte[])
+    +GetLength() int
+}
+
+class RID {
+    <<value object>>
+    +PageId : int
+    +SlotNumber : int
+    +Equals(other : RID) bool
+}
+
+class Index {
+}
+
+Database "1" *-- "*" Schema
+Schema "1" *-- "*" Table
+Table "1" *-- "*" Column
+Table "1" *-- "*" Constraint
+Table "1" *-- "*" Index
+Table "1" *-- "*" Partition
+Table "1" *-- "*" Trigger
+Schema "1" *-- "*" View
+Schema "1" *-- "*" StoredProcedure
+Schema "1" *-- "*" Sequence
+Table "1" *-- "*" Row
+
 Row *-- RID
 Row *-- RecordData
 Column --> DataType
@@ -705,16 +834,56 @@ Constraint <|-- ForeignKey
 Constraint <|-- UniqueConstraint
 Constraint <|-- CheckConstraint
 ForeignKey --> Table
-%% ── Domain Services ─────────────────────────────────
+PrimaryKey --> IRowKeyExtractor
+UniqueConstraint --> IRowKeyExtractor
+PrimaryKey --> Index
+UniqueConstraint --> Index
+
+
+%% =====================================================
+%% Builder Pattern
+%% =====================================================
+
+class ITableBuilder {
+    <<interface>>
+    +Reset(name : string)
+    +AddColumn(def : ColumnDef)
+    +AddConstraint(def : ConstraintDef)
+    +AddIndex(def : IndexDef)
+    +AddPartition(def : PartitionDef)
+    +AddTrigger(def : TriggerDef)
+    +Build() Table
+}
+
+class TableBuilder {
+    -currentTable : Table
+    +Reset(name : string)
+    +AddColumn(def : ColumnDef)
+    +AddConstraint(def : ConstraintDef)
+    +AddIndex(def : IndexDef)
+    +AddPartition(def : PartitionDef)
+    +AddTrigger(def : TriggerDef)
+    +Build() Table
+}
+
+ITableBuilder <|.. TableBuilder
+TableBuilder --> Table : builds
+
+
+%% =====================================================
+%% Domain Services
+%% =====================================================
+
 class SchemaService {
     -catalog : CatalogManager
     -storage : StorageEngine
-    +CreateTable(schema : Schema, def : TableDef) Table
+    -builder : ITableBuilder
+    +CreateTable(schema : Schema, name : string) Table
     +DropTable(schema : Schema, name : string)
     +CreateView(schema : Schema, name : string, query : string) View
     +DropView(schema : Schema, name : string)
 }
-note for SchemaService "DDL service — orchestrates CatalogManager\n+ StorageEngine to create/drop objects"
+
 class RecordManager {
     -storage : StorageEngine
     -catalog : CatalogManager
@@ -724,11 +893,22 @@ class RecordManager {
     +Read(table : Table, rid : RID) Row
     +Scan(table : Table) List~Row~
 }
-note for RecordManager "DML service — translates Row operations\ninto StorageEngine page reads/writes"
+
+class IndexManager {
+    -indexes : Dictionary~string, Index~
+    +CreateIndex(name : string)
+    +FindBestIndex(query : Query) Index
+}
+
+class Query {
+}
+
+SchemaService --> ITableBuilder : uses
 SchemaService --> Schema : manages DDL
 SchemaService --> Table : creates/drops
 RecordManager --> Table : reads schema from
 RecordManager --> Row : reads/writes
+IndexManager --> Index : manages
 ```
 ## Database Objects
 
