@@ -812,7 +812,16 @@ class RID {
 }
 
 class Index {
+    <<abstract>>
+    +Name : string
+    +Insert(key, rid)
+    +Delete(key)
+    +Search(key)
 }
+
+class BTreeIndex
+class HashIndex
+class BitmapIndex
 
 Database "1" *-- "*" Schema
 Schema "1" *-- "*" Table
@@ -838,6 +847,9 @@ PrimaryKey --> IRowKeyExtractor
 UniqueConstraint --> IRowKeyExtractor
 PrimaryKey --> Index
 UniqueConstraint --> Index
+Index <|-- BTreeIndex
+Index <|-- HashIndex
+Index <|-- BitmapIndex
 
 
 %% =====================================================
@@ -847,27 +859,81 @@ UniqueConstraint --> Index
 class ITableBuilder {
     <<interface>>
     +Reset(name : string)
-    +AddColumn(def : ColumnDef)
-    +AddConstraint(def : ConstraintDef)
-    +AddIndex(def : IndexDef)
-    +AddPartition(def : PartitionDef)
-    +AddTrigger(def : TriggerDef)
+    +AddColumn(column : Column)
+    +AddConstraint(constraint : Constraint)
+    +AddIndex(index : Index)
+    +AddPartition(partition : Partition)
+    +AddTrigger(trigger : Trigger)
     +Build() Table
 }
 
 class TableBuilder {
     -currentTable : Table
     +Reset(name : string)
-    +AddColumn(def : ColumnDef)
-    +AddConstraint(def : ConstraintDef)
-    +AddIndex(def : IndexDef)
-    +AddPartition(def : PartitionDef)
-    +AddTrigger(def : TriggerDef)
+    +AddColumn(column : Column)
+    +AddConstraint(constraint : Constraint)
+    +AddIndex(index : Index)
+    +AddPartition(partition : Partition)
+    +AddTrigger(trigger : Trigger)
     +Build() Table
 }
 
-ITableBuilder <|.. TableBuilder
-TableBuilder --> Table : builds
+
+%% =====================================================
+%% Factory Method Patterns
+%% =====================================================
+
+class IConstraintFactory {
+    <<interface>>
+    +Create(type : ConstraintType, options : ConstraintOptions) Constraint
+}
+
+class ConstraintFactory {
+    +Create(type : ConstraintType, options : ConstraintOptions) Constraint
+}
+
+class ConstraintType{
+    <<enumeration>>
+    PRIMARY_KEY
+    UNIQUE
+    FOREIGN_KEY
+    CHECK
+}
+
+class ConstraintOptions{
+    +Columns : List~Column~
+    +ReferenceTable : Table
+    +ReferenceColumns : List~Column~
+    +Expression : string
+}
+
+class IIndexFactory {
+    <<interface>>
+    +Create(type : IndexType, options : IndexOptions) Index
+}
+
+class IndexFactory {
+    +Create(type : IndexType, options : IndexOptions) Index
+}
+
+class IndexType{
+    <<enumeration>>
+    BTREE
+    HASH
+    BITMAP
+}
+
+class IndexOptions{
+    +Name : string
+    +Columns : List~Column~
+    +Unique : bool
+}
+
+ConstraintFactory --> ConstraintType
+ConstraintFactory --> ConstraintOptions
+
+IndexFactory --> IndexType
+IndexFactory --> IndexOptions
 
 
 %% =====================================================
@@ -878,6 +944,8 @@ class SchemaService {
     -catalog : CatalogManager
     -storage : StorageEngine
     -builder : ITableBuilder
+    -constraintFactory : IConstraintFactory
+    -indexFactory : IIndexFactory
     +CreateTable(schema : Schema, name : string) Table
     +DropTable(schema : Schema, name : string)
     +CreateView(schema : Schema, name : string, query : string) View
@@ -896,16 +964,30 @@ class RecordManager {
 
 class IndexManager {
     -indexes : Dictionary~string, Index~
-    +CreateIndex(name : string)
+    +Register(index : Index)
+    +Drop(name : string)
+    +Find(name : string) Index
     +FindBestIndex(query : Query) Index
+    +Rebuild(index : Index)
 }
 
 class Query {
 }
 
 SchemaService --> ITableBuilder : uses
+SchemaService --> IConstraintFactory : uses
+SchemaService --> IIndexFactory : uses
 SchemaService --> Schema : manages DDL
 SchemaService --> Table : creates/drops
+
+ITableBuilder <|.. TableBuilder
+IConstraintFactory <|.. ConstraintFactory
+IIndexFactory <|.. IndexFactory
+
+TableBuilder --> Table : builds
+ConstraintFactory --> Constraint : creates
+IndexFactory --> Index : creates
+
 RecordManager --> Table : reads schema from
 RecordManager --> Row : reads/writes
 IndexManager --> Index : manages
