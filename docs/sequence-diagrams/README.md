@@ -9,7 +9,7 @@
 | Primary Key Constraints | 3 | 3 | 0 | 100% |
 | Unique Constraints | 3 | 3 | 0 | 100% |
 | Foreign Key Constraints | 5 | 5 | 0 | 100% |
-| Check Constraints | 4 | 0 | 4 | 0% |
+| Check Constraints | 4 | 4 | 0 | 100% |
 | Index & IndexManager | 8 | 0 | 8 | 0% |
 | Schema & Table Services | 9 | 3 | 6 | 33% |
 | RecordManager | 7 | 0 | 7 | 0% |
@@ -25,7 +25,7 @@
 | Metadata Lookup & Dependency Management | 4 | 1 | 3 | 25% |
 | Authentication | 3 | 0 | 3 | 0% |
 | Permission & Authorization | 8 | 0 | 8 | 0% |
-| **TOTAL** | **154** | **41** | **113** | **27%** |
+| **TOTAL** | **154** | **45** | **109** | **29%** |
 
 ## 1. Server & Database Management
 
@@ -652,12 +652,12 @@ sequenceDiagram
 ```
 
 ### Check Constraints
-Covers: `Validate_ShouldRejectInvalidExpression`, `CheckConstraint_ShouldEvaluateExpressionTrue`, `CheckConstraint_ShouldRejectWhenExpressionFalse`, `CheckConstraint_ShouldHandleNullValues`
+Covers: `CheckConstraint_ShouldRejectInvalidExpression`, `CheckConstraint_ShouldEvaluateExpressionTrue`, `CheckConstraint_ShouldRejectWhenExpressionFalse`, `CheckConstraint_ShouldHandleNullValues`
 ```mermaid
 flowchart LR
     ClassNode["Check Constraints"]
 
-    ClassNode --> Check_Constraints_1["Validate_ShouldRejectInvalidExpression"]
+    ClassNode --> Check_Constraints_1["CheckConstraint_ShouldRejectInvalidExpression"]
     ClassNode --> Check_Constraints_2["CheckConstraint_ShouldEvaluateExpressionTrue"]
     ClassNode --> Check_Constraints_3["CheckConstraint_ShouldRejectWhenExpressionFalse"]
     ClassNode --> Check_Constraints_4["CheckConstraint_ShouldHandleNullValues"]
@@ -667,7 +667,7 @@ flowchart LR
     classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
 
     class ClassNode classNode
-    class Check_Constraints_1,Check_Constraints_2,Check_Constraints_3,Check_Constraints_4 missingTest
+    class Check_Constraints_1,Check_Constraints_2,Check_Constraints_3,Check_Constraints_4 completedTest
 ```
 
 ```mermaid
@@ -675,12 +675,18 @@ sequenceDiagram
     autonumber
     participant RecordMgr as RecordManager
     participant Constr as CheckConstraint
+    participant Eval as IExpressionEvaluator
     
     RecordMgr->>Constr: Validate(Row)
-    Constr->>Constr: Evaluate Expression
-    alt Expression Evaluates to False
+    Constr->>Eval: Evaluate(Expression, Row)
+    alt Invalid Expression
+        Eval-->>Constr: throws InvalidExpressionException
+        Constr-->>RecordMgr: throws InvalidExpressionException
+    else Expression Evaluates to False
+        Eval-->>Constr: returns false
         Constr-->>RecordMgr: throws CheckConstraintViolationException
     else Expression Evaluates to True (or Null allowed)
+        Eval-->>Constr: returns true
         Constr-->>RecordMgr: return true
     end
 ```

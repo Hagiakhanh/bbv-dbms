@@ -66,3 +66,13 @@ public class CatalogException : Exception
 {
     public CatalogException(string message) : base(message) { }
 }
+
+public class CheckConstraintViolationException : Exception
+{
+    public CheckConstraintViolationException(string message) : base(message) { }
+}
+
+public class InvalidExpressionException : Exception
+{
+    public InvalidExpressionException(string message) : base(message) { }
+}
