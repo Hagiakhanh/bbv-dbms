@@ -8,6 +8,7 @@ public class Schema
 {
     public int SchemaId { get; private set; }
     public string Name { get; private set; }
+    public Database Parent { get; set; }
     
     private readonly List<Table> _tables = new();
     public IReadOnlyCollection<Table> Tables => _tables.AsReadOnly();

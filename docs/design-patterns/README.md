@@ -1,188 +1,934 @@
 # Design Patterns in DBMS
 
-This document summarizes the Design Patterns applied in various components of the DBMS.
-
-| Module | Feature / Class | Design Pattern | Why Use It |
-| :--- | :--- | :--- | :--- |
-| **Database Objects** | `Database` → `Schema` → `Table` | **Composite** | Database Objects have a tree structure (Hierarchy). Allows uniform operations on objects. |
-| | `TableFactory`, `IndexFactory`, `ConstraintFactory` | **Factory Method** | DDL (`CREATE TABLE`, `CREATE INDEX`) instantiates the correct object independent of constructors. |
-| | `Constraint`, `Index` | **Strategy** | Enables changing algorithms for `Validate()`, `Search()` (PK, FK, Unique, BTree, Hash...) without modifying the client. |
-| | `SchemaVisitor`, `MetadataVisitor` | **Visitor** | Used by Backup, Export, Statistics, and Dependency Scan to traverse the entire object tree. |
-| | `CreateTableCommand`, `DropTableCommand` | **Command** | Encapsulates each DDL as a command, making rollback and transactions easier. |
-| | `CatalogManager` | **Repository (Catalog)**| Centralizes metadata access so the Query Processor doesn't access objects directly. |
-| **Query Processing** | `AST` | **Interpreter** | Parses SQL into an AST and "interprets" it. |
-| | `LogicalPlanBuilder`, `PhysicalPlanBuilder` | **Builder** | Constructs the Execution Plan step-by-step from the AST. |
-| | `AST Visitor` | **Visitor** | Optimizer traverses the AST without modifying AST classes. |
-| | `JoinStrategy`, `ScanStrategy` | **Strategy** | Implements Nested Loop, Hash Join, Merge Join, Index Scan, etc. |
-| | `Parser` → `Validator` → `Optimizer` → `Executor` | **Pipeline (Chain)** | Follows the standard query processing flow of a DBMS. |
-| | `ResultCursor` | **Iterator** | Yields results row by row instead of loading the entire dataset into memory. |
-| **Storage Engine** | `StorageEngine` | **Facade** | Hides `BufferPool`, `FileManager`, `WAL`, and `Recovery` behind `ReadPage()` and `WritePage()` APIs. |
-| | `ReplacementPolicy` | **Strategy** | Allows easy switching of cache algorithms like LRU, Clock, MRU... |
-| | `Page` | **State** | Behavior changes based on page state: Dirty, Clean, Pinned, Free... |
-| | `Page` / `RecordData` | **Flyweight** | Reduces the allocation of large `Byte[]` objects, saving memory. |
-| | Read Pipeline | **Chain of Responsibility**| `BufferPool` → `Disk` → `Recovery` → `WAL` when reading a page. |
-| | `BufferPool`, `WALManager` | **Singleton** | Ensures only a single instance exists within a database instance. |
-| | `RecoveryManager` | **Template Method** | Recovery always follows Analysis → REDO → UNDO steps, but individual DBMS implementations can override them. |
----
+This document outlines the Design Patterns implemented within various core components of the BBV-DBMS.
 
 ## Visual Summary
 
-| Feature | Problem to Solve | Pattern | Idea |
+| Module | Feature | Pattern | Application |
 | :--- | :--- | :--- | :--- |
-| **Database Manager** | | | |
-| Open / Close Database | Initializing a database requires coordinating complex subsystems (Storage, Catalog, BufferPool). | **Facade** | `DatabaseManager` acts as a Facade, hiding the complexity and providing a simple API. |
-| DB Instance Control | Prevent creating multiple instances of the same database which could cause system conflicts. | **Singleton** | Ensures that each Database is managed by a single object. |
-| **Schema & Table Operations** | | | |
-| Create Table | Table has many complex components (Column, Constraint, Index...). | **Builder** | Construct the Table step by step instead of using a long constructor. |
-| Constraint Validation | Each type of Constraint has a different validation algorithm. | **Strategy** | Encapsulate each validation algorithm into its own Strategy. |
-| Index Creation | DBMS supports multiple different types of Indexes. | **Factory Method** | Let the Factory decide whether to instantiate `BTreeIndex`, `HashIndex`, or `BitmapIndex`. |
-| Object Hierarchy | Schema contains Table, Table contains Column, Constraint, Index forming a complex collection. | **Composite** | Structure objects in a tree hierarchy to allow uniform operations. |
-
-## Sequence Diagrams & Pattern Explanations
-
-### 1. Database Manager - Open / Close Database (Facade Pattern)
-
-**Why use it?** `DatabaseManager` acts as a Facade. Opening or closing a database involves complex coordination between the Catalog, Storage Engine, and Buffer Pool. Instead of forcing the client to initialize and manage these subsystems individually, the Facade provides a single `OpenDatabase` method.
+| **Database & Metadata** | Hierarchy Management | **Composite** | Quản lý kiến trúc phân cấp: `DatabaseComposite` → `SchemaComposite` → `TableComposite` → `ColumnLeaf`. |
+| **Database & Metadata** | Metadata Initialization | **Builder** | Sử dụng `TableDefBuilder` để thiết lập từng thuộc tính của bảng thay vì dùng constructor dài. |
+| **Database & Metadata** | Constraint Validation | **Strategy** | `PrimaryKeyConstraint`, `UniqueConstraint`, `ForeignKeyConstraint` triển khai cùng interface. |
+| **Database & Metadata** | Dynamic Allocation | **Factory Method** | Khởi tạo động các Index, Constraint thông qua `ObjectFactoryProvider` trong lúc chạy DDL. |
+| **Database & Metadata** | Metadata Persistence | **Repository** | Cung cấp interface `ICatalogRepository` để lấy cấu trúc bảng mà không dính dáng đến Storage vật lý. |
+| **Database & Metadata** | Fast Duplication | **Prototype** | Hỗ trợ nhân bản bảng (lệnh `CREATE TABLE LIKE`) thông qua hàm `DeepCopy()`. |
+| **Database & Metadata** | Cache Invalidation | **Observer** | Dùng `CatalogEventBroker` báo cho `PlanCacheManager` biết khi có thay đổi cấu trúc để xóa cache. |
+| **Database Manager** | System Initialization | **Facade** | `DbEngineFacade` gom nhóm các bước khởi động phức tạp của Disk, Storage, và Catalog. |
+| **Database Manager** | DDL Operations | **Command** | Đóng gói các lệnh tạo/xóa Database thành `CreateDatabaseAction` để dễ dàng undo/redo hoặc log. |
+---
 
 ```mermaid
-sequenceDiagram
-    autonumber
-    actor Client
-    participant Facade as DatabaseManager
-    participant Storage as StorageEngine
-    participant Catalog as ICatalogManager
-    
-    Client->>Facade: OpenDatabase("AppDB")
-    activate Facade
-    Facade->>Storage: InitializeStorageEngine("AppDB")
-    Facade->>Catalog: LoadCatalog("AppDB")
-    Facade-->>Client: Database Opened Successfully
-    deactivate Facade
+classDiagram
+direction LR
+
+%% =====================================================
+%% Composite Hierarchy & DB Objects
+%% =====================================================
+
+class Database {
+    +DatabaseId : int
+    +Name : string
+    +Owner : string
+    +Schemas : IReadOnlyList~Schema~
+    +Database(id : int, name : string, owner : string)
+    +CreateSchema(name : string) Schema
+    +DropSchema(name : string)
+    +GetSchema(name : string) Schema
+    +GetSchemas() IReadOnlyList~Schema~
+    +AddSchema(schema : Schema)
+    +RemoveSchema(schema : Schema)
+    +Backup(path : string, fileManager : IFileManager)
+    +Restore(path : string, fileManager : IFileManager)
+}
+
+class Schema {
+    +SchemaId : int
+    +Name : string
+    +Parent : Database
+    +Tables : IReadOnlyCollection~Table~
+    +Views : IReadOnlyCollection~View~
+    +Procedures : IReadOnlyCollection~StoredProcedure~
+    +Sequences : IReadOnlyCollection~Sequence~
+    +Schema(name : string)
+    +AddTable(table : Table)
+    +DropTable(name : string)
+    +GetTable(name : string) Table
+    +GetTables() IReadOnlyCollection~Table~
+    +CreateView(view : View)
+    +DropView(name : string)
+    +CreateProcedure(proc : StoredProcedure)
+    +DropProcedure(name : string)
+    +CreateSequence(seq : Sequence)
+}
+
+class Table {
+    +TableId : int
+    +Name : string
+    +Parent : Schema
+    +Columns : IReadOnlyCollection~Column~
+    +Constraints : IReadOnlyCollection~Constraint~
+    +Indexes : IReadOnlyCollection~Index~
+    +Partitions : IReadOnlyCollection~Partition~
+    +Triggers : IReadOnlyCollection~Trigger~
+    +Table(name : string)
+    +AddColumn(col : Column)
+    +RemoveColumn(name : string)
+    +GetColumn(name : string) Column
+    +GetColumns() IReadOnlyCollection~Column~
+    +AddConstraint(constraint : Constraint)
+    +RemoveConstraint(name : string)
+    +AddIndex(index : Index)
+    +RemoveIndex(name : string)
+    +AddPartition(partition : Partition)
+    +DropPartition(name : string)
+    +AddTrigger(trigger : Trigger)
+    +RemoveTrigger(name : string)
+}
+
+class Column {
+    +ColumnId : int
+    +Name : string
+    +Parent : Table
+    +DataType : DataType
+    +Nullable : bool
+    +DefaultValue : object
+    +SetDataType(type : DataType)
+    +SetNullable(nullable : bool)
+    +SetDefaultValue(value : object)
+    +Rename(newName : string)
+    +ValidateValue(value : object) bool
+}
+
+class DataType {
+    <<enumeration>>
+    INT
+    BIGINT
+    VARCHAR
+    BOOLEAN
+    FLOAT
+    DATETIME
+}
+
+class Constraint {
+    <<abstract>>
+    +Name : string
+    +Validate(row : Row) bool
+}
+
+class IRowKeyExtractor {
+    <<interface>>
+    +ExtractKey(row : Row, columns : List~Column~) object
+    +HasNullValue(row : Row, columns : List~Column~) bool
+}
+
+class PrimaryKey {
+    +Columns : List~Column~
+    -Index _index
+    -IRowKeyExtractor _extractor
+}
+
+class ForeignKey {
+    +ReferenceTable : Table
+    +ReferenceColumns : List~Column~
+}
+
+class UniqueConstraint {
+    +Columns : List~Column~
+    -Index _index
+    -IRowKeyExtractor _extractor
+}
+
+class CheckConstraint {
+    +Expression : string
+}
+
+class View {
+    +ViewId : int
+    +Name : string
+    +QueryDefinition : string
+    +View(name : string)
+    +Compile() ExecutionPlan
+    +Execute() ResultCursor
+}
+
+class StoredProcedure {
+    +Name : string
+    +Parameters : IReadOnlyCollection~Column~
+    +Body : string
+    +StoredProcedure(name : string)
+    +Compile()
+    +Execute(args : object[]) ResultCursor
+}
+
+class Sequence {
+    +Name : string
+    +CurrentValue : long
+    +Increment : long
+    +Sequence(name : string)
+    +NextValue() long
+    +Reset()
+}
+
+class Partition {
+    +PartitionKey : string
+    +PartitionType : string
+    +InsertRecord(row : Row)
+    +DropPartition(name : string)
+    +GetPartition(key : object) Partition
+}
+
+class Trigger {
+    +Name : string
+    +Event : TriggerEvent
+    +Timing : TriggerTiming
+    +Body : string
+    +Execute(context : TriggerContext)
+}
+
+class Row {
+    +RowId : RID
+    +Data : RecordData
+    +Version : long
+    +GetValue(colId : int) object
+    +SetValue(colId : int, value : object)
+    +UpdateValue(colId : int, value : object)
+}
+
+class RecordData {
+    <<value object>>
+    +Bytes : Byte[]
+    +Length : int
+    +Serialize() Byte[]
+    +Deserialize(bytes : Byte[])
+    +GetLength() int
+}
+
+class RID {
+    <<value object>>
+    +PageId : int
+    +SlotNumber : int
+    +Equals(other : RID) bool
+}
+
+class Index {
+    <<abstract>>
+    +Name : string
+    +Insert(key, rid)
+    +Delete(key)
+    +Search(key)
+}
+
+class BTreeIndex
+class HashIndex
+class BitmapIndex
+
+Database "1" *-- "*" Schema
+Schema "1" *-- "*" Table
+Table "1" *-- "*" Column
+Table "1" *-- "*" Constraint
+Table "1" *-- "*" Index
+Table "1" *-- "*" Partition
+Table "1" *-- "*" Trigger
+Schema "1" *-- "*" View
+Schema "1" *-- "*" StoredProcedure
+Schema "1" *-- "*" Sequence
+Table "1" *-- "*" Row
+
+Row *-- RID
+Row *-- RecordData
+Column --> DataType
+Constraint <|-- PrimaryKey
+Constraint <|-- ForeignKey
+Constraint <|-- UniqueConstraint
+Constraint <|-- CheckConstraint
+ForeignKey --> Table
+PrimaryKey --> IRowKeyExtractor
+UniqueConstraint --> IRowKeyExtractor
+PrimaryKey --> Index
+UniqueConstraint --> Index
+Index <|-- BTreeIndex
+Index <|-- HashIndex
+Index <|-- BitmapIndex
+
+
+%% =====================================================
+%% Builder Pattern
+%% =====================================================
+
+class ITableBuilder {
+    <<interface>>
+    +Reset(name : string)
+    +AddColumn(column : Column)
+    +AddConstraint(constraint : Constraint)
+    +AddIndex(index : Index)
+    +AddPartition(partition : Partition)
+    +AddTrigger(trigger : Trigger)
+    +Build() Table
+}
+
+class TableBuilder {
+    -currentTable : Table
+    +Reset(name : string)
+    +AddColumn(column : Column)
+    +AddConstraint(constraint : Constraint)
+    +AddIndex(index : Index)
+    +AddPartition(partition : Partition)
+    +AddTrigger(trigger : Trigger)
+    +Build() Table
+}
+
+
+%% =====================================================
+%% Factory Method Patterns
+%% =====================================================
+
+class IConstraintFactory {
+    <<interface>>
+    +Create(type : ConstraintType, options : ConstraintOptions) Constraint
+}
+
+class ConstraintFactory {
+    +Create(type : ConstraintType, options : ConstraintOptions) Constraint
+}
+
+class ConstraintType{
+    <<enumeration>>
+    PRIMARY_KEY
+    UNIQUE
+    FOREIGN_KEY
+    CHECK
+}
+
+class ConstraintOptions{
+    +Columns : List~Column~
+    +ReferenceTable : Table
+    +ReferenceColumns : List~Column~
+    +Expression : string
+}
+
+class IIndexFactory {
+    <<interface>>
+    +Create(type : IndexType, options : IndexOptions) Index
+}
+
+class IndexFactory {
+    +Create(type : IndexType, options : IndexOptions) Index
+}
+
+class IndexType{
+    <<enumeration>>
+    BTREE
+    HASH
+    BITMAP
+}
+
+class IndexOptions{
+    +Name : string
+    +Columns : List~Column~
+    +Unique : bool
+}
+
+ConstraintFactory --> ConstraintType
+ConstraintFactory --> ConstraintOptions
+
+IndexFactory --> IndexType
+IndexFactory --> IndexOptions
+
+
+%% =====================================================
+%% Domain Services
+%% =====================================================
+
+class SchemaService {
+    -catalog : CatalogManager
+    -storage : StorageEngine
+    -builder : ITableBuilder
+    -constraintFactory : IConstraintFactory
+    -indexFactory : IIndexFactory
+    +CreateTable(schema : Schema, name : string) Table
+    +DropTable(schema : Schema, name : string)
+    +CreateView(schema : Schema, name : string, query : string) View
+    +DropView(schema : Schema, name : string)
+}
+
+class RecordManager {
+    -storage : StorageEngine
+    -catalog : CatalogManager
+    +Insert(table : Table, row : Row) RID
+    +Update(table : Table, rid : RID, row : Row)
+    +Delete(table : Table, rid : RID)
+    +Read(table : Table, rid : RID) Row
+    +Scan(table : Table) List~Row~
+}
+
+class IndexManager {
+    -indexes : Dictionary~string, Index~
+    +Register(index : Index)
+    +Drop(name : string)
+    +Find(name : string) Index
+    +FindBestIndex(query : Query) Index
+    +Rebuild(index : Index)
+}
+
+class Query {
+}
+
+SchemaService --> ITableBuilder : uses
+SchemaService --> IConstraintFactory : uses
+SchemaService --> IIndexFactory : uses
+SchemaService --> Schema : manages DDL
+SchemaService --> Table : creates/drops
+
+ITableBuilder <|.. TableBuilder
+IConstraintFactory <|.. ConstraintFactory
+IIndexFactory <|.. IndexFactory
+
+TableBuilder --> Table : builds
+ConstraintFactory --> Constraint : creates
+IndexFactory --> Index : creates
+
+RecordManager --> Table : reads schema from
+RecordManager --> Row : reads/writes
+IndexManager --> Index : manages
 ```
 
-![alt text](image.png)
+## Sequence Diagrams (Database Manager & Metadata)
 
-### 2. Database Manager - DB Instance Control (Singleton Pattern)
+### 1. Hierarchy Management (Composite Pattern)
 
-**Why use it?** We must ensure that only a single `DatabaseManager` (and internal managers like `BufferPool` or `WALManager`) instance coordinates operations across the entire DBMS process. Creating multiple instances would cause conflicts when accessing underlying files or managing memory buffers.
+**Application:** Mô hình hóa cây siêu dữ liệu: Database → Schema → Table → Column.
+
+**Tại sao áp dụng?** Composite Pattern cấu trúc hoá dữ liệu thành dạng cây, cung cấp các hàm Add/Remove đồng nhất. Biểu đồ dưới đây thể hiện việc gán ghép các object lại với nhau để hình thành cấu trúc cha-con, giúp dễ dàng truy xuất toàn bộ nhánh (ví dụ: `GetSchemas()`, `GetTables()`).
 
 ```mermaid
-sequenceDiagram
-    autonumber
-    actor Client
-    participant DB as DatabaseManager (Singleton)
-    
-    Client->>DB: GetInstance()
-    activate DB
-    alt Instance is null
-        DB->>DB: Create new DatabaseManager()
-    end
-    DB-->>Client: Return Singleton Instance
-    deactivate DB
-    Client->>DB: OpenDatabase(...)
+classDiagram
+direction TB
+
+class Database {
+    +DatabaseId : int
+    +Name : string
+    +Owner : string
+    +Schemas : IReadOnlyList~Schema~
+    +Database(id : int, name : string, owner : string)
+    +CreateSchema(name : string) Schema
+    +DropSchema(name : string)
+    +GetSchema(name : string) Schema
+    +GetSchemas() IReadOnlyList~Schema~
+    +AddSchema(schema : Schema)
+    +RemoveSchema(schema : Schema)
+    +Backup(path : string, fileManager : IFileManager)
+    +Restore(path : string, fileManager : IFileManager)
+}
+
+class Schema {
+    +SchemaId : int
+    +Name : string
+    +Parent : Database
+    +Tables : IReadOnlyCollection~Table~
+    +Views : IReadOnlyCollection~View~
+    +Procedures : IReadOnlyCollection~StoredProcedure~
+    +Sequences : IReadOnlyCollection~Sequence~
+    +Schema(name : string)
+    +AddTable(table : Table)
+    +DropTable(name : string)
+    +GetTable(name : string) Table
+    +GetTables() IReadOnlyCollection~Table~
+    +CreateView(view : View)
+    +DropView(name : string)
+    +CreateProcedure(proc : StoredProcedure)
+    +DropProcedure(name : string)
+    +CreateSequence(seq : Sequence)
+}
+
+class Table {
+    +TableId : int
+    +Name : string
+    +Parent : Schema
+    +Columns : IReadOnlyCollection~Column~
+    +Constraints : IReadOnlyCollection~Constraint~
+    +Indexes : IReadOnlyCollection~Index~
+    +Partitions : IReadOnlyCollection~Partition~
+    +Triggers : IReadOnlyCollection~Trigger~
+    +Table(name : string)
+    +AddColumn(col : Column)
+    +RemoveColumn(name : string)
+    +GetColumn(name : string) Column
+    +GetColumns() IReadOnlyCollection~Column~
+    +AddConstraint(constraint : Constraint)
+    +RemoveConstraint(name : string)
+    +AddIndex(index : Index)
+    +RemoveIndex(name : string)
+    +AddPartition(partition : Partition)
+    +DropPartition(name : string)
+    +AddTrigger(trigger : Trigger)
+    +RemoveTrigger(name : string)
+}
+
+class Column {
+    +ColumnId : int
+    +Name : string
+    +Parent : Table
+    +DataType : DataType
+    +Nullable : bool
+    +DefaultValue : object
+}
+class Constraint
+class Index
+class Partition
+class Trigger
+class View
+class StoredProcedure
+class Sequence
+
+Database "1" *-- "*" Schema : Composite
+Schema "1" *-- "*" Table : Composite
+Schema "1" *-- "*" View : Leaf
+Schema "1" *-- "*" StoredProcedure : Leaf
+Schema "1" *-- "*" Sequence : Leaf
+Table "1" *-- "*" Column : Leaf
+Table "1" *-- "*" Constraint : Leaf
+Table "1" *-- "*" Index : Leaf
+Table "1" *-- "*" Partition : Leaf
+Table "1" *-- "*" Trigger : Leaf
 ```
 
-![alt text](image-10.png)
+```mermaid
+sequenceDiagram
+    actor Engine
+    participant DB as Database
+    participant Schema as Schema
+    participant Table as Table
+    participant Column as Column
 
-### 3. Schema & Table Operations - Create Table (Builder Pattern)
+    Engine->>DB: AddSchema(schema)
+    DB->>Schema: SetParent(DB)
 
-**Why use it?** A `Table` object is highly complex. It contains multiple `Column`s, `Constraint`s (Primary Key, Foreign Key), and `Index`es. A constructor with all these parameters would be unwieldy (Telescoping Constructor Anti-pattern). A `TableBuilder` allows step-by-step construction of the Table object.
+    Engine->>Schema: AddTable(table)
+    Schema->>Table: SetParent(Schema)
+
+    Engine->>Table: AddColumn(column)
+    Table->>Column: SetParent(Table)
+
+    Engine->>DB: GetSchemas()
+    DB-->>Engine: List<Schema>
+    
+    Engine->>Schema: GetTables()
+    Schema-->>Engine: List<Table>
+```
+
+### 2. Metadata Initialization (Builder Pattern)
+
+**Application:** Khởi tạo bảng qua `TableBuilder` từ cú pháp DDL.
+
+**Tại sao áp dụng?** Khởi tạo một đối tượng Table cần rất nhiều thuộc tính. `TableBuilder` giúp thu thập dần dần các thông số (Cột, Khóa chính) và chỉ tạo ra object `TableMetadata` ở bước cuối cùng, giúp code mạch lạc và dễ đọc hơn.
+
+```mermaid
+classDiagram
+direction LR
+
+class ITableBuilder {
+    <<interface>>
+    +Reset(name : string)
+    +AddColumn(column : Column)
+    +AddConstraint(constraint : Constraint)
+    +AddIndex(index : Index)
+    +AddPartition(partition : Partition)
+    +AddTrigger(trigger : Trigger)
+    +Build() Table
+}
+
+class TableBuilder {
+    -currentTable : Table
+    +Reset(name : string)
+    +AddColumn(column : Column)
+    +AddConstraint(constraint : Constraint)
+    +AddIndex(index : Index)
+    +AddPartition(partition : Partition)
+    +AddTrigger(trigger : Trigger)
+    +Build() Table
+}
+
+class Table {
+    +TableId : int
+    +Name : string
+}
+
+class SchemaService {
+    -builder : ITableBuilder
+    +CreateTable(schema : Schema, name : string) Table
+}
+class Column
+class Constraint
+class Index
+class Partition
+class Trigger
+
+SchemaService --> ITableBuilder : Director
+ITableBuilder <|.. TableBuilder : ConcreteBuilder
+TableBuilder --> Table : creates Product
+TableBuilder --> Column : uses
+TableBuilder --> Constraint : uses
+TableBuilder --> Index : uses
+TableBuilder --> Partition : uses
+TableBuilder --> Trigger : uses
+```
 
 ```mermaid
 sequenceDiagram
     autonumber
+
     actor Client
+    participant Service as SchemaService
     participant Builder as TableBuilder
     participant Table as Table
-    
-    Client->>Builder: new TableBuilder("Users")
-    Client->>Builder: AddColumn("Id", INT)
-    Client->>Builder: AddColumn("Name", VARCHAR)
-    Client->>Builder: AddPrimaryKey("Id")
-    Client->>Builder: Build()
+    participant Column as Column
+    participant PK as PrimaryKey
+    participant Index as BTreeIndex
+    participant Schema as Schema
+
+    Client->>Service: CreateTable(schema, tableDef)
+
+    Service->>Builder: Create(tableDef)
+
     activate Builder
-    Builder->>Table: new Table("Users", columns, constraints)
-    Builder-->>Client: Return Table Object
+
+    loop Build Columns
+        Builder->>Column: new Column()
+        Column-->>Builder: Column
+    end
+
+    loop Build Constraints
+        Builder->>PK: new PrimaryKey()
+        PK-->>Builder: Constraint
+    end
+
+    loop Build Indexes
+        Builder->>Index: new BTreeIndex()
+        Index-->>Builder: Index
+    end
+
+    Builder->>Table: Build()
+
+    Table-->>Builder: Table
+
     deactivate Builder
+
+    Builder-->>Service: Table
+
+    Service->>Schema: AddTable(Table)
+
+    Schema-->>Client: Success
 ```
 
-![alt text](image-2.png)
-![alt text](image-3.png)
+### 3. Constraint Validation (Strategy Pattern)
 
-### 4. Schema & Table Operations - Constraint Validation (Strategy Pattern)
+**Application:** Đánh giá tính hợp lệ của Row dựa trên nhiều loại Constraint khác nhau.
 
-**Why use it?** Different constraints (Primary Key, Unique, Foreign Key, Check) require entirely different logic to validate a row. The Strategy pattern defines a common `Validate(Row)` interface in an abstract `Constraint` base class. This allows the `RecordManager` to validate rows without knowing the specific constraint details, making it easy to add new constraints later.
+**Tại sao áp dụng?** Bằng cách áp dụng Strategy Pattern thông qua interface `IConstraint`, RecordManager không cần quan tâm chi tiết logic bên trong (Primary Key kiểm tra trùng lặp, Check kiểm tra biểu thức, Foreign Key kiểm tra bảng tham chiếu). Nó chỉ cần gọi `Validate(row)` và xử lý kết quả trả về đa hình.
+
+```mermaid
+classDiagram
+direction TB
+
+class RecordManager {
+    +Insert(table : Table, row : Row)
+    +Update(table : Table, rid : RID, row : Row)
+}
+
+class Table {
+    +Constraints : IReadOnlyCollection~Constraint~
+}
+
+class Constraint {
+    <<abstract>>
+    +Name : string
+    +Validate(row : Row) bool
+}
+
+class PrimaryKey {
+    +Validate(row : Row) bool
+}
+
+class ForeignKey {
+    +Validate(row : Row) bool
+}
+
+class UniqueConstraint {
+    +Validate(row : Row) bool
+}
+
+class CheckConstraint {
+    +Validate(row : Row) bool
+}
+class IRowKeyExtractor {
+    <<interface>>
+    +ExtractKey(row : Row, columns : List~Column~) object
+}
+
+class Index
+
+RecordManager --> Table : Context uses
+Table "1" *-- "*" Constraint : holds Strategies
+Constraint <|-- PrimaryKey : ConcreteStrategy
+Constraint <|-- ForeignKey : ConcreteStrategy
+Constraint <|-- UniqueConstraint : ConcreteStrategy
+Constraint <|-- CheckConstraint : ConcreteStrategy
+PrimaryKey --> IRowKeyExtractor
+UniqueConstraint --> IRowKeyExtractor
+PrimaryKey --> Index
+UniqueConstraint --> Index
+ForeignKey --> Table
+```
 
 ```mermaid
 sequenceDiagram
     autonumber
+
     participant RecordMgr as RecordManager
-    participant Constr as Constraint (Strategy)
-    participant Concrete as PrimaryKey (ConcreteStrategy)
-    
-    RecordMgr->>Constr: Validate(row)
-    activate Constr
-    Constr->>Concrete: Execute Validation Logic
-    activate Concrete
-    Concrete->>Concrete: Check for duplicates/nulls
-    Concrete-->>Constr: Validation Result (true/false)
-    deactivate Concrete
-    Constr-->>RecordMgr: Return Result
-    deactivate Constr
+    participant Table as Table
+    participant PK as PrimaryKey
+    participant Unique as UniqueConstraint
+    participant FK as ForeignKey
+    participant Check as CheckConstraint
+
+    RecordMgr->>Table: GetConstraints()
+
+    loop For each Constraint
+
+        alt Primary Key
+            Table-->>RecordMgr: PrimaryKey
+            RecordMgr->>PK: Validate(row)
+            PK-->>RecordMgr: true
+        else Unique
+            Table-->>RecordMgr: UniqueConstraint
+            RecordMgr->>Unique: Validate(row)
+            Unique-->>RecordMgr: true
+        else Foreign Key
+            Table-->>RecordMgr: ForeignKey
+            RecordMgr->>FK: Validate(row)
+            FK-->>RecordMgr: true
+        else Check
+            Table-->>RecordMgr: CheckConstraint
+            RecordMgr->>Check: Validate(row)
+            Check-->>RecordMgr: true
+        end
+
+    end
+
+    RecordMgr-->>RecordMgr: Insert Row
 ```
 
-![alt text](image-4.png)
-![alt text](image-5.png)
+### 4. Dynamic Allocation (Factory Method Pattern)
 
-### 5. Schema & Table Operations - Index Creation (Factory Method Pattern)
+**Application:** Phân bổ các object như Index, Constraint tự động lúc thi hành DDL.
 
-**Why use it?** A DBMS can support multiple types of indexes (`BTreeIndex`, `HashIndex`, etc.). The exact type of index to create may depend on column types or user requests. A Factory Method encapsulates the instantiation logic, returning a common `Index` base class interface so the `Table` doesn't depend on concrete index classes.
+**Tại sao áp dụng?** Giao phó việc tạo Index cụ thể (BTree hay Hash) cho `IndexFactory`. Client không cần biết logic khởi tạo bên trong, chỉ cần truyền vào loại Index mong muốn và nhận lại một interface `IIndex` chung.
+
+```mermaid
+classDiagram
+direction TB
+class SchemaService {
+    -constraintFactory : IConstraintFactory
+    -indexFactory : IIndexFactory
+}
+
+class IConstraintFactory {
+    <<interface>>
+    +Create(type : ConstraintType, options : ConstraintOptions) Constraint
+}
+
+class ConstraintFactory {
+    +Create(type : ConstraintType, options : ConstraintOptions) Constraint
+}
+
+class ConstraintType{
+    <<enumeration>>
+    PRIMARY_KEY
+    UNIQUE
+    FOREIGN_KEY
+    CHECK
+}
+
+class ConstraintOptions{
+    +Columns : List~Column~
+    +ReferenceTable : Table
+    +ReferenceColumns : List~Column~
+    +Expression : string
+}
+
+class IIndexFactory {
+    <<interface>>
+    +Create(type : IndexType, options : IndexOptions) Index
+}
+
+class IndexFactory {
+    +Create(type : IndexType, options : IndexOptions) Index
+}
+
+class IndexType{
+    <<enumeration>>
+    BTREE
+    HASH
+    BITMAP
+}
+
+class IndexOptions{
+    +Name : string
+    +Columns : List~Column~
+    +Unique : bool
+}
+
+class Constraint
+class PrimaryKey
+class Index
+class BTreeIndex
+
+SchemaService --> IConstraintFactory : Creator
+SchemaService --> IIndexFactory : Creator
+IConstraintFactory <|.. ConstraintFactory
+IIndexFactory <|.. IndexFactory
+ConstraintFactory --> Constraint : creates
+IndexFactory --> Index : creates
+ConstraintFactory --> ConstraintType
+ConstraintFactory --> ConstraintOptions
+IndexFactory --> IndexType
+IndexFactory --> IndexOptions
+Constraint <|-- PrimaryKey
+Index <|-- BTreeIndex
+```
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Client
+    participant Service as SchemaService
     participant Factory as IndexFactory
     participant BTree as BTreeIndex
     participant Table as Table
-    
-    Client->>Factory: CreateIndex("BTree", columns)
+    Client->>Service: CreateIndex(type="BTree")
+    Service->>Factory: Create(BTree)
     activate Factory
-    Factory->>BTree: new BTreeIndex(columns)
-    Factory-->>Client: Return Index Object
+    Factory->>BTree: new BTreeIndex()
+    BTree-->>Factory: Index
     deactivate Factory
-    Client->>Table: AddIndex(Index)
+    Factory-->>Service: Index
+    Service->>Table: AddIndex(Index)
+    Table-->>Client: Success
 ```
 
-![alt text](image-6.png)
-![alt text](image-7.png)
+### 5. Metadata Persistence (Repository Pattern)
 
-### 6. Schema & Table Operations - Object Hierarchy (Composite Pattern)
+**Application:** Tập trung logic lưu và truy xuất cấu trúc dữ liệu.
 
-**Why use it?** Database metadata forms a natural tree structure: `Database` -> `Schema` -> `Table` -> `Column`/`Constraint`. The Composite pattern lets clients treat individual objects (like a Table) and compositions of objects (like a Schema) uniformly. For example, dropping a Schema cascades down to drop all Tables and Columns it contains without the client managing the loops.
+**Tại sao áp dụng?** Cô lập các lớp Domain khỏi thư viện đọc/ghi file. Các tầng xử lý truy vấn chỉ cần yêu cầu `ICatalogRepository` trả về thông tin bảng (`TableMetadata`), mà không cần quan tâm nó được load từ hệ thống phân trang bộ nhớ bên dưới như thế nào.
 
 ```mermaid
 sequenceDiagram
-    autonumber
-    actor Client
-    participant DB as Database (Composite)
-    participant Sch as Schema (Composite)
-    participant Tbl as Table (Leaf)
-    
-    Client->>DB: DropDatabase("AppDB")
-    activate DB
-    DB->>Sch: DropSchema("dbo")
-    activate Sch
-    Sch->>Tbl: DropTable("Users")
-    activate Tbl
-    Tbl->>Tbl: Cleanup Columns & Indexes
-    Tbl-->>Sch: Success
-    deactivate Tbl
-    Sch-->>DB: Success
-    deactivate Sch
-    DB-->>Client: Database Dropped
-    deactivate DB
+    actor QueryPlanner
+    participant Repo as ICatalogRepository
+    participant Engine as StorageSubsystem
+
+    QueryPlanner->>Repo: FetchTableDefinition("Employees")
+    activate Repo
+    Repo->>Engine: ReadRecord(SysTables_Id, "Employees")
+    Engine-->>Repo: Byte Array
+    Repo->>Repo: Deserialize to TableMetadata
+    Repo-->>QueryPlanner: TableMetadata Instance
+    deactivate Repo
 ```
 
-![alt text](image-8.png)
-![alt text](image-9.png)
+### 6. Fast Duplication (Prototype Pattern)
+
+**Application:** Sao chép nguyên mẫu Schema hoặc Bảng.
+
+**Tại sao áp dụng?** Trong các tác vụ như `CREATE TABLE AS SELECT...`, việc clone lại toàn bộ cấu hình của một TableMetadata hiện có qua hàm `DeepCopy()` sẽ nhanh và ít rủi ro hơn nhiều so với việc trích xuất và gán lại từng tham số thông qua Builder.
+
+```mermaid
+sequenceDiagram
+    actor Engine
+    participant Src as TableMetadata (Source)
+    participant Dest as TableMetadata (Cloned)
+
+    Engine->>Src: DeepCopy()
+    activate Src
+    Src->>Dest: new TableMetadata()
+    Src->>Dest: Copy Columns, Constraints, Indexes
+    Src-->>Engine: Cloned Instance
+    deactivate Src
+```
+
+### 7. Cache Invalidation (Observer Pattern)
+
+**Application:** Thông báo thay đổi hệ thống cấu trúc bảng.
+
+**Tại sao áp dụng?** Thay vì service thay đổi bảng phải gọi một đống hàm clear cache, Observer Pattern cho phép các Broker phát đi event `SchemaChangedEvent`. Bất kì module nào đăng ký (như Plan Cache hay Module thống kê dữ liệu) sẽ tự bắt sự kiện và xử lý bộ đệm của nó.
+
+```mermaid
+sequenceDiagram
+    actor ExecEngine
+    participant Broker as CatalogEventBroker
+    participant PlanCache as PlanCacheManager
+    participant StatTracker as DbStatisticsTracker
+
+    %% Initialization
+    PlanCache->>Broker: RegisterListener(SchemaChangedEvent)
+    StatTracker->>Broker: RegisterListener(SchemaChangedEvent)
+
+    %% Alter Table
+    ExecEngine->>Broker: PublishSchemaChange(TableModifiedInfo)
+    activate Broker
+    Broker->>PlanCache: OnSchemaChanged(TableModifiedInfo)
+    PlanCache->>PlanCache: EvictRelatedQueries()
+    Broker->>StatTracker: OnSchemaChanged(TableModifiedInfo)
+    StatTracker->>StatTracker: FlagStatsForRecalculation()
+    Broker-->>ExecEngine: Events Dispatched
+    deactivate Broker
+```
+
+### 8. System Initialization (Facade Pattern)
+
+**Application:** `DbEngineFacade` đóng vai trò là cửa ngõ duy nhất để khởi động hệ thống.
+
+**Tại sao áp dụng?** Việc bật hoặc tắt một instance cơ sở dữ liệu đòi hỏi phải gọi tuần tự rất nhiều module bên dưới. Facade cung cấp một điểm truy cập duy nhất, giúp code ở client (như CLI hoặc giao diện) trở nên cực kỳ đơn giản và không bị phụ thuộc vào các module cấp thấp.
+
+```mermaid
+sequenceDiagram
+    actor App
+    participant Engine as DbEngineFacade
+    participant Disk as IDiskManager
+    participant Store as IStorageSubsystem
+    participant Cat as IDatabaseCatalog
+    
+    App->>Engine: MountDatabase("UserDB")
+    activate Engine
+    Engine->>Disk: CheckDatabaseFilesExist("UserDB")
+    Engine->>Store: BootStorageEngine("UserDB")
+    Engine->>Cat: LoadSystemTables()
+    Engine-->>App: DbConnection
+    deactivate Engine
+```
+
+### 9. DDL Operations (Command Pattern)
+
+**Application:** Đóng gói các lệnh thực thi cấu trúc thành các Action object.
+
+**Tại sao áp dụng?** Thay vì viết thẳng logic tạo database trong controller, hệ thống đóng gói chúng thành `CreateDatabaseAction`. Việc này chia tách trách nhiệm rõ ràng giữa nơi nhận lệnh (Processor) và nơi thi hành, hỗ trợ tốt cho việc ghi log (WAL) hoặc khôi phục khi có lỗi.
+
+```mermaid
+sequenceDiagram
+    actor App
+    participant Processor as DdlCommandProcessor
+    participant Cmd as CreateDatabaseAction
+    participant Cat as IDatabaseCatalog
+    
+    App->>Processor: SubmitCommand(new CreateDatabaseAction("UserDB"))
+    activate Processor
+    Processor->>Cmd: ExecuteAction()
+    activate Cmd
+    Cmd->>Cat: AllocateNewDatabaseRecord()
+    Cat-->>Cmd: true
+    Cmd-->>Processor: true
+    deactivate Cmd
+    Processor-->>App: Success
+    deactivate Processor
+```
