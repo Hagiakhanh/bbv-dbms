@@ -8,7 +8,7 @@
 | Schema & Table Operations | 10 | 10 | 0 | 100% |
 | Primary Key Constraints | 3 | 3 | 0 | 100% |
 | Unique Constraints | 3 | 3 | 0 | 100% |
-| Foreign Key Constraints | 8 | 0 | 8 | 0% |
+| Foreign Key Constraints | 5 | 5 | 0 | 100% |
 | Check Constraints | 4 | 0 | 4 | 0% |
 | Index & IndexManager | 8 | 0 | 8 | 0% |
 | Schema & Table Services | 9 | 3 | 6 | 33% |
@@ -25,7 +25,7 @@
 | Metadata Lookup & Dependency Management | 4 | 1 | 3 | 25% |
 | Authentication | 3 | 0 | 3 | 0% |
 | Permission & Authorization | 8 | 0 | 8 | 0% |
-| **TOTAL** | **157** | **36** | **121** | **23%** |
+| **TOTAL** | **154** | **41** | **113** | **27%** |
 
 ## 1. Server & Database Management
 
@@ -613,42 +613,39 @@ sequenceDiagram
 
 
 ### Foreign Key Constraints
-Covers: `Validate_ShouldAcceptExistingReferencedRow`, `Validate_ShouldRejectMissingReferencedRow`, `Validate_ShouldCascadeDelete_WhenCascadeEnabled`, `ForeignKey_ShouldAcceptExistingReference`, `ForeignKey_ShouldRejectMissingReference`, `ForeignKey_ShouldCascadeDelete`, `ForeignKey_ShouldCascadeUpdate`, `ForeignKey_ShouldSetNullOnDelete`
+Covers: `ForeignKey_ShouldAcceptExistingReference`, `ForeignKey_ShouldRejectMissingReference`, `ForeignKey_ShouldTriggerCascadeDelete`, `ForeignKey_ShouldTriggerCascadeUpdate`, `ForeignKey_ShouldTriggerSetNullOnDelete`
 ```mermaid
 flowchart LR
     ClassNode["Foreign Key Constraints"]
 
-    ClassNode --> Foreign_Key_Constraints_1["Validate_ShouldAcceptExistingReferencedRow"]
-    ClassNode --> Foreign_Key_Constraints_2["Validate_ShouldRejectMissingReferencedRow"]
-    ClassNode --> Foreign_Key_Constraints_3["Validate_ShouldCascadeDelete_WhenCascadeEnabled"]
-    ClassNode --> Foreign_Key_Constraints_4["ForeignKey_ShouldAcceptExistingReference"]
-    ClassNode --> Foreign_Key_Constraints_5["ForeignKey_ShouldRejectMissingReference"]
-    ClassNode --> Foreign_Key_Constraints_6["ForeignKey_ShouldCascadeDelete"]
-    ClassNode --> Foreign_Key_Constraints_7["ForeignKey_ShouldCascadeUpdate"]
-    ClassNode --> Foreign_Key_Constraints_8["ForeignKey_ShouldSetNullOnDelete"]
+    ClassNode --> Foreign_Key_Constraints_1["ForeignKey_ShouldAcceptExistingReference"]
+    ClassNode --> Foreign_Key_Constraints_2["ForeignKey_ShouldRejectMissingReference"]
+    ClassNode --> Foreign_Key_Constraints_3["ForeignKey_ShouldTriggerCascadeDelete"]
+    ClassNode --> Foreign_Key_Constraints_4["ForeignKey_ShouldTriggerCascadeUpdate"]
+    ClassNode --> Foreign_Key_Constraints_5["ForeignKey_ShouldTriggerSetNullOnDelete"]
 
     classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
     classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
     classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
 
     class ClassNode classNode
-    class Foreign_Key_Constraints_1,Foreign_Key_Constraints_2,Foreign_Key_Constraints_3,Foreign_Key_Constraints_4,Foreign_Key_Constraints_5,Foreign_Key_Constraints_6,Foreign_Key_Constraints_7,Foreign_Key_Constraints_8 missingTest
+    class Foreign_Key_Constraints_1,Foreign_Key_Constraints_2,Foreign_Key_Constraints_3,Foreign_Key_Constraints_4,Foreign_Key_Constraints_5 completedTest
 ```
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant RecordMgr as RecordManager
+    participant RecordMgr as IRecordManager
     participant Constr as ForeignKey
-    participant RefTbl as ReferenceTable
+    participant RefTbl as Table (ReferenceTable)
     
     RecordMgr->>Constr: Validate(Row)
-    Constr->>RefTbl: Lookup Referenced Row
-    alt Missing Reference
+    Constr->>RefTbl: LookupReferencedRow(Row)
+    alt Referenced Row is null
         Constr-->>RecordMgr: throws ForeignKeyReferenceException
-    else Reference Exists
-        alt Cascade Triggered (Update/Delete)
-            Constr->>RecordMgr: CascadeAction(ReferencedRows)
+    else Referenced Row exists
+        alt Cascade/SetNull Triggered
+            Constr->>RecordMgr: CascadeAction(List<Row>)
         end
         Constr-->>RecordMgr: return true
     end
