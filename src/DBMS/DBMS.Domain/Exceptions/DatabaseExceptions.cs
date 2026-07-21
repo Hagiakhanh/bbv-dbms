@@ -76,3 +76,8 @@ public class InvalidExpressionException : Exception
 {
     public InvalidExpressionException(string message) : base(message) { }
 }
+
+public class DuplicateIndexException : Exception
+{
+    public DuplicateIndexException(string message) : base(message) { }
+}

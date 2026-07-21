@@ -382,10 +382,18 @@ class RecordManager {
     +Read(table : Table, rid : RID) Row
     +Scan(table : Table) List~Row~
 }
+class IndexManager {
+    -indexes : Dictionary~string, Index~
+    +CreateIndex(name : string)
+    +FindBestIndex(query : Query) Index
+}
+class Query {
+}
 SchemaService --> Schema : manages DDL
 SchemaService --> Table : creates/drops
 RecordManager --> Table : reads schema from
 RecordManager --> Row : reads/writes
+IndexManager --> Index : manages
 ```
 
 ### Database Operations
