@@ -11,9 +11,9 @@ This document outlines the Design Patterns implemented within various core compo
 | **Database & Metadata** | Constraint Validation | **Strategy** | `PrimaryKeyConstraint`, `UniqueConstraint`, `ForeignKeyConstraint` implement the same interface. |
 | **Database & Metadata** | Dynamic Allocation | **Factory Method** | Dynamically initializes Indexes and Constraints via `ObjectFactoryProvider` during DDL execution. |
 | **Database & Metadata** | Hierarchy Traversal | **Iterator** | Traverse Schema, Table, Column. |
+| **Database & Metadata** | Trigger Execution | **Command** | Trigger executes DDL actions. |
 | **Database & Metadata** | System Utilities | **Visitor** | Backup, Export DDL, Metadata Scan, Statistics. |
 | **Database & Metadata** | Data Change Reactions | **Observer** | Trigger, Index, Statistics react when data changes. |
-| **Database & Metadata** | Trigger Execution | **Command** | Trigger executes actions. |
 | **Database & Metadata** | DDL Coordination | **Facade / Application Service**| `SchemaService` coordinates DDL. |
 | **Database Manager** | System Initialization | **Facade** | `DbEngineFacade` groups complex startup steps for Disk, Storage, and Catalog. |
 | **Database Manager** | DDL Operations | **Command** | Encapsulates Database create/drop commands into `CreateDatabaseAction` for easy undo/redo or logging. |
@@ -590,8 +590,12 @@ sequenceDiagram
 classDiagram
 direction LR
 
+%% =====================================================
+%% Builder Pattern
+%% =====================================================
+
 class ITableBuilder {
-    <<interface>>
+    <<Builder>>
     +Reset(name : string)
     +AddColumn(column : Column)
     +AddConstraint(constraint : Constraint)
@@ -602,6 +606,7 @@ class ITableBuilder {
 }
 
 class TableBuilder {
+    <<Concrete Builder>>
     -currentTable : Table
     +Reset(name : string)
     +AddColumn(column : Column)
@@ -612,29 +617,73 @@ class TableBuilder {
     +Build() Table
 }
 
-class Table {
-    +TableId : int
-    +Name : string
+class TableDirector {
+    <<Director>>
+    -builder : ITableBuilder
+    -constraintFactory : IConstraintFactory
+    -indexFactory : IIndexFactory
+    +Construct(definition : TableDefinition) Table
 }
 
-class SchemaService {
-    -builder : ITableBuilder
-    +CreateTable(schema : Schema, name : string) Table
+class TableDefinition {
+    <<Construction Data>>
+    +Name : string
+    +Columns : IReadOnlyCollection~Column~
+    +Constraints : IReadOnlyCollection~ConstraintOptions~
+    +Indexes : IReadOnlyCollection~IndexOptions~
+    +Partitions : IReadOnlyCollection~Partition~
+    +Triggers : IReadOnlyCollection~Trigger~
 }
+
+class Table {
+    <<Product>>
+    +TableId : int
+    +Name : string
+    +Columns : IReadOnlyCollection~Column~
+    +Constraints : IReadOnlyCollection~Constraint~
+    +Indexes : IReadOnlyCollection~Index~
+    +Partitions : IReadOnlyCollection~Partition~
+    +Triggers : IReadOnlyCollection~Trigger~
+}
+
 class Column
 class Constraint
 class Index
 class Partition
 class Trigger
 
-SchemaService --> ITableBuilder : Director
-ITableBuilder <|.. TableBuilder : ConcreteBuilder
-TableBuilder --> Table : creates Product
-TableBuilder --> Column : uses
-TableBuilder --> Constraint : uses
-TableBuilder --> Index : uses
-TableBuilder --> Partition : uses
-TableBuilder --> Trigger : uses
+class IConstraintFactory {
+    <<Factory>>
+    +Create(options : ConstraintOptions) Constraint
+}
+
+class IIndexFactory {
+    <<Factory>>
+    +Create(options : IndexOptions) Index
+}
+
+class ConstraintOptions
+class IndexOptions
+
+ITableBuilder <|.. TableBuilder
+TableDirector --> ITableBuilder : directs
+TableDirector --> IConstraintFactory : creates constraints
+TableDirector --> IIndexFactory : creates indexes
+TableDirector --> TableDefinition : reads
+
+TableBuilder --> Table : builds
+
+Table *-- Column
+Table *-- Constraint
+Table *-- Index
+Table *-- Partition
+Table *-- Trigger
+
+TableDefinition --> Column
+TableDefinition --> ConstraintOptions
+TableDefinition --> IndexOptions
+TableDefinition --> Partition
+TableDefinition --> Trigger
 ```
 
 ```mermaid
@@ -643,45 +692,53 @@ sequenceDiagram
 
     actor Client
     participant Service as SchemaService
-    participant Builder as TableBuilder
-    participant Table as Table
-    participant Column as Column
-    participant PK as PrimaryKey
-    participant Index as BTreeIndex
-    participant Schema as Schema
+    participant Director as TableDirector
+    participant Builder as ITableBuilder
+    participant CFactory as IConstraintFactory
+    participant IFactory as IIndexFactory
+    participant Schema
 
-    Client->>Service: CreateTable(schema, tableDef)
+    Client->>Service: CreateTable(schema, definition)
 
-    Service->>Builder: Create(tableDef)
+    Service->>Director: Construct(definition)
+    activate Director
 
-    activate Builder
+    Director->>Builder: Reset(definition.Name)
 
-    loop Build Columns
-        Builder->>Column: new Column()
-        Column-->>Builder: Column
+    loop Mỗi Column
+        Director->>Builder: AddColumn(column)
     end
 
-    loop Build Constraints
-        Builder->>PK: new PrimaryKey()
-        PK-->>Builder: Constraint
+    loop Mỗi ConstraintOptions
+        Director->>CFactory: Create(options)
+        CFactory-->>Director: Constraint
+        Director->>Builder: AddConstraint(constraint)
     end
 
-    loop Build Indexes
-        Builder->>Index: new BTreeIndex()
-        Index-->>Builder: Index
+    loop Mỗi IndexOptions
+        Director->>IFactory: Create(options)
+        IFactory-->>Director: Index
+        Director->>Builder: AddIndex(index)
     end
 
-    Builder->>Table: Build()
+    loop Mỗi Partition
+        Director->>Builder: AddPartition(partition)
+    end
 
-    Table-->>Builder: Table
+    loop Mỗi Trigger
+        Director->>Builder: AddTrigger(trigger)
+    end
 
-    deactivate Builder
+    Director->>Builder: Build()
+    Builder-->>Director: Table
 
-    Builder-->>Service: Table
+    deactivate Director
+    Director-->>Service: Table
 
-    Service->>Schema: AddTable(Table)
+    Service->>Schema: AddTable(table)
+    Schema-->>Service: Success
 
-    Schema-->>Client: Success
+    Service-->>Client: Table
 ```
 
 ### 3. Constraint Validation (Strategy Pattern)
@@ -1127,4 +1184,205 @@ sequenceDiagram
 
     Client->>Iterator: HasMore()
     Iterator-->>Client: false
+```
+
+### 6. DDL Execution (Command Pattern)
+
+**Application:** Encapsulates Data Definition Language (DDL) requests (like `CreateTable`, `CreateSchema`) as standalone objects that contain all information about the request.
+
+**Why apply?** The Command Pattern allows the `QueryProcessor` to parameterize the `DdlCommandExecutor` with different requests, decouple the invoker from the receivers (`SchemaService`, `DatabaseService`), and supports future capabilities like queuing, logging, or undoing operations.
+
+```mermaid
+classDiagram
+direction LR
+
+%% =====================================================
+%% Command Pattern
+%% =====================================================
+
+class IDdlCommand {
+    <<Command>>
+    +Execute() DdlResult
+}
+
+class CreateTableCommand {
+    <<Concrete Command>>
+    -receiver : ISchemaService
+    -schema : Schema
+    -definition : TableDefinition
+    +CreateTableCommand(receiver, schema, definition)
+    +Execute() DdlResult
+}
+
+class CreateSchemaCommand {
+    <<Concrete Command>>
+    -receiver : IDatabaseService
+    -database : Database
+    -schemaName : string
+    +CreateSchemaCommand(receiver, database, schemaName)
+    +Execute() DdlResult
+}
+
+class DdlCommandExecutor {
+    <<Invoker>>
+    +Execute(command : IDdlCommand) DdlResult
+}
+
+class QueryProcessor {
+    <<Client>>
+    +CreateCommand(query : Query) IDdlCommand
+}
+
+class DdlResult {
+    <<Result>>
+    +Success : bool
+    +Message : string
+    +AffectedObject : ICatalogComponent
+}
+
+%% =====================================================
+%% Receivers
+%% =====================================================
+
+class IDatabaseService {
+    <<Receiver>>
+    +CreateSchema(database : Database, name : string) Schema
+}
+
+class DatabaseService {
+    -catalog : CatalogManager
+    +CreateSchema(database : Database, name : string) Schema
+}
+
+class ISchemaService {
+    <<Receiver>>
+    +CreateTable(schema : Schema, definition : TableDefinition) Table
+}
+
+class SchemaService {
+    -director : TableDirector
+    -catalog : CatalogManager
+    -storage : StorageEngine
+    +CreateTable(schema : Schema, definition : TableDefinition) Table
+}
+
+%% =====================================================
+%% Related Domain Objects
+%% =====================================================
+
+class Database
+class Schema
+class TableDefinition
+class TableDirector
+class CatalogManager
+class StorageEngine
+class Query
+class ICatalogComponent
+
+IDdlCommand <|.. CreateTableCommand
+IDdlCommand <|.. CreateSchemaCommand
+
+IDatabaseService <|.. DatabaseService
+ISchemaService <|.. SchemaService
+
+DdlCommandExecutor --> IDdlCommand : executes
+
+QueryProcessor --> IDdlCommand : creates
+QueryProcessor --> DdlCommandExecutor : submits
+
+CreateTableCommand --> ISchemaService : receiver
+CreateTableCommand --> Schema : target
+CreateTableCommand --> TableDefinition : carries
+
+CreateSchemaCommand --> IDatabaseService : receiver
+CreateSchemaCommand --> Database : target
+
+SchemaService --> TableDirector : constructs table
+SchemaService --> Schema : adds table
+SchemaService --> CatalogManager : registers metadata
+SchemaService --> StorageEngine : allocates storage
+
+DatabaseService --> Database : adds schema
+DatabaseService --> CatalogManager : registers metadata
+
+IDdlCommand --> DdlResult : returns
+DdlResult --> ICatalogComponent : contains
+```
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    participant QP as QueryProcessor
+    participant Executor as DdlCommandExecutor
+    participant Command as CreateTableCommand
+    participant Service as ISchemaService
+    participant Director as TableDirector
+    participant Builder as ITableBuilder
+    participant CFactory as IConstraintFactory
+    participant IFactory as IIndexFactory
+    participant Storage as StorageEngine
+    participant Schema
+    participant Catalog as CatalogManager
+
+    QP->>Command: new(receiver, schema, definition)
+    QP->>Executor: Execute(command)
+
+    Executor->>Command: Execute()
+    activate Command
+
+    Command->>Service: CreateTable(schema, definition)
+    activate Service
+
+    Service->>Director: Construct(definition)
+    activate Director
+
+    Director->>Builder: Reset(definition.Name)
+
+    loop Columns
+        Director->>Builder: AddColumn(column)
+    end
+
+    loop Constraint options
+        Director->>CFactory: Create(options)
+        CFactory-->>Director: Constraint
+        Director->>Builder: AddConstraint(constraint)
+    end
+
+    loop Index options
+        Director->>IFactory: Create(options)
+        IFactory-->>Director: Index
+        Director->>Builder: AddIndex(index)
+    end
+
+    loop Partitions
+        Director->>Builder: AddPartition(partition)
+    end
+
+    loop Triggers
+        Director->>Builder: AddTrigger(trigger)
+    end
+
+    Director->>Builder: Build()
+    Builder-->>Director: Table
+
+    deactivate Director
+    Director-->>Service: Table
+
+    Service->>Storage: Allocate(table)
+    Storage-->>Service: Success
+
+    Service->>Schema: AddTable(table)
+    Schema-->>Service: Success
+
+    Service->>Catalog: Register(table)
+    Catalog-->>Service: Success
+
+    Service-->>Command: Table
+    deactivate Service
+
+    Command-->>Executor: DdlResult
+    deactivate Command
+
+    Executor-->>QP: DdlResult
 ```
