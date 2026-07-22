@@ -1,58 +1,26 @@
 using System;
-using System.Collections.Generic;
+using DBMS.Domain.Catalog;
+using DBMS.Domain.Catalog.Composite;
+using DBMS.Domain.Catalog.Builder;
+using DBMS.Domain.Storage;
 
 namespace DBMS.Domain.Services;
 
-public class SchemaService
+public class SchemaService : ISchemaService
 {
-    private CatalogManager catalog;
-    private StorageEngine storage;
-    private readonly ITableBuilder _builder;
-    private readonly IConstraintFactory _constraintFactory;
-    private readonly IIndexFactory _indexFactory;
+    private readonly CatalogManager _catalog;
+    private readonly StorageEngine _storage;
+    private readonly TableDirector _tableDirector;
 
-    public SchemaService(ITableBuilder builder, IConstraintFactory constraintFactory, IIndexFactory indexFactory)
+    public SchemaService(CatalogManager catalog, StorageEngine storage, TableDirector tableDirector)
     {
-        _builder = builder;
-        _constraintFactory = constraintFactory;
-        _indexFactory = indexFactory;
+        _catalog = catalog;
+        _storage = storage;
+        _tableDirector = tableDirector;
     }
 
-    public Table CreateTable(Schema schema, TableDef def)
+    public Table CreateTable(Schema schema, TableDefinition definition)
     {
-        _builder.Reset(def.Name);
-
-        foreach (var col in def.Columns)
-        {
-            _builder.AddColumn(col);
-        }
-
-        foreach (var constraint in def.Constraints)
-        {
-            _builder.AddConstraint(constraint);
-        }
-
-        var table = _builder.Build();
-        table.Parent = schema;
-        schema.AddTable(table);
-
-        return table;
-    }
-
-    public void DropTable(Schema schema, string name)
-    {
-        schema.DropTable(name);
-    }
-
-    public View CreateView(Schema schema, string name, string query)
-    {
-        var view = new View(name, query);
-        schema.CreateView(view);
-        return view;
-    }
-
-    public void DropView(Schema schema, string name)
-    {
-        schema.DropView(name);
+        throw new NotImplementedException();
     }
 }

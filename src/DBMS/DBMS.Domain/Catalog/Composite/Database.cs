@@ -37,12 +37,12 @@ public class Database : ICatalogComposite, IIterableCatalog
         _schemas = new List<Schema>();
     }
 
-    public Schema CreateSchema(string name)
+    public void AddSchema(Schema schema)
     {
         throw new NotImplementedException();
     }
 
-    public void DropSchema(string name)
+    public void RemoveSchema(string name)
     {
         throw new NotImplementedException();
     }

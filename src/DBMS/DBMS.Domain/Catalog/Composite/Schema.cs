@@ -57,11 +57,8 @@ public class Schema : ICatalogComposite, IIterableCatalog
         throw new NotImplementedException();
     }
 
-    public void DropTable(string name)
+    public void RemoveTable(string name)
     {
-        // var table = _tables.FirstOrDefault(t => t.Name == name);
-        // if (table == null) throw new Exception($"Table not found: {name}");
-        // _tables.Remove(table);
         throw new NotImplementedException();
     }
 
@@ -77,36 +74,33 @@ public class Schema : ICatalogComposite, IIterableCatalog
         throw new NotImplementedException();
     }
 
-    public void CreateView(View view)
+    public void AddView(View view)
     {
-        // if (view == null) throw new ArgumentNullException(nameof(view));
-        // _views.Add(view);
         throw new NotImplementedException();
     }
 
-    public void DropView(string name)
+    public void RemoveView(string name)
     {
-        // _views.RemoveAll(v => v.Name == name);
         throw new NotImplementedException();
     }
 
-    public void CreateProcedure(StoredProcedure proc)
+    public void AddProcedure(StoredProcedure proc)
     {
-        // if (proc == null) throw new ArgumentNullException(nameof(proc));
-        // _procedures.Add(proc);
         throw new NotImplementedException();
     }
 
-    public void DropProcedure(string name)
+    public void RemoveProcedure(string name)
     {
-        // _procedures.RemoveAll(p => p.Name == name);
         throw new NotImplementedException();
     }
 
-    public void CreateSequence(Sequence seq)
+    public void AddSequence(Sequence seq)
     {
-        // if (seq == null) throw new ArgumentNullException(nameof(seq));
-        // _sequences.Add(seq);
+        throw new NotImplementedException();
+    }
+
+    public void RemoveSequence(string name)
+    {
         throw new NotImplementedException();
     }
 }

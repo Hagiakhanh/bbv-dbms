@@ -1,4 +1,6 @@
-using DBMS.Domain.Core;
+using System;
+using DBMS.Domain.Catalog.Composite;
+using DBMS.Domain.Catalog.Strategy;
 
 namespace DBMS.Domain.Catalog.Builder;
 
@@ -12,6 +14,3 @@ public interface ITableBuilder
     void AddTrigger(Trigger trigger);
     Table Build();
 }
-
-
-

@@ -66,12 +66,10 @@ class Database {
     +Owner : string
     +Schemas : IReadOnlyList~Schema~
     +Database(id : int, name : string, owner : string)
-    +CreateSchema(name : string) Schema
-    +DropSchema(name : string)
     +GetSchema(name : string) Schema
     +GetSchemas() IReadOnlyList~Schema~
     +AddSchema(schema : Schema)
-    +RemoveSchema(schema : Schema)
+    +RemoveSchema(name : string)
     +Backup(path : string, fileManager : IFileManager)
     +Restore(path : string, fileManager : IFileManager)
     +CreateIterator() ICatalogIterator
@@ -87,14 +85,15 @@ class Schema {
     +Sequences : IReadOnlyCollection~Sequence~
     +Schema(name : string)
     +AddTable(table : Table)
-    +DropTable(name : string)
+    +RemoveTable(name : string)
     +GetTable(name : string) Table
     +GetTables() IReadOnlyCollection~Table~
-    +CreateView(view : View)
-    +DropView(name : string)
-    +CreateProcedure(proc : StoredProcedure)
-    +DropProcedure(name : string)
-    +CreateSequence(seq : Sequence)
+    +AddView(view : View)
+    +RemoveView(name : string)
+    +AddProcedure(proc : StoredProcedure)
+    +RemoveProcedure(name : string)
+    +AddSequence(seq : Sequence)
+    +RemoveSequence(name : string)
     +CreateIterator() ICatalogIterator
 }
 
@@ -117,7 +116,7 @@ class Table {
     +AddIndex(index : Index)
     +RemoveIndex(name : string)
     +AddPartition(partition : Partition)
-    +DropPartition(name : string)
+    +RemovePartition(name : string)
     +AddTrigger(trigger : Trigger)
     +RemoveTrigger(name : string)
     +CreateIterator() ICatalogIterator
@@ -287,6 +286,184 @@ UniqueConstraint --> Index
 Index <|-- BTreeIndex
 Index <|-- HashIndex
 Index <|-- BitmapIndex
+
+  class TableDefinition {
+      <<Command Data>>
+      +Name : string
+      +Columns : IReadOnlyCollection~Column~
+      +Constraints : IReadOnlyCollection~ConstraintOptions~
+      +Indexes : IReadOnlyCollection~IndexOptions~
+      +Partitions : IReadOnlyCollection~Partition~
+      +Triggers : IReadOnlyCollection~Trigger~
+  }
+
+  class ConstraintOptions {
+      <<DTO>>
+      +Columns : List~Column~
+      +ReferenceTable : Table
+      +ReferenceColumns : List~Column~
+      +Expression : string
+  }
+
+  class IndexOptions {
+      <<DTO>>
+      +Name : string
+      +Columns : List~Column~
+      +Unique : bool
+  }
+
+  class DdlResult {
+      <<Result>>
+      +Success : bool
+      +Message : string
+      +AffectedObject : ICatalogComponent
+  }
+
+  TableDefinition --> Column
+  TableDefinition --> ConstraintOptions
+  TableDefinition --> IndexOptions
+  TableDefinition --> Partition
+  TableDefinition --> Trigger
+
+  %% =====================================================
+  %% Services, Builders, Factories & Commands
+  %% =====================================================
+
+  class ITableBuilder {
+      <<Builder>>
+      +Reset(name : string)
+      +AddColumn(column : Column)
+      +AddConstraint(constraint : Constraint)
+      +AddIndex(index : Index)
+      +AddPartition(partition : Partition)
+      +AddTrigger(trigger : Trigger)
+      +Build() Table
+  }
+
+  class TableBuilder {
+      <<Concrete Builder>>
+  }
+
+  class TableDirector {
+      <<Director>>
+      +Construct(definition : TableDefinition) Table
+  }
+
+  class IConstraintFactory {
+      <<Factory>>
+      +Create(options : ConstraintOptions) Constraint
+  }
+
+  class ConstraintFactory {
+      <<Concrete Factory>>
+  }
+
+  class ConstraintType {
+      <<enumeration>>
+      PRIMARY_KEY
+      FOREIGN_KEY
+      UNIQUE
+      CHECK
+  }
+
+  class IIndexFactory {
+      <<Factory>>
+      +Create(options : IndexOptions) Index
+  }
+
+  class IndexFactory {
+      <<Concrete Factory>>
+  }
+
+  class IndexType {
+      <<enumeration>>
+      BTREE
+      HASH
+      BITMAP
+  }
+
+  class IDdlCommand {
+      <<Command>>
+      +Execute() DdlResult
+  }
+
+  class CreateTableCommand {
+      <<Concrete Command>>
+  }
+
+  class CreateSchemaCommand {
+      <<Concrete Command>>
+  }
+
+  class DdlCommandExecutor {
+      <<Invoker>>
+      +Execute(command : IDdlCommand) DdlResult
+  }
+
+
+  class IDatabaseService {
+      <<Service>>
+      +CreateSchema(database : Database, name : string) Schema
+  }
+
+  class DatabaseService {
+      <<Service>>
+  }
+
+  class ISchemaService {
+      <<Service>>
+      +CreateTable(schema : Schema, definition : TableDefinition) Table
+  }
+
+  class SchemaService {
+      <<Service>>
+  }
+
+  class CatalogManager {
+      <<Manager>>
+  }
+
+  class StorageEngine {
+      <<Manager>>
+  }
+  
+  class RecordManager {
+      <<Manager>>
+  }
+  
+  class IndexManager {
+      <<Manager>>
+  }
+
+  ITableBuilder <|.. TableBuilder
+  IConstraintFactory <|.. ConstraintFactory
+  IIndexFactory <|.. IndexFactory
+  IDdlCommand <|.. CreateTableCommand
+  IDdlCommand <|.. CreateSchemaCommand
+  IDatabaseService <|.. DatabaseService
+  ISchemaService <|.. SchemaService
+  
+  TableDirector --> ITableBuilder
+  TableDirector --> IConstraintFactory
+  TableDirector --> IIndexFactory
+  TableDirector --> TableDefinition
+  IConstraintFactory --> ConstraintOptions
+  IIndexFactory --> IndexOptions
+  IConstraintFactory --> Constraint
+  IIndexFactory --> Index
+  DdlCommandExecutor --> IDdlCommand
+  CreateTableCommand --> ISchemaService
+  CreateSchemaCommand --> IDatabaseService
+  CreateTableCommand --> Schema
+  CreateTableCommand --> TableDefinition
+  CreateSchemaCommand --> Database
+  SchemaService --> TableDirector
+  SchemaService --> Schema
+  SchemaService --> CatalogManager
+  SchemaService --> StorageEngine
+  DatabaseService --> Database
+  DatabaseService --> CatalogManager
+  IDdlCommand --> DdlResult
 
 
 %% =====================================================

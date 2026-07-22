@@ -1,4 +1,6 @@
-using DBMS.Domain.Core;
+using System;
+using DBMS.Domain.Catalog.Composite;
+using DBMS.Domain.Catalog.Strategy;
 
 namespace DBMS.Domain.Catalog.Builder;
 
@@ -8,41 +10,36 @@ public class TableBuilder : ITableBuilder
 
     public void Reset(string name)
     {
-        _currentTable = new Table(name);
+        throw new NotImplementedException();
     }
 
     public void AddColumn(Column column)
     {
-        _currentTable.AddColumn(column);
+        throw new NotImplementedException();
     }
 
     public void AddConstraint(Constraint constraint)
     {
-        _currentTable.AddConstraint(constraint);
+        throw new NotImplementedException();
     }
 
     public void AddIndex(Index index)
     {
-        _currentTable.AddIndex(index);
+        throw new NotImplementedException();
     }
 
     public void AddPartition(Partition partition)
     {
-        _currentTable.AddPartition(partition);
+        throw new NotImplementedException();
     }
 
     public void AddTrigger(Trigger trigger)
     {
-        _currentTable.AddTrigger(trigger);
+        throw new NotImplementedException();
     }
 
     public Table Build()
     {
-        var table = _currentTable;
-        _currentTable = null;
-        return table;
+        throw new NotImplementedException();
     }
 }
-
-
-

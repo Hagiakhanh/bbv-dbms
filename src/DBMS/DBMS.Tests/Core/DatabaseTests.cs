@@ -12,11 +12,11 @@ namespace DBMS.Tests.Core;
 public class DatabaseTests
 {
     [Fact]
-    public void CreateSchema_ShouldAddSchemaToDatabase()
+    public void AddSchema_ShouldAddSchemaToDatabase()
     {
         var db = new Database(1, "TestDB", "Admin");
         
-        var schema = db.CreateSchema("dbo");
+        var schema = new DBMS.Domain.Catalog.Composite.Schema("dbo"); db.AddSchema(schema);
 
         schema.Should().NotBeNull();
         schema.Name.Should().Be("dbo");
@@ -24,61 +24,61 @@ public class DatabaseTests
     }
 
     [Fact]
-    public void CreateSchema_ShouldRejectDuplicateSchemaName()
+    public void AddSchema_ShouldRejectDuplicateSchemaName()
     {
         var db = new Database(1, "TestDB", "Admin");
         
         Action act = () => {
-            db.CreateSchema("dbo");
-            db.CreateSchema("dbo");
+            db.AddSchema(new DBMS.Domain.Catalog.Composite.Schema("dbo"));
+            db.AddSchema(new DBMS.Domain.Catalog.Composite.Schema("dbo"));
         };
 
         act.Should().Throw<DuplicateSchemaException>();
     }
 
     [Fact]
-    public void CreateSchema_ShouldReject_WhenPermissionDenied()
+    public void AddSchema_ShouldReject_WhenPermissionDenied()
     {
         var db = new Database(1, "TestDB", "Admin");
         
         // Arrange (Assuming some SecurityContext or SecurityManager integration will be added)
         // For red phase, this will fail or throw NotImplementedException
-        Action act = () => db.CreateSchema("dbo");
+        Action act = () => db.AddSchema(new DBMS.Domain.Catalog.Composite.Schema("dbo"));
 
         act.Should().Throw<PermissionDeniedException>();
     }
 
     [Fact]
-    public void CreateSchema_ShouldRollback_WhenCatalogRegistrationFails()
+    public void AddSchema_ShouldRollback_WhenCatalogRegistrationFails()
     {
         var db = new Database(1, "TestDB", "Admin");
         
         // Arrange: mock catalog to fail
-        Action act = () => db.CreateSchema("dbo");
+        Action act = () => db.AddSchema(new DBMS.Domain.Catalog.Composite.Schema("dbo"));
 
         act.Should().Throw<CatalogException>();
         db.Schemas.Should().BeEmpty(); // Verify rollback
     }
 
     [Fact]
-    public void DropSchema_ShouldRemoveExistingSchema()
+    public void RemoveSchema_ShouldRemoveExistingSchema()
     {
         var db = new Database(1, "TestDB", "Admin");
 
         Action act = () => {
-            db.CreateSchema("temp");
-            db.DropSchema("temp");
+            db.AddSchema(new DBMS.Domain.Catalog.Composite.Schema("temp"));
+            db.RemoveSchema("temp");
         };
         
         act.Should().NotThrow();
     }
 
     [Fact]
-    public void DropSchema_ShouldThrow_WhenSchemaDoesNotExist()
+    public void RemoveSchema_ShouldThrow_WhenSchemaDoesNotExist()
     {
         var db = new Database(1, "TestDB", "Admin");
 
-        Action act = () => db.DropSchema("nonexistent");
+        Action act = () => db.RemoveSchema("nonexistent");
 
         act.Should().Throw<SchemaNotFoundException>();
     }
