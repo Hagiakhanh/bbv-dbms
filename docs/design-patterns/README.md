@@ -28,6 +28,38 @@ direction LR
 %% Composite Hierarchy & DB Objects
 %% =====================================================
 
+class ICatalogComponent {
+    <<Component>>
+    +Name : string
+}
+
+class ICatalogComposite {
+    <<Composite>>
+    +Children : IReadOnlyCollection~ICatalogComponent~
+}
+
+ICatalogComponent <|-- ICatalogComposite
+
+class ICatalogIterator {
+    <<Iterator>>
+    +GetNext() ICatalogComponent
+    +HasMore() bool
+}
+
+class CatalogIterator {
+    <<Concrete Iterator>>
+    -collection : ICatalogComposite
+    -iterationState
+    +CatalogIterator(collection : ICatalogComposite)
+    +GetNext() ICatalogComponent
+    +HasMore() bool
+}
+
+class IIterableCatalog {
+    <<Iterable Collection>>
+    +CreateIterator() ICatalogIterator
+}
+
 class Database {
     +DatabaseId : int
     +Name : string
@@ -42,6 +74,7 @@ class Database {
     +RemoveSchema(schema : Schema)
     +Backup(path : string, fileManager : IFileManager)
     +Restore(path : string, fileManager : IFileManager)
+    +CreateIterator() ICatalogIterator
 }
 
 class Schema {
@@ -62,6 +95,7 @@ class Schema {
     +CreateProcedure(proc : StoredProcedure)
     +DropProcedure(name : string)
     +CreateSequence(seq : Sequence)
+    +CreateIterator() ICatalogIterator
 }
 
 class Table {
@@ -86,6 +120,7 @@ class Table {
     +DropPartition(name : string)
     +AddTrigger(trigger : Trigger)
     +RemoveTrigger(name : string)
+    +CreateIterator() ICatalogIterator
 }
 
 class Column {
@@ -393,6 +428,32 @@ IndexFactory --> Index : creates
 RecordManager --> Table : reads schema from
 RecordManager --> Row : reads/writes
 IndexManager --> Index : manages
+
+ICatalogIterator <|.. CatalogIterator
+
+ICatalogComposite <|.. Database
+ICatalogComposite <|.. Schema
+ICatalogComposite <|.. Table
+
+ICatalogComponent <|.. Column
+ICatalogComponent <|.. Constraint
+ICatalogComponent <|.. Index
+ICatalogComponent <|.. Partition
+ICatalogComponent <|.. Trigger
+ICatalogComponent <|.. View
+ICatalogComponent <|.. StoredProcedure
+ICatalogComponent <|.. Sequence
+
+IIterableCatalog <|.. Database
+IIterableCatalog <|.. Schema
+IIterableCatalog <|.. Table
+
+CatalogIterator o-- ICatalogComposite : collection
+CatalogIterator --> ICatalogComponent : returns
+
+IIterableCatalog --> ICatalogIterator : creates
+SchemaService --> IIterableCatalog : requests iterator
+SchemaService --> ICatalogIterator : traverses
 ```
 
 ## Sequence Diagrams (Database Manager & Metadata)
@@ -817,4 +878,253 @@ sequenceDiagram
     Factory-->>Service: Index
     Service->>Table: AddIndex(Index)
     Table-->>Client: Success
+```
+
+### 5. Hierarchy Traversal (Iterator Pattern)
+
+**Application:** Traverses the database metadata hierarchy (Database, Schema, Table) sequentially without exposing the underlying representations.
+
+**Why apply?** The Iterator Pattern provides a unified interface `ICatalogIterator` for clients (like `SchemaService`) to iterate through catalog components (Schemas in a Database, Tables in a Schema, Columns in a Table) regardless of whether they are stored in an `IReadOnlyList` or `IReadOnlyCollection`.
+
+```mermaid
+classDiagram
+direction TB
+
+class ICatalogComponent {
+    <<Component>>
+    +Name : string
+}
+
+class ICatalogComposite {
+    <<Composite>>
+    +Children : IReadOnlyCollection~ICatalogComponent~
+}
+
+ICatalogComponent <|-- ICatalogComposite
+
+class ICatalogIterator {
+    <<Iterator>>
+    +GetNext() ICatalogComponent
+    +HasMore() bool
+}
+
+class CatalogIterator {
+    <<Concrete Iterator>>
+    -collection : ICatalogComposite
+    -iterationState
+    +CatalogIterator(collection : ICatalogComposite)
+    +GetNext() ICatalogComponent
+    +HasMore() bool
+}
+
+class IIterableCatalog {
+    <<Iterable Collection>>
+    +CreateIterator() ICatalogIterator
+}
+
+class Database {
+    +DatabaseId : int
+    +Name : string
+    +Owner : string
+    +Schemas : IReadOnlyList~Schema~
+    +Database(id : int, name : string, owner : string)
+    +CreateSchema(name : string) Schema
+    +DropSchema(name : string)
+    +GetSchema(name : string) Schema
+    +GetSchemas() IReadOnlyList~Schema~
+    +AddSchema(schema : Schema)
+    +RemoveSchema(schema : Schema)
+    +Backup(path : string, fileManager : IFileManager)
+    +Restore(path : string, fileManager : IFileManager)
+    +CreateIterator() ICatalogIterator
+}
+
+class Schema {
+    +SchemaId : int
+    +Name : string
+    +Parent : Database
+    +Tables : IReadOnlyCollection~Table~
+    +Views : IReadOnlyCollection~View~
+    +Procedures : IReadOnlyCollection~StoredProcedure~
+    +Sequences : IReadOnlyCollection~Sequence~
+    +Schema(name : string)
+    +AddTable(table : Table)
+    +DropTable(name : string)
+    +GetTable(name : string) Table
+    +GetTables() IReadOnlyCollection~Table~
+    +CreateView(view : View)
+    +DropView(name : string)
+    +CreateProcedure(proc : StoredProcedure)
+    +DropProcedure(name : string)
+    +CreateSequence(seq : Sequence)
+    +CreateIterator() ICatalogIterator
+}
+
+class Table {
+    +TableId : int
+    +Name : string
+    +Parent : Schema
+    +Columns : IReadOnlyCollection~Column~
+    +Constraints : IReadOnlyCollection~Constraint~
+    +Indexes : IReadOnlyCollection~Index~
+    +Partitions : IReadOnlyCollection~Partition~
+    +Triggers : IReadOnlyCollection~Trigger~
+    +Table(name : string)
+    +AddColumn(col : Column)
+    +RemoveColumn(name : string)
+    +GetColumn(name : string) Column
+    +GetColumns() IReadOnlyCollection~Column~
+    +AddConstraint(constraint : Constraint)
+    +RemoveConstraint(name : string)
+    +AddIndex(index : Index)
+    +RemoveIndex(name : string)
+    +AddPartition(partition : Partition)
+    +DropPartition(name : string)
+    +AddTrigger(trigger : Trigger)
+    +RemoveTrigger(name : string)
+    +CreateIterator() ICatalogIterator
+}
+
+class Column {
+    +ColumnId : int
+    +Name : string
+    +Parent : Table
+    +DataType : DataType
+    +Nullable : bool
+    +DefaultValue : object
+    +SetDataType(type : DataType)
+    +SetNullable(nullable : bool)
+    +SetDefaultValue(value : object)
+    +Rename(newName : string)
+    +ValidateValue(value : object) bool
+}
+
+class Constraint {
+    <<abstract>>
+    +Name : string
+    +Validate(row : Row) bool
+}
+
+class Index {
+    <<abstract>>
+    +Name : string
+    +Insert(key, rid)
+    +Delete(key)
+    +Search(key)
+}
+
+class Partition {
+    +PartitionKey : string
+    +PartitionType : string
+    +InsertRecord(row : Row)
+    +DropPartition(name : string)
+    +GetPartition(key : object) Partition
+}
+
+class Trigger {
+    +Name : string
+    +Event : TriggerEvent
+    +Timing : TriggerTiming
+    +Body : string
+    +Execute(context : TriggerContext)
+}
+
+class View {
+    +ViewId : int
+    +Name : string
+    +QueryDefinition : string
+    +View(name : string)
+    +Compile() ExecutionPlan
+    +Execute() ResultCursor
+}
+
+class StoredProcedure {
+    +Name : string
+    +Parameters : IReadOnlyCollection~Column~
+    +Body : string
+    +StoredProcedure(name : string)
+    +Compile()
+    +Execute(args : object[]) ResultCursor
+}
+
+class Sequence {
+    +Name : string
+    +CurrentValue : long
+    +Increment : long
+    +Sequence(name : string)
+    +NextValue() long
+    +Reset()
+}
+
+class SchemaService {
+    <<Client>>
+}
+
+ICatalogIterator <|.. CatalogIterator
+
+ICatalogComposite <|.. Database
+ICatalogComposite <|.. Schema
+ICatalogComposite <|.. Table
+
+ICatalogComponent <|.. Column
+ICatalogComponent <|.. Constraint
+ICatalogComponent <|.. Index
+ICatalogComponent <|.. Partition
+ICatalogComponent <|.. Trigger
+ICatalogComponent <|.. View
+ICatalogComponent <|.. StoredProcedure
+ICatalogComponent <|.. Sequence
+
+
+Database "1" *-- "*" Schema
+Schema "1" *-- "*" Table
+Schema "1" *-- "*" View
+Schema "1" *-- "*" StoredProcedure
+Schema "1" *-- "*" Sequence
+Table "1" *-- "*" Column
+Table "1" *-- "*" Constraint
+Table "1" *-- "*" Index
+Table "1" *-- "*" Partition
+Table "1" *-- "*" Trigger
+
+IIterableCatalog <|.. Database
+IIterableCatalog <|.. Schema
+IIterableCatalog <|.. Table
+
+CatalogIterator o-- ICatalogComposite : collection
+CatalogIterator --> ICatalogComponent : returns
+
+IIterableCatalog --> ICatalogIterator : creates
+SchemaService --> IIterableCatalog : requests iterator
+SchemaService --> ICatalogIterator : traverses
+```
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    participant Client as SchemaService
+    participant Composite as Database / Schema / Table
+    participant Iterator as CatalogIterator
+    participant Component as ICatalogComponent
+
+    Client->>Composite: CreateIterator()
+    Composite->>Iterator: Create(this)
+    Iterator-->>Composite: ICatalogIterator
+    Composite-->>Client: ICatalogIterator
+
+    loop HasMore() = true
+        Client->>Iterator: HasMore()
+        Iterator-->>Client: true
+
+        Client->>Iterator: GetNext()
+        Iterator->>Component: Get next component
+        Component-->>Iterator: Component
+        Iterator-->>Client: ICatalogComponent
+
+        Client->>Client: Process component
+    end
+
+    Client->>Iterator: HasMore()
+    Iterator-->>Client: false
 ```

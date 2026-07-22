@@ -10,14 +10,14 @@ namespace DBMS.Tests.Core;
 
 public class PrimaryKeyTests
 {
-    private readonly Mock<DBMS.Domain.Core.Index> _mockIndex;
+    private readonly Mock<DBMS.Domain.Catalog.Strategy.Index> _mockIndex;
     private readonly Mock<IRowKeyExtractor> _mockExtractor;
     private readonly List<Column> _columns;
     private readonly PrimaryKey _primaryKey;
 
     public PrimaryKeyTests()
     {
-        _mockIndex = new Mock<DBMS.Domain.Core.Index>();
+        _mockIndex = new Mock<DBMS.Domain.Catalog.Strategy.Index>();
         _mockExtractor = new Mock<IRowKeyExtractor>();
         _columns = new List<Column> { new Column { Name = "Id" } };
 
@@ -74,3 +74,4 @@ public class PrimaryKeyTests
         result.Should().BeTrue();
     }
 }
+

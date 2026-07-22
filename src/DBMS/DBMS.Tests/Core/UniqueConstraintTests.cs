@@ -10,14 +10,14 @@ namespace DBMS.Tests.Core;
 
 public class UniqueConstraintTests
 {
-    private readonly Mock<DBMS.Domain.Core.Index> _mockIndex;
+    private readonly Mock<DBMS.Domain.Catalog.Strategy.Index> _mockIndex;
     private readonly Mock<IRowKeyExtractor> _mockExtractor;
     private readonly List<Column> _columns;
     private readonly UniqueConstraint _uniqueConstraint;
 
     public UniqueConstraintTests()
     {
-        _mockIndex = new Mock<DBMS.Domain.Core.Index>();
+        _mockIndex = new Mock<DBMS.Domain.Catalog.Strategy.Index>();
         _mockExtractor = new Mock<IRowKeyExtractor>();
         _columns = new List<Column> { new Column { Name = "Email" } };
 
@@ -74,3 +74,4 @@ public class UniqueConstraintTests
         result.Should().BeTrue();
     }
 }
+
