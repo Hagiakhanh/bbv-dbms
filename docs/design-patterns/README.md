@@ -6,15 +6,18 @@ This document outlines the Design Patterns implemented within various core compo
 
 | Module | Feature | Pattern | Application |
 | :--- | :--- | :--- | :--- |
-| **Database & Metadata** | Hierarchy Management | **Composite** | Quản lý kiến trúc phân cấp: `DatabaseComposite` → `SchemaComposite` → `TableComposite` → `ColumnLeaf`. |
-| **Database & Metadata** | Metadata Initialization | **Builder** | Sử dụng `TableDefBuilder` để thiết lập từng thuộc tính của bảng thay vì dùng constructor dài. |
-| **Database & Metadata** | Constraint Validation | **Strategy** | `PrimaryKeyConstraint`, `UniqueConstraint`, `ForeignKeyConstraint` triển khai cùng interface. |
-| **Database & Metadata** | Dynamic Allocation | **Factory Method** | Khởi tạo động các Index, Constraint thông qua `ObjectFactoryProvider` trong lúc chạy DDL. |
-| **Database & Metadata** | Metadata Persistence | **Repository** | Cung cấp interface `ICatalogRepository` để lấy cấu trúc bảng mà không dính dáng đến Storage vật lý. |
-| **Database & Metadata** | Fast Duplication | **Prototype** | Hỗ trợ nhân bản bảng (lệnh `CREATE TABLE LIKE`) thông qua hàm `DeepCopy()`. |
-| **Database & Metadata** | Cache Invalidation | **Observer** | Dùng `CatalogEventBroker` báo cho `PlanCacheManager` biết khi có thay đổi cấu trúc để xóa cache. |
-| **Database Manager** | System Initialization | **Facade** | `DbEngineFacade` gom nhóm các bước khởi động phức tạp của Disk, Storage, và Catalog. |
-| **Database Manager** | DDL Operations | **Command** | Đóng gói các lệnh tạo/xóa Database thành `CreateDatabaseAction` để dễ dàng undo/redo hoặc log. |
+| **Database & Metadata** | Hierarchy Management | **Composite** | Manages hierarchical architecture: `DatabaseComposite` → `SchemaComposite` → `TableComposite` → `ColumnLeaf`. |
+| **Database & Metadata** | Metadata Initialization | **Builder** | Uses `TableDefBuilder` to set each table property instead of a long constructor. |
+| **Database & Metadata** | Constraint Validation | **Strategy** | `PrimaryKeyConstraint`, `UniqueConstraint`, `ForeignKeyConstraint` implement the same interface. |
+| **Database & Metadata** | Dynamic Allocation | **Factory Method** | Dynamically initializes Indexes and Constraints via `ObjectFactoryProvider` during DDL execution. |
+| **Database & Metadata** | Hierarchy Traversal | **Iterator** | Traverse Schema, Table, Column. |
+| **Database & Metadata** | System Utilities | **Visitor** | Backup, Export DDL, Metadata Scan, Statistics. |
+| **Database & Metadata** | Data Change Reactions | **Observer** | Trigger, Index, Statistics react when data changes. |
+| **Database & Metadata** | Trigger Execution | **Command** | Trigger executes actions. |
+| **Database & Metadata** | DDL Coordination | **Facade / Application Service**| `SchemaService` coordinates DDL. |
+| **Database Manager** | System Initialization | **Facade** | `DbEngineFacade` groups complex startup steps for Disk, Storage, and Catalog. |
+| **Database Manager** | DDL Operations | **Command** | Encapsulates Database create/drop commands into `CreateDatabaseAction` for easy undo/redo or logging. |
+
 ---
 
 ```mermaid
@@ -396,9 +399,9 @@ IndexManager --> Index : manages
 
 ### 1. Hierarchy Management (Composite Pattern)
 
-**Application:** Mô hình hóa cây siêu dữ liệu: Database → Schema → Table → Column.
+**Application:** Models the metadata tree: Database → Schema → Table → Column.
 
-**Tại sao áp dụng?** Composite Pattern cấu trúc hoá dữ liệu thành dạng cây, cung cấp các hàm Add/Remove đồng nhất. Biểu đồ dưới đây thể hiện việc gán ghép các object lại với nhau để hình thành cấu trúc cha-con, giúp dễ dàng truy xuất toàn bộ nhánh (ví dụ: `GetSchemas()`, `GetTables()`).
+**Why apply?** Composite Pattern structures data into a tree form, providing uniform Add/Remove functions. The diagram below shows assigning objects together to form a parent-child structure, making it easy to access the entire branch (e.g., `GetSchemas()`, `GetTables()`).
 
 ```mermaid
 classDiagram
@@ -518,9 +521,9 @@ sequenceDiagram
 
 ### 2. Metadata Initialization (Builder Pattern)
 
-**Application:** Khởi tạo bảng qua `TableBuilder` từ cú pháp DDL.
+**Application:** Initializes tables via `TableBuilder` from DDL syntax.
 
-**Tại sao áp dụng?** Khởi tạo một đối tượng Table cần rất nhiều thuộc tính. `TableBuilder` giúp thu thập dần dần các thông số (Cột, Khóa chính) và chỉ tạo ra object `TableMetadata` ở bước cuối cùng, giúp code mạch lạc và dễ đọc hơn.
+**Why apply?** Initializing a Table object requires many properties. `TableBuilder` helps gather parameters gradually (Columns, Primary Keys) and only creates the `TableMetadata` object in the final step, making the code coherent and readable.
 
 ```mermaid
 classDiagram
@@ -622,9 +625,9 @@ sequenceDiagram
 
 ### 3. Constraint Validation (Strategy Pattern)
 
-**Application:** Đánh giá tính hợp lệ của Row dựa trên nhiều loại Constraint khác nhau.
+**Application:** Evaluates Row validity based on various types of Constraints.
 
-**Tại sao áp dụng?** Bằng cách áp dụng Strategy Pattern thông qua interface `IConstraint`, RecordManager không cần quan tâm chi tiết logic bên trong (Primary Key kiểm tra trùng lặp, Check kiểm tra biểu thức, Foreign Key kiểm tra bảng tham chiếu). Nó chỉ cần gọi `Validate(row)` và xử lý kết quả trả về đa hình.
+**Why apply?** By applying the Strategy Pattern via the `IConstraint` interface, `RecordManager` doesn't need to care about internal detailed logic (Primary Key checks for duplicates, Check evaluates expressions, Foreign Key checks reference table). It just calls `Validate(row)` and handles the polymorphic result.
 
 ```mermaid
 classDiagram
@@ -720,9 +723,9 @@ sequenceDiagram
 
 ### 4. Dynamic Allocation (Factory Method Pattern)
 
-**Application:** Phân bổ các object như Index, Constraint tự động lúc thi hành DDL.
+**Application:** Allocates objects like Index and Constraint automatically during DDL execution.
 
-**Tại sao áp dụng?** Giao phó việc tạo Index cụ thể (BTree hay Hash) cho `IndexFactory`. Client không cần biết logic khởi tạo bên trong, chỉ cần truyền vào loại Index mong muốn và nhận lại một interface `IIndex` chung.
+**Why apply?** Delegates the creation of a specific Index (BTree or Hash) to `IndexFactory`. The client doesn't need to know the internal initialization logic, just passes in the desired Index type and receives a common `IIndex` interface back.
 
 ```mermaid
 classDiagram
@@ -814,121 +817,4 @@ sequenceDiagram
     Factory-->>Service: Index
     Service->>Table: AddIndex(Index)
     Table-->>Client: Success
-```
-
-### 5. Metadata Persistence (Repository Pattern)
-
-**Application:** Tập trung logic lưu và truy xuất cấu trúc dữ liệu.
-
-**Tại sao áp dụng?** Cô lập các lớp Domain khỏi thư viện đọc/ghi file. Các tầng xử lý truy vấn chỉ cần yêu cầu `ICatalogRepository` trả về thông tin bảng (`TableMetadata`), mà không cần quan tâm nó được load từ hệ thống phân trang bộ nhớ bên dưới như thế nào.
-
-```mermaid
-sequenceDiagram
-    actor QueryPlanner
-    participant Repo as ICatalogRepository
-    participant Engine as StorageSubsystem
-
-    QueryPlanner->>Repo: FetchTableDefinition("Employees")
-    activate Repo
-    Repo->>Engine: ReadRecord(SysTables_Id, "Employees")
-    Engine-->>Repo: Byte Array
-    Repo->>Repo: Deserialize to TableMetadata
-    Repo-->>QueryPlanner: TableMetadata Instance
-    deactivate Repo
-```
-
-### 6. Fast Duplication (Prototype Pattern)
-
-**Application:** Sao chép nguyên mẫu Schema hoặc Bảng.
-
-**Tại sao áp dụng?** Trong các tác vụ như `CREATE TABLE AS SELECT...`, việc clone lại toàn bộ cấu hình của một TableMetadata hiện có qua hàm `DeepCopy()` sẽ nhanh và ít rủi ro hơn nhiều so với việc trích xuất và gán lại từng tham số thông qua Builder.
-
-```mermaid
-sequenceDiagram
-    actor Engine
-    participant Src as TableMetadata (Source)
-    participant Dest as TableMetadata (Cloned)
-
-    Engine->>Src: DeepCopy()
-    activate Src
-    Src->>Dest: new TableMetadata()
-    Src->>Dest: Copy Columns, Constraints, Indexes
-    Src-->>Engine: Cloned Instance
-    deactivate Src
-```
-
-### 7. Cache Invalidation (Observer Pattern)
-
-**Application:** Thông báo thay đổi hệ thống cấu trúc bảng.
-
-**Tại sao áp dụng?** Thay vì service thay đổi bảng phải gọi một đống hàm clear cache, Observer Pattern cho phép các Broker phát đi event `SchemaChangedEvent`. Bất kì module nào đăng ký (như Plan Cache hay Module thống kê dữ liệu) sẽ tự bắt sự kiện và xử lý bộ đệm của nó.
-
-```mermaid
-sequenceDiagram
-    actor ExecEngine
-    participant Broker as CatalogEventBroker
-    participant PlanCache as PlanCacheManager
-    participant StatTracker as DbStatisticsTracker
-
-    %% Initialization
-    PlanCache->>Broker: RegisterListener(SchemaChangedEvent)
-    StatTracker->>Broker: RegisterListener(SchemaChangedEvent)
-
-    %% Alter Table
-    ExecEngine->>Broker: PublishSchemaChange(TableModifiedInfo)
-    activate Broker
-    Broker->>PlanCache: OnSchemaChanged(TableModifiedInfo)
-    PlanCache->>PlanCache: EvictRelatedQueries()
-    Broker->>StatTracker: OnSchemaChanged(TableModifiedInfo)
-    StatTracker->>StatTracker: FlagStatsForRecalculation()
-    Broker-->>ExecEngine: Events Dispatched
-    deactivate Broker
-```
-
-### 8. System Initialization (Facade Pattern)
-
-**Application:** `DbEngineFacade` đóng vai trò là cửa ngõ duy nhất để khởi động hệ thống.
-
-**Tại sao áp dụng?** Việc bật hoặc tắt một instance cơ sở dữ liệu đòi hỏi phải gọi tuần tự rất nhiều module bên dưới. Facade cung cấp một điểm truy cập duy nhất, giúp code ở client (như CLI hoặc giao diện) trở nên cực kỳ đơn giản và không bị phụ thuộc vào các module cấp thấp.
-
-```mermaid
-sequenceDiagram
-    actor App
-    participant Engine as DbEngineFacade
-    participant Disk as IDiskManager
-    participant Store as IStorageSubsystem
-    participant Cat as IDatabaseCatalog
-    
-    App->>Engine: MountDatabase("UserDB")
-    activate Engine
-    Engine->>Disk: CheckDatabaseFilesExist("UserDB")
-    Engine->>Store: BootStorageEngine("UserDB")
-    Engine->>Cat: LoadSystemTables()
-    Engine-->>App: DbConnection
-    deactivate Engine
-```
-
-### 9. DDL Operations (Command Pattern)
-
-**Application:** Đóng gói các lệnh thực thi cấu trúc thành các Action object.
-
-**Tại sao áp dụng?** Thay vì viết thẳng logic tạo database trong controller, hệ thống đóng gói chúng thành `CreateDatabaseAction`. Việc này chia tách trách nhiệm rõ ràng giữa nơi nhận lệnh (Processor) và nơi thi hành, hỗ trợ tốt cho việc ghi log (WAL) hoặc khôi phục khi có lỗi.
-
-```mermaid
-sequenceDiagram
-    actor App
-    participant Processor as DdlCommandProcessor
-    participant Cmd as CreateDatabaseAction
-    participant Cat as IDatabaseCatalog
-    
-    App->>Processor: SubmitCommand(new CreateDatabaseAction("UserDB"))
-    activate Processor
-    Processor->>Cmd: ExecuteAction()
-    activate Cmd
-    Cmd->>Cat: AllocateNewDatabaseRecord()
-    Cat-->>Cmd: true
-    Cmd-->>Processor: true
-    deactivate Cmd
-    Processor-->>App: Success
-    deactivate Processor
 ```
