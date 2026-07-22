@@ -40,25 +40,25 @@ public class SchemaTests
     }
 
     [Fact]
-    public void DropTable_ShouldRemoveExistingTable()
+    public void RemoveTable_ShouldRemoveExistingTable()
     {
         var table = new Table("OldTable");
         _schema.AddTable(table);
 
-        _schema.DropTable("OldTable");
+        _schema.RemoveTable("OldTable");
         _schema.Tables.Should().NotContain(table);
     }
 
     [Fact]
-    public void DropTable_ShouldThrow_WhenTableDoesNotExist()
+    public void RemoveTable_ShouldThrow_WhenTableDoesNotExist()
     {
-        Action act = () => _schema.DropTable("NonExistentTable");
+        Action act = () => _schema.RemoveTable("NonExistentTable");
 
         act.Should().Throw<TableNotFoundException>();
     }
 
     [Fact]
-    public void DropTable_ShouldReject_WhenReferencedByForeignKey()
+    public void RemoveTable_ShouldReject_WhenReferencedByForeignKey()
     {
         var table1 = new Table("Users");
         var table2 = new Table("Orders");
@@ -68,7 +68,7 @@ public class SchemaTests
         var fk = new ForeignKey("FK_Users", table1, new List<Column>(), mockRecordManager.Object);
         table2.AddConstraint(fk);
 
-        Action act = () => _schema.DropTable("Users");
+        Action act = () => _schema.RemoveTable("Users");
 
         act.Should().Throw<ForeignKeyReferenceException>();
     }
@@ -96,52 +96,52 @@ public class SchemaTests
     }
 
     [Fact]
-    public void CreateView_ShouldRegisterView()
+    public void AddView_ShouldRegisterView()
     {
         var view = new View("UserView");
 
-        _schema.CreateView(view);
+        _schema.AddView(view);
 
         _schema.Views.Should().Contain(view);
     }
 
     [Fact]
-    public void DropView_ShouldRemoveView()
+    public void RemoveView_ShouldRemoveView()
     {
         var view = new View("OldView");
-        _schema.CreateView(view);
+        _schema.AddView(view);
 
-        _schema.DropView("OldView");
+        _schema.RemoveView("OldView");
         _schema.Views.Should().NotContain(view);
     }
 
     [Fact]
-    public void CreateProcedure_ShouldRegisterProcedure()
+    public void AddProcedure_ShouldRegisterProcedure()
     {
         var proc = new StoredProcedure("GetUsers");
 
-        _schema.CreateProcedure(proc);
+        _schema.AddProcedure(proc);
 
         _schema.Procedures.Should().Contain(proc);
     }
 
     [Fact]
-    public void DropProcedure_ShouldRemoveProcedure()
+    public void RemoveProcedure_ShouldRemoveProcedure()
     {
         var proc = new StoredProcedure("OldProc");
-        _schema.CreateProcedure(proc);
+        _schema.AddProcedure(proc);
 
-        _schema.DropProcedure("OldProc");
+        _schema.RemoveProcedure("OldProc");
 
         _schema.Procedures.Should().NotContain(proc);
     }
 
     [Fact]
-    public void CreateSequence_ShouldRegisterSequence()
+    public void AddSequence_ShouldRegisterSequence()
     {
         var seq = new Sequence("UserSeq");
 
-        _schema.CreateSequence(seq);
+        _schema.AddSequence(seq);
 
         _schema.Sequences.Should().Contain(seq);
     }

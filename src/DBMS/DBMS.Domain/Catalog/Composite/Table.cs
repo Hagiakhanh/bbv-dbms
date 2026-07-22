@@ -59,7 +59,7 @@ public class Table : ICatalogComposite, IIterableCatalog
     public void AddIndex(Index index) { throw new NotImplementedException(); }
     public void RemoveIndex(string name) { throw new NotImplementedException(); }
     public void AddPartition(Partition partition) { throw new NotImplementedException(); }
-    public void DropPartition(string name) { throw new NotImplementedException(); }
+    public void RemovePartition(string name) { throw new NotImplementedException(); }
     public void AddTrigger(Trigger trigger) { throw new NotImplementedException(); }
     public void RemoveTrigger(string name) { throw new NotImplementedException(); }
     public virtual Row LookupReferencedRow(Row row) { throw new NotImplementedException(); }
