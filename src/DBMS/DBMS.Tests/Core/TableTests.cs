@@ -57,7 +57,7 @@ public class TableTests
         var col = new Column { Name = "Id" };
         _table.AddColumn(col);
 
-        var pk = new PrimaryKey("PK", new List<Column> { col }, new Mock<DBMS.Domain.Core.Index>().Object, new Mock<IRowKeyExtractor>().Object);
+        var pk = new PrimaryKey("PK", new List<Column> { col }, new Mock<DBMS.Domain.Catalog.Strategy.Index>().Object, new Mock<IRowKeyExtractor>().Object);
         _table.AddConstraint(pk);
 
         Action act = () => _table.RemoveColumn("Id");
@@ -68,7 +68,7 @@ public class TableTests
     [Fact]
     public void AddConstraint_ShouldRegisterConstraint()
     {
-        var constraint = new PrimaryKey("PK", new List<Column> { new Column { Name = "Id" } }, new Mock<DBMS.Domain.Core.Index>().Object, new Mock<IRowKeyExtractor>().Object);
+        var constraint = new PrimaryKey("PK", new List<Column> { new Column { Name = "Id" } }, new Mock<DBMS.Domain.Catalog.Strategy.Index>().Object, new Mock<IRowKeyExtractor>().Object);
 
         _table.AddConstraint(constraint);
 
@@ -78,7 +78,7 @@ public class TableTests
     [Fact]
     public void RemoveConstraint_ShouldRemoveConstraint()
     {
-        var constraint = new PrimaryKey("PK", new List<Column>(), new Mock<DBMS.Domain.Core.Index>().Object, new Mock<IRowKeyExtractor>().Object);
+        var constraint = new PrimaryKey("PK", new List<Column>(), new Mock<DBMS.Domain.Catalog.Strategy.Index>().Object, new Mock<IRowKeyExtractor>().Object);
         _table.AddConstraint(constraint);
 
         _table.RemoveConstraint(constraint.Name);
@@ -128,3 +128,4 @@ public class TableTests
         _table.Triggers.Should().NotContain(trigger);
     }
 }
+

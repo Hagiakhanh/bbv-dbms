@@ -17,7 +17,7 @@ public class CatalogManager
         throw new NotImplementedException();
     }
 
-    public Core.Index GetIndex(string name)
+    public Index GetIndex(string name)
     {
         throw new NotImplementedException();
     }
@@ -27,3 +27,4 @@ public class CatalogManager
         throw new NotImplementedException();
     }
 }
+
