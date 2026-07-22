@@ -15,7 +15,7 @@ This document outlines the Design Patterns implemented within various core compo
 | **Database & Metadata** | System Utilities | **Visitor** | Backup, Export DDL, Metadata Scan, Statistics. |
 | **Database & Metadata** | Data Change Reactions | **Observer** | Trigger, Index, Statistics react when data changes. |
 | **Database & Metadata** | DDL Coordination | **Facade / Application Service**| `SchemaService` coordinates DDL. |
-| **Database Manager** | System Initialization | **Facade** | `DbEngineFacade` groups complex startup steps for Disk, Storage, and Catalog. |
+| **Database Server** | System Initialization | **Facade** | `DbEngineFacade` groups complex startup steps for Disk, Storage, and Catalog. |
 | **Database Manager** | DDL Operations | **Command** | Encapsulates Database create/drop commands into `CreateDatabaseAction` for easy undo/redo or logging. |
 
 ---
@@ -1562,4 +1562,123 @@ sequenceDiagram
     deactivate Command
 
     Executor-->>QP: DdlResult
+```
+### 7. System Initialization (Facade Pattern)
+
+**Application:** `DbEngineFacade` groups complex startup steps for Disk, Storage, and Catalog.
+
+**Why apply?** The Facade Pattern provides a unified, high-level interface to the complex subsystems of the database engine (Disk, Storage, Catalog, Transaction, Recovery). This simplifies the interaction for the `DatabaseServer`, which only needs to call `Start()`, `Stop()`, or `Recover()` without managing the intricate initialization order and dependencies of each internal manager.
+
+```mermaid
+classDiagram
+direction LR
+
+class DbEngineFacade {
+    -diskManager : IDiskManager
+    -storageEngine : IStorageEngine
+    -catalogManager : ICatalogManager
+    -transactionManager : ITransactionManager
+    -recoveryManager : IRecoveryManager
+    +Start(safeMode : bool)
+    +Stop(force : bool)
+    +Restart()
+    +Recover()
+}
+
+class DatabaseServer {
+    -engineFacade : DbEngineFacade
+    +ServerId : int
+    +Version : string
+    +Status : ServerStatus
+    +Start(safeMode : bool)
+    +Stop(force : bool)
+    +Restart()
+    +Recover()
+    +HandleSignal(signal : string)
+    +GetStatus() ServerStatus
+}
+
+class DatabaseManager {
+    -catalog : ICatalogManager
+    -connectionPool : IConnectionPool
+    +CreateDatabase(name : string)
+    +DropDatabase(name : string, cascade : bool)
+    +OpenDatabase(name : string)
+    +CloseDatabase(name : string)
+    +AttachDatabase(name : string, filePath : string)
+    +DetachDatabase(name : string)
+}
+
+class IDiskManager
+class IStorageEngine
+class ICatalogManager
+class ITransactionManager
+class IRecoveryManager
+class IConnectionPool
+
+DatabaseServer --> DbEngineFacade : controls
+DatabaseServer --> DatabaseManager : manages databases
+
+DbEngineFacade --> IDiskManager : initializes
+DbEngineFacade --> IStorageEngine : initializes
+DbEngineFacade --> ICatalogManager : initializes
+DbEngineFacade --> ITransactionManager : initializes
+DbEngineFacade --> IRecoveryManager : coordinates recovery
+
+DatabaseManager --> ICatalogManager : updates metadata
+DatabaseManager --> IConnectionPool : manages connections
+```
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    actor Admin
+    participant Server as DatabaseServer
+    participant Facade as DbEngineFacade
+    participant Config as ConfigurationManager
+    participant Disk as IDiskManager
+    participant Storage as IStorageEngine
+    participant Catalog as ICatalogManager
+    participant Recovery as IRecoveryManager
+    participant Tx as ITransactionManager
+    participant Monitor as MonitoringManager
+
+    Admin->>Server: Start(safeMode)
+    Server->>Server: Status = Starting
+    Server->>Facade: Start(safeMode)
+
+    Facade->>Config: LoadConfiguration(filePath)
+    Config-->>Facade: configuration
+
+    Facade->>Disk: Initialize(configuration)
+    Disk-->>Facade: diskReady
+
+    Facade->>Storage: Initialize(Disk)
+    Storage-->>Facade: storageReady
+
+    Facade->>Catalog: LoadCatalog()
+    Catalog-->>Facade: catalogReady
+
+    alt Unclean previous shutdown
+        Facade->>Recovery: Recover()
+        Recovery->>Storage: RedoCommittedOperations()
+        Recovery->>Storage: UndoIncompleteTransactions()
+        Storage-->>Recovery: recoveryCompleted
+        Recovery-->>Facade: recoveryCompleted
+    end
+
+    alt Normal mode
+        Facade->>Tx: Initialize()
+        Tx-->>Facade: transactionManagerReady
+    else Safe mode
+        Note over Facade,Tx: Transaction processing is limited
+    end
+
+    Facade->>Monitor: CollectMetrics()
+    Monitor-->>Facade: initialMetrics
+
+    Facade-->>Server: startupCompleted
+    Server->>Server: Status = Running
+    Server-->>Admin: ServerStatus.Running
 ```
