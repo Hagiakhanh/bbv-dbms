@@ -1,22 +1,24 @@
-# Design Patterns in DBMS
-
+# Features and Design Pattern Follow
 This document outlines the Design Patterns implemented within various core components of the BBV-DBMS.
 
 ## Visual Summary
 
-| Module | Feature | Pattern | Application |
-| :--- | :--- | :--- | :--- |
-| **Database & Metadata** | Hierarchy Management | **Composite** | Manages hierarchical architecture: `DatabaseComposite` → `SchemaComposite` → `TableComposite` → `ColumnLeaf`. |
-| **Database & Metadata** | Metadata Initialization | **Builder** | Uses `TableDefBuilder` to set each table property instead of a long constructor. |
-| **Database & Metadata** | Constraint Validation | **Strategy** | `PrimaryKeyConstraint`, `UniqueConstraint`, `ForeignKeyConstraint` implement the same interface. |
-| **Database & Metadata** | Dynamic Allocation | **Factory Method** | Dynamically initializes Indexes and Constraints via `ObjectFactoryProvider` during DDL execution. |
-| **Database & Metadata** | Hierarchy Traversal | **Iterator** | Traverse Schema, Table, Column. |
-| **Database & Metadata** | Trigger Execution | **Command** | Trigger executes DDL actions. |
-| **Database & Metadata** | System Utilities | **Visitor** | Backup, Export DDL, Metadata Scan, Statistics. |
-| **Database & Metadata** | Data Change Reactions | **Observer** | Trigger, Index, Statistics react when data changes. |
-| **Database & Metadata** | DDL Coordination | **Facade / Application Service**| `SchemaService` coordinates DDL. |
-| **Database Server** | System Initialization | **Facade** | `DbEngineFacade` groups complex startup steps for Disk, Storage, and Catalog. |
-| **Database Manager** | DDL Operations | **Command** | Encapsulates Database create/drop commands into `CreateDatabaseAction` for easy undo/redo or logging. |
+| Module | Feature | Main Classes | Pattern | Status | Priority |
+| :--- | :--- | :--- | :--- | :---: | :---: |
+| Database Object | Metadata Hierarchy | `Database`, `Schema`, `Table`, child objects | **Composite** | ✅ | 🔥 |
+| Database Object | Table Definition, Complex Table Construction | `TableDefinition`, `TableBuilder`, `TableDirector` | **Builder** | ✅ | 🔥 |
+| Database Object | Constraint Object Creation | `ConstraintFactory` | **Factory** | ✅ | 🔥 |
+| Database Object | Constraint Validation | Constraint validators | **Strategy** | ✅ | 🔥 |
+| Database Object | Index Object Creation | `IndexFactory` | **Factory** | ✅ | 🔥 |
+| Database Object | Encapsulate DDL Requests | DDL commands and executor | **Command** | ✅ | 🔥 |
+| Database Object | Coordinate Create/Drop/Alter | `SchemaService`, `DatabaseService` | **Facade** | ✅ | 🔥 |
+| Catalog | Persist and Query Metadata | `CatalogManager`, catalog repositories | **Repository** | Not Started | 🔥 |
+| Database Object | Metadata Traversal | `CatalogIterator`, `IIterableCatalog` | **Iterator** | ✅ | ⭐ |
+| Partition | Select Target Partition | Partition strategies | **Strategy** | Not Started | ⭐ |
+| Trigger | Execute Trigger Actions | `TriggerExecutor`, trigger actions | **Command/Pipeline** | Not Started | ⭐ |
+| Metadata Events | Cache, Statistics, Audit Reactions | Event publisher and handlers | **Observer** | Not Started | ⭐ |
+| Metadata Utility | Export DDL, Dependency Scan | Visitors or traversal services | **Visitor** | Not Started | △ |
+| Record | CRUD and Scan | `RecordManager` | None | Incomplete |  |
 
 ---
 
@@ -1563,7 +1565,328 @@ sequenceDiagram
 
     Executor-->>QP: DdlResult
 ```
-### 7. System Initialization (Facade Pattern)
+
+### 7. DDL Coordination (Facade Pattern)
+
+**Application:** `SchemaService` and `DatabaseService` coordinate complex Create, Drop, and Alter operations for database objects.
+
+**Why apply?** The Facade Pattern provides a unified, high-level interface for DDL operations, shielding the clients (like DDL Commands) from the complexities of the underlying subsystems. Instead of manually coordinating `CatalogManager`, `TableDirector`, `StorageEngine`, and various factories, the clients simply call methods like `CreateTable()` or `DropSchema()` on these services.
+
+```mermaid
+classDiagram
+direction LR
+
+%% =====================================================
+%% Facade Interfaces
+%% =====================================================
+
+class IDatabaseService {
+    <<Facade Interface>>
+    +CreateSchema(database : Database, name : string) Schema
+    +DropSchema(database : Database, name : string, cascade : bool)
+    +RenameSchema(database : Database, oldName : string, newName : string)
+}
+
+class ISchemaService {
+    <<Facade Interface>>
+    +CreateTable(schema : Schema, definition : TableDefinition) Table
+    +DropTable(schema : Schema, name : string, cascade : bool)
+    +RenameTable(schema : Schema, oldName : string, newName : string)
+    +AddColumn(table : Table, column : Column)
+    +DropColumn(table : Table, name : string)
+    +AddConstraint(table : Table, constraint : Constraint)
+    +DropConstraint(table : Table, name : string)
+    +CreateView(schema : Schema, name : string, query : string) View
+    +DropView(schema : Schema, name : string)
+    +CreateProcedure(schema : Schema, name : string, body : string) StoredProcedure
+    +DropProcedure(schema : Schema, name : string)
+    +CreateSequence(schema : Schema, name : string) Sequence
+    +DropSequence(schema : Schema, name : string)
+}
+
+%% =====================================================
+%% Concrete Facades
+%% =====================================================
+
+class DatabaseService {
+    <<Facade>>
+    -catalog : CatalogManager
+    +CreateSchema(database : Database, name : string) Schema
+    +DropSchema(database : Database, name : string, cascade : bool)
+    +RenameSchema(database : Database, oldName : string, newName : string)
+}
+
+class SchemaService {
+    <<Facade>>
+    -catalog : CatalogManager
+    -tableDirector : TableDirector
+    +CreateTable(schema : Schema, definition : TableDefinition) Table
+    +DropTable(schema : Schema, name : string, cascade : bool)
+    +RenameTable(schema : Schema, oldName : string, newName : string)
+    +AddColumn(table : Table, column : Column)
+    +DropColumn(table : Table, name : string)
+    +AddConstraint(table : Table, constraint : Constraint)
+    +DropConstraint(table : Table, name : string)
+    +CreateView(schema : Schema, name : string, query : string) View
+    +DropView(schema : Schema, name : string)
+    +CreateProcedure(schema : Schema, name : string, body : string) StoredProcedure
+    +DropProcedure(schema : Schema, name : string)
+    +CreateSequence(schema : Schema, name : string) Sequence
+    +DropSequence(schema : Schema, name : string)
+}
+
+%% =====================================================
+%% Subsystems Used By Facades
+%% =====================================================
+
+class CatalogManager {
+    <<Subsystem>>
+    +ObjectExists(parent : ICatalogComposite, name : string) bool
+    +Register(component : ICatalogComponent)
+    +Update(component : ICatalogComponent)
+    +Remove(component : ICatalogComponent)
+    +GetDependencies(component : ICatalogComponent) IReadOnlyCollection~ICatalogComponent~
+}
+
+class TableDirector {
+    <<Subsystem / Director>>
+    -builder : ITableBuilder
+    -constraintFactory : IConstraintFactory
+    -indexFactory : IIndexFactory
+    +Construct(definition : TableDefinition) Table
+}
+
+class ITableBuilder {
+    <<Builder>>
+    +Reset(name : string)
+    +AddColumn(column : Column)
+    +AddConstraint(constraint : Constraint)
+    +AddIndex(index : Index)
+    +AddPartition(partition : Partition)
+    +AddTrigger(trigger : Trigger)
+    +Build() Table
+}
+
+class IConstraintFactory {
+    <<Factory>>
+    +Create(options : ConstraintOptions) Constraint
+}
+
+class IIndexFactory {
+    <<Factory>>
+    +Create(options : IndexOptions) Index
+}
+
+%% =====================================================
+%% Database Objects
+%% =====================================================
+
+class ICatalogComponent {
+    <<Component>>
+    +Name : string
+}
+
+class ICatalogComposite {
+    <<Composite>>
+    +Children : IReadOnlyCollection~ICatalogComponent~
+}
+
+class Database {
+    +DatabaseId : int
+    +Name : string
+    +Owner : string
+    +Schemas : IReadOnlyList~Schema~
+    +GetSchema(name : string) Schema
+    +AddSchema(schema : Schema)
+    +RemoveSchema(name : string)
+}
+
+class Schema {
+    +SchemaId : int
+    +Name : string
+    +Parent : Database
+    +Tables : IReadOnlyCollection~Table~
+    +Views : IReadOnlyCollection~View~
+    +Procedures : IReadOnlyCollection~StoredProcedure~
+    +Sequences : IReadOnlyCollection~Sequence~
+    +AddTable(table : Table)
+    +RemoveTable(name : string)
+    +AddView(view : View)
+    +RemoveView(name : string)
+    +AddProcedure(proc : StoredProcedure)
+    +RemoveProcedure(name : string)
+    +AddSequence(sequence : Sequence)
+    +RemoveSequence(name : string)
+}
+
+class Table {
+    +TableId : int
+    +Name : string
+    +Parent : Schema
+    +AddColumn(column : Column)
+    +RemoveColumn(name : string)
+    +AddConstraint(constraint : Constraint)
+    +RemoveConstraint(name : string)
+    +AddIndex(index : Index)
+    +RemoveIndex(name : string)
+    +AddPartition(partition : Partition)
+    +RemovePartition(name : string)
+    +AddTrigger(trigger : Trigger)
+    +RemoveTrigger(name : string)
+}
+
+class View {
+    +ViewId : int
+    +Name : string
+    +QueryDefinition : string
+}
+
+class StoredProcedure {
+    +Name : string
+    +Body : string
+}
+
+class Sequence {
+    +Name : string
+    +CurrentValue : long
+    +Increment : long
+}
+
+class Column {
+    +ColumnId : int
+    +Name : string
+    +Rename(newName : string)
+}
+
+class Constraint {
+    <<abstract>>
+    +Name : string
+}
+
+class Index {
+    <<abstract>>
+    +Name : string
+}
+
+class Partition {
+    +PartitionKey : string
+}
+
+class Trigger {
+    +Name : string
+}
+
+%% =====================================================
+%% Definition Objects
+%% =====================================================
+
+class TableDefinition {
+    <<Command Data>>
+    +Name : string
+    +Columns : IReadOnlyCollection~Column~
+    +Constraints : IReadOnlyCollection~ConstraintOptions~
+    +Indexes : IReadOnlyCollection~IndexOptions~
+    +Partitions : IReadOnlyCollection~Partition~
+    +Triggers : IReadOnlyCollection~Trigger~
+}
+
+class ConstraintOptions {
+    <<DTO>>
+}
+
+class IndexOptions {
+    <<DTO>>
+}
+
+%% =====================================================
+%% Relationships
+%% =====================================================
+
+IDatabaseService <|.. DatabaseService
+ISchemaService <|.. SchemaService
+
+DatabaseService --> CatalogManager : coordinates metadata
+DatabaseService --> Database : manages schemas
+DatabaseService --> Schema : creates/drops/alters
+
+SchemaService --> CatalogManager : coordinates metadata
+SchemaService --> TableDirector : builds tables
+SchemaService --> Schema : manages objects
+SchemaService --> Table : alters
+SchemaService --> View : creates/drops
+SchemaService --> StoredProcedure : creates/drops
+SchemaService --> Sequence : creates/drops
+
+TableDirector --> ITableBuilder
+TableDirector --> IConstraintFactory
+TableDirector --> IIndexFactory
+TableDirector --> TableDefinition
+
+ICatalogComponent <|-- ICatalogComposite
+ICatalogComposite <|.. Database
+ICatalogComposite <|.. Schema
+ICatalogComposite <|.. Table
+
+ICatalogComponent <|.. Column
+ICatalogComponent <|.. Constraint
+ICatalogComponent <|.. Index
+ICatalogComponent <|.. Partition
+ICatalogComponent <|.. Trigger
+ICatalogComponent <|.. View
+ICatalogComponent <|.. StoredProcedure
+ICatalogComponent <|.. Sequence
+
+Database "1" *-- "*" Schema
+Schema "1" *-- "*" Table
+Schema "1" *-- "*" View
+Schema "1" *-- "*" StoredProcedure
+Schema "1" *-- "*" Sequence
+
+Table "1" *-- "*" Column
+Table "1" *-- "*" Constraint
+Table "1" *-- "*" Index
+Table "1" *-- "*" Partition
+Table "1" *-- "*" Trigger
+
+TableDefinition --> Column
+TableDefinition --> ConstraintOptions
+TableDefinition --> IndexOptions
+TableDefinition --> Partition
+TableDefinition --> Trigger
+```
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    actor Client
+    participant Facade as DatabaseService
+    participant Catalog as CatalogManager
+    participant Database
+    participant Schema
+
+    Client->>Facade: CreateSchema(database, name)
+
+    Facade->>Catalog: ObjectExists(database, name)
+    Catalog-->>Facade: exists
+
+    alt Schema already exists
+        Facade--xClient: DuplicateObjectException
+    else Schema does not exist
+        Facade->>Schema: new Schema(name)
+        Schema-->>Facade: schema
+
+        Facade->>Database: AddSchema(schema)
+        Database-->>Facade: schemaAdded
+
+        Facade->>Catalog: Register(schema)
+        Catalog-->>Facade: metadataRegistered
+
+        Facade-->>Client: schema
+    end
+```
+
+### 8. System Initialization (Facade Pattern)
 
 **Application:** `DbEngineFacade` groups complex startup steps for Disk, Storage, and Catalog.
 

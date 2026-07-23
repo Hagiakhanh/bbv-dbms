@@ -27,7 +27,7 @@
 | Permission & Authorization | 8 | 0 | 8 | 0% |
 | **TOTAL** | **154** | **45** | **109** | **29%** |
 
-## 1. Server & Database Management
+## 1. Database Server & Database Lifecycle
 
 ```mermaid
 classDiagram

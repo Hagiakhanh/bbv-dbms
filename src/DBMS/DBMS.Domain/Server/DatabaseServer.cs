@@ -10,32 +10,32 @@ public class DatabaseServer
     public string Version { get; set; }
     public ServerStatus Status { get; set; }
     
-    private readonly IBufferPool _bufferPool;
-    private readonly IWALManager _walManager;
+    private readonly IDbEngineFacade _engineFacade;
 
-    public DatabaseServer(IBufferPool bufferPool, IWALManager walManager)
+    public DatabaseServer(IDbEngineFacade engineFacade)
     {
-        _bufferPool = bufferPool ?? throw new ArgumentNullException(nameof(bufferPool));
-        _walManager = walManager ?? throw new ArgumentNullException(nameof(walManager));
+        _engineFacade = engineFacade ?? throw new ArgumentNullException(nameof(engineFacade));
     }
 
     public void Start(bool safeMode)
     {
-        throw new NotImplementedException();
+        _engineFacade.Start(safeMode);
+        Status = ServerStatus.Running;
     }
 
     public void Stop(bool force)
     {
-        throw new NotImplementedException();
+        _engineFacade.Stop(force);
+        Status = ServerStatus.Stopped;
     }
 
     public void Restart()
     {
-        throw new NotImplementedException();
+        _engineFacade.Restart();
     }
     
     public void Recover()
     {
-        throw new NotImplementedException();
+        _engineFacade.Recover();
     }
 }

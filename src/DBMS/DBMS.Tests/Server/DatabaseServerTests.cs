@@ -10,45 +10,43 @@ namespace DBMS.Tests.Server;
 
 public class DatabaseServerTests
 {
-    private (DatabaseServer server, Mock<IBufferPool> bufferPool, Mock<IWALManager> walManager) CreateServer()
+    private (DatabaseServer server, Mock<IDbEngineFacade> facadeMock) CreateServer()
     {
-        var bufferPoolMock = new Mock<IBufferPool>();
-        var walManagerMock = new Mock<IWALManager>();
+        var facadeMock = new Mock<IDbEngineFacade>();
+        var server = new DatabaseServer(facadeMock.Object);
 
-        var server = new DatabaseServer(bufferPoolMock.Object, walManagerMock.Object);
-
-        return (server, bufferPoolMock, walManagerMock);
+        return (server, facadeMock);
     }
 
     [Fact]
     public void Start_ShouldInitializeAllServices()
     {
-        var (server, _, _) = CreateServer();
+        var (server, facadeMock) = CreateServer();
 
         server.Start(safeMode: true);
 
-        // We expect the server status to be updated to Running after starting.
+        facadeMock.Verify(f => f.Start(true), Times.Once);
         server.Status.Should().Be(ServerStatus.Running);
     }
 
     [Fact]
-    public void Stop_ShouldFlushDirtyPagesBeforeShutdown()
+    public void Stop_ShouldStopEngine()
     {
-        var (server, bufferPool, _) = CreateServer();
+        var (server, facadeMock) = CreateServer();
 
         server.Stop(force: false);
 
-        bufferPool.Verify(b => b.FlushDirtyPagesBeforeShutdown(), Times.Once);
+        facadeMock.Verify(f => f.Stop(false), Times.Once);
         server.Status.Should().Be(ServerStatus.Stopped);
     }
 
     [Fact]
-    public void RecoverAfterCrash_ShouldReplayWAL()
+    public void RecoverAfterCrash_ShouldCallFacadeRecover()
     {
-        var (server, _, walManager) = CreateServer();
+        var (server, facadeMock) = CreateServer();
 
         server.Recover();
 
-        walManager.Verify(w => w.ReplayWAL(), Times.Once);
+        facadeMock.Verify(f => f.Recover(), Times.Once);
     }
 }
