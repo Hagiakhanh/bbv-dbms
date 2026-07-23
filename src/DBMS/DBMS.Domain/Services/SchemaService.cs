@@ -9,7 +9,7 @@ namespace DBMS.Domain.Services;
 
 public class SchemaService : ISchemaService
 {
-    private readonly CatalogManager _catalog;
+    private readonly ICatalogManager _catalog;
     private readonly StorageEngine _storage;
     private readonly TableDirector _tableDirector;
     private readonly ITableBuilder _builder;
@@ -17,7 +17,7 @@ public class SchemaService : ISchemaService
     private readonly IIndexFactory _indexFactory;
 
     public SchemaService(
-        CatalogManager catalog,
+        ICatalogManager catalog,
         StorageEngine storage,
         TableDirector tableDirector,
         ITableBuilder builder,

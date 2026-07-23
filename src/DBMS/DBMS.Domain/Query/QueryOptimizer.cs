@@ -6,7 +6,7 @@ namespace DBMS.Domain.Query;
 public class QueryOptimizer
 {
     private object costModel;
-    private CatalogManager catalog;
+    private ICatalogManager catalog;
 
     public PhysicalPlan Optimize(object ast)
     {

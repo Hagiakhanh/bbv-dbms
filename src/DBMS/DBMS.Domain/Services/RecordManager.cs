@@ -6,7 +6,7 @@ namespace DBMS.Domain.Services;
 public class RecordManager
 {
     private StorageEngine storage;
-    private CatalogManager catalog;
+    private ICatalogManager catalog;
 
     public RID Insert(Table table, Row row)
     {
