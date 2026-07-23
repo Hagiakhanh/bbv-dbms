@@ -14,9 +14,9 @@ This document outlines the Design Patterns implemented within various core compo
 | Database Object | Coordinate Create/Drop/Alter | `SchemaService`, `DatabaseService` | **Facade** | ✅ | 🔥 |
 | Catalog | Persist and Query Metadata | `CatalogManager`, catalog repositories | **Repository** | Not Started | 🔥 |
 | Database Object | Metadata Traversal | `CatalogIterator`, `IIterableCatalog` | **Iterator** | ✅ | ⭐ |
+| Metadata Events | Cache, Statistics, Audit Reactions | Event publisher and handlers | **Observer** | Not Started | ⭐ |
 | Partition | Select Target Partition | Partition strategies | **Strategy** | Not Started | ⭐ |
 | Trigger | Execute Trigger Actions | `TriggerExecutor`, trigger actions | **Command/Pipeline** | Not Started | ⭐ |
-| Metadata Events | Cache, Statistics, Audit Reactions | Event publisher and handlers | **Observer** | Not Started | ⭐ |
 | Metadata Utility | Export DDL, Dependency Scan | Visitors or traversal services | **Visitor** | Not Started | △ |
 | Record | CRUD and Scan | `RecordManager` | None | Incomplete |  |
 
@@ -404,21 +404,39 @@ Index <|-- BitmapIndex
 
 
   class IDatabaseService {
-      <<Service>>
+      <<Facade Interface>>
       +CreateSchema(database : Database, name : string) Schema
+      +DropSchema(database : Database, name : string, cascade : bool)
+      +RenameSchema(database : Database, oldName : string, newName : string)
   }
 
   class DatabaseService {
-      <<Service>>
+      <<Facade>>
+      -catalog : CatalogManager
+      +CreateSchema(database : Database, name : string) Schema
+      +DropSchema(database : Database, name : string, cascade : bool)
+      +RenameSchema(database : Database, oldName : string, newName : string)
   }
 
   class ISchemaService {
-      <<Service>>
+      <<Facade Interface>>
       +CreateTable(schema : Schema, definition : TableDefinition) Table
+      +DropTable(schema : Schema, name : string, cascade : bool)
+      +RenameTable(schema : Schema, oldName : string, newName : string)
+      +AddColumn(table : Table, column : Column)
+      +DropColumn(table : Table, name : string)
+      +AddConstraint(table : Table, constraint : Constraint)
+      +DropConstraint(table : Table, name : string)
+      +CreateView(schema : Schema, name : string, query : string) View
+      +DropView(schema : Schema, name : string)
+      +CreateProcedure(schema : Schema, name : string, body : string) StoredProcedure
+      +DropProcedure(schema : Schema, name : string)
+      +CreateSequence(schema : Schema, name : string) Sequence
+      +DropSequence(schema : Schema, name : string)
   }
 
   class SchemaService {
-      <<Service>>
+      <<Facade>>
   }
 
   class CatalogManager {
@@ -557,15 +575,26 @@ IndexFactory --> IndexOptions
 %% =====================================================
 
 class SchemaService {
+    <<Facade>>
     -catalog : CatalogManager
     -storage : StorageEngine
+    -tableDirector : TableDirector
     -builder : ITableBuilder
     -constraintFactory : IConstraintFactory
     -indexFactory : IIndexFactory
-    +CreateTable(schema : Schema, name : string) Table
-    +DropTable(schema : Schema, name : string)
+    +CreateTable(schema : Schema, definition : TableDefinition) Table
+    +DropTable(schema : Schema, name : string, cascade : bool)
+    +RenameTable(schema : Schema, oldName : string, newName : string)
+    +AddColumn(table : Table, column : Column)
+    +DropColumn(table : Table, name : string)
+    +AddConstraint(table : Table, constraint : Constraint)
+    +DropConstraint(table : Table, name : string)
     +CreateView(schema : Schema, name : string, query : string) View
     +DropView(schema : Schema, name : string)
+    +CreateProcedure(schema : Schema, name : string, body : string) StoredProcedure
+    +DropProcedure(schema : Schema, name : string)
+    +CreateSequence(schema : Schema, name : string) Sequence
+    +DropSequence(schema : Schema, name : string)
 }
 
 class RecordManager {
@@ -594,7 +623,14 @@ SchemaService --> ITableBuilder : uses
 SchemaService --> IConstraintFactory : uses
 SchemaService --> IIndexFactory : uses
 SchemaService --> Schema : manages DDL
-SchemaService --> Table : creates/drops
+SchemaService --> Table : creates/drops/alters
+SchemaService --> View : creates/drops
+SchemaService --> StoredProcedure : creates/drops
+SchemaService --> Sequence : creates/drops
+
+DatabaseService --> CatalogManager : coordinates metadata
+DatabaseService --> Database : manages schemas
+DatabaseService --> Schema : creates/drops/alters
 
 ITableBuilder <|.. TableBuilder
 IConstraintFactory <|.. ConstraintFactory
@@ -1885,6 +1921,8 @@ sequenceDiagram
         Facade-->>Client: schema
     end
 ```
+
+
 
 ### 8. System Initialization (Facade Pattern)
 
