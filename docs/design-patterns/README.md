@@ -412,7 +412,7 @@ Index <|-- BitmapIndex
 
   class DatabaseService {
       <<Facade>>
-      -catalog : CatalogManager
+      -catalog : ICatalogManager
       +CreateSchema(database : Database, name : string) Schema
       +DropSchema(database : Database, name : string, cascade : bool)
       +RenameSchema(database : Database, oldName : string, newName : string)
@@ -439,8 +439,107 @@ Index <|-- BitmapIndex
       <<Facade>>
   }
 
+  class ICatalogManager {
+      <<interface>>
+      +RegisterDatabase(database : Database)
+      +RegisterSchema(schema : Schema)
+      +RegisterTable(table : Table)
+      +UpdateDatabase(database : Database)
+      +UpdateSchema(schema : Schema)
+      +UpdateTable(table : Table)
+      +RemoveDatabase(databaseId : int)
+      +RemoveSchema(schemaId : int)
+      +RemoveTable(tableId : int)
+      +GetDatabase(name : string) Database
+      +GetSchema(databaseId : int, name : string) Schema
+      +GetTable(schemaId : int, name : string) Table
+      +ObjectExists(parentId : int, name : string) bool
+  }
+
   class CatalogManager {
       <<Manager>>
+      -databaseRepository : IDatabaseCatalogRepository
+      -schemaRepository : ISchemaCatalogRepository
+      -tableRepository : ITableCatalogRepository
+      +RegisterDatabase(database : Database)
+      +RegisterSchema(schema : Schema)
+      +RegisterTable(table : Table)
+      +UpdateDatabase(database : Database)
+      +UpdateSchema(schema : Schema)
+      +UpdateTable(table : Table)
+      +RemoveDatabase(databaseId : int)
+      +RemoveSchema(schemaId : int)
+      +RemoveTable(tableId : int)
+      +GetDatabase(name : string) Database
+      +GetSchema(databaseId : int, name : string) Schema
+      +GetTable(schemaId : int, name : string) Table
+      +ObjectExists(parentId : int, name : string) bool
+  }
+
+  class IDatabaseCatalogRepository {
+      <<Repository>>
+      +Add(database : Database)
+      +Update(database : Database)
+      +Remove(databaseId : int)
+      +FindById(databaseId : int) Database
+      +FindByName(name : string) Database
+      +GetAll() IReadOnlyCollection~Database~
+      +Exists(name : string) bool
+  }
+
+  class ISchemaCatalogRepository {
+      <<Repository>>
+      +Add(schema : Schema)
+      +Update(schema : Schema)
+      +Remove(schemaId : int)
+      +FindById(schemaId : int) Schema
+      +FindByName(databaseId : int, name : string) Schema
+      +GetByDatabase(databaseId : int) IReadOnlyCollection~Schema~
+      +Exists(databaseId : int, name : string) bool
+  }
+
+  class ITableCatalogRepository {
+      <<Repository>>
+      +Add(table : Table)
+      +Update(table : Table)
+      +Remove(tableId : int)
+      +FindById(tableId : int) Table
+      +FindByName(schemaId : int, name : string) Table
+      +GetBySchema(schemaId : int) IReadOnlyCollection~Table~
+      +Exists(schemaId : int, name : string) bool
+  }
+
+  class DatabaseCatalogRepository {
+      <<Concrete Repository>>
+      +Add(database : Database)
+      +Update(database : Database)
+      +Remove(databaseId : int)
+      +FindById(databaseId : int) Database
+      +FindByName(name : string) Database
+      +GetAll() IReadOnlyCollection~Database~
+      +Exists(name : string) bool
+  }
+
+  class SchemaCatalogRepository {
+      <<Concrete Repository>>
+      +Add(schema : Schema)
+      +Update(schema : Schema)
+      +Remove(schemaId : int)
+      +FindById(schemaId : int) Schema
+      +FindByName(databaseId : int, name : string) Schema
+      +GetByDatabase(databaseId : int) IReadOnlyCollection~Schema~
+      +Exists(databaseId : int, name : string) bool
+  }
+
+  class TableCatalogRepository {
+      <<Concrete Repository>>
+      +Add(table : Table)
+      +Update(table : Table)
+      +Remove(tableId : int)
+      +FindById(tableId : int) Table
+      +FindByName(schemaId : int, name : string) Table
+      +GetBySchema(schemaId : int) IReadOnlyCollection~Table~
+      +Exists(schemaId : int, name : string) bool
   }
 
   class StorageEngine {
@@ -576,7 +675,7 @@ IndexFactory --> IndexOptions
 
 class SchemaService {
     <<Facade>>
-    -catalog : CatalogManager
+    -catalog : ICatalogManager
     -storage : StorageEngine
     -tableDirector : TableDirector
     -builder : ITableBuilder
@@ -599,7 +698,7 @@ class SchemaService {
 
 class RecordManager {
     -storage : StorageEngine
-    -catalog : CatalogManager
+    -catalog : ICatalogManager
     +Insert(table : Table, row : Row) RID
     +Update(table : Table, rid : RID, row : Row)
     +Delete(table : Table, rid : RID)
@@ -628,9 +727,24 @@ SchemaService --> View : creates/drops
 SchemaService --> StoredProcedure : creates/drops
 SchemaService --> Sequence : creates/drops
 
-DatabaseService --> CatalogManager : coordinates metadata
+DatabaseService --> ICatalogManager : coordinates metadata
 DatabaseService --> Database : manages schemas
 DatabaseService --> Schema : creates/drops/alters
+SchemaService --> ICatalogManager : coordinates metadata
+
+ICatalogManager <|.. CatalogManager
+
+IDatabaseCatalogRepository <|.. DatabaseCatalogRepository
+ISchemaCatalogRepository <|.. SchemaCatalogRepository
+ITableCatalogRepository <|.. TableCatalogRepository
+
+CatalogManager --> IDatabaseCatalogRepository : database metadata
+CatalogManager --> ISchemaCatalogRepository : schema metadata
+CatalogManager --> ITableCatalogRepository : table metadata
+
+DatabaseCatalogRepository --> Database : maps metadata
+SchemaCatalogRepository --> Schema : maps metadata
+TableCatalogRepository --> Table : maps aggregate metadata
 
 ITableBuilder <|.. TableBuilder
 IConstraintFactory <|.. ConstraintFactory
@@ -1924,7 +2038,239 @@ sequenceDiagram
 
 
 
-### 8. System Initialization (Facade Pattern)
+### 8. Persist and Query Metadata (Repository Pattern)
+
+**Application:** `CatalogManager` and catalog repositories manage the persistence and retrieval of database metadata.
+
+**Why apply?** The Repository Pattern acts as an in-memory collection interface for accessing domain objects (metadata like schemas, tables, columns, indexes). It abstracts away the underlying storage details (such as reading or writing to system tables or files) and provides a clean, domain-centric interface. This shields the `CatalogManager` and Facade services from the complexities of data access, allowing them to focus purely on metadata coordination and DDL logic.
+
+```mermaid
+classDiagram
+direction LR
+
+%% =====================================================
+%% Catalog Manager
+%% =====================================================
+
+class ICatalogManager {
+    <<interface>>
+    +RegisterDatabase(database : Database)
+    +RegisterSchema(schema : Schema)
+    +RegisterTable(table : Table)
+    +UpdateDatabase(database : Database)
+    +UpdateSchema(schema : Schema)
+    +UpdateTable(table : Table)
+    +RemoveDatabase(databaseId : int)
+    +RemoveSchema(schemaId : int)
+    +RemoveTable(tableId : int)
+    +GetDatabase(name : string) Database
+    +GetSchema(databaseId : int, name : string) Schema
+    +GetTable(schemaId : int, name : string) Table
+    +ObjectExists(parentId : int, name : string) bool
+}
+
+class CatalogManager {
+    <<Manager>>
+    -databaseRepository : IDatabaseCatalogRepository
+    -schemaRepository : ISchemaCatalogRepository
+    -tableRepository : ITableCatalogRepository
+    +RegisterDatabase(database : Database)
+    +RegisterSchema(schema : Schema)
+    +RegisterTable(table : Table)
+    +UpdateDatabase(database : Database)
+    +UpdateSchema(schema : Schema)
+    +UpdateTable(table : Table)
+    +RemoveDatabase(databaseId : int)
+    +RemoveSchema(schemaId : int)
+    +RemoveTable(tableId : int)
+    +GetDatabase(name : string) Database
+    +GetSchema(databaseId : int, name : string) Schema
+    +GetTable(schemaId : int, name : string) Table
+    +ObjectExists(parentId : int, name : string) bool
+}
+
+%% =====================================================
+%% Repository Interfaces
+%% =====================================================
+
+class IDatabaseCatalogRepository {
+    <<Repository>>
+    +Add(database : Database)
+    +Update(database : Database)
+    +Remove(databaseId : int)
+    +FindById(databaseId : int) Database
+    +FindByName(name : string) Database
+    +GetAll() IReadOnlyCollection~Database~
+    +Exists(name : string) bool
+}
+
+class ISchemaCatalogRepository {
+    <<Repository>>
+    +Add(schema : Schema)
+    +Update(schema : Schema)
+    +Remove(schemaId : int)
+    +FindById(schemaId : int) Schema
+    +FindByName(databaseId : int, name : string) Schema
+    +GetByDatabase(databaseId : int) IReadOnlyCollection~Schema~
+    +Exists(databaseId : int, name : string) bool
+}
+
+class ITableCatalogRepository {
+    <<Repository>>
+    +Add(table : Table)
+    +Update(table : Table)
+    +Remove(tableId : int)
+    +FindById(tableId : int) Table
+    +FindByName(schemaId : int, name : string) Table
+    +GetBySchema(schemaId : int) IReadOnlyCollection~Table~
+    +Exists(schemaId : int, name : string) bool
+}
+
+%% =====================================================
+%% Concrete Repositories
+%% =====================================================
+
+class DatabaseCatalogRepository {
+    <<Concrete Repository>>
+    +Add(database : Database)
+    +Update(database : Database)
+    +Remove(databaseId : int)
+    +FindById(databaseId : int) Database
+    +FindByName(name : string) Database
+    +GetAll() IReadOnlyCollection~Database~
+    +Exists(name : string) bool
+}
+
+class SchemaCatalogRepository {
+    <<Concrete Repository>>
+    +Add(schema : Schema)
+    +Update(schema : Schema)
+    +Remove(schemaId : int)
+    +FindById(schemaId : int) Schema
+    +FindByName(databaseId : int, name : string) Schema
+    +GetByDatabase(databaseId : int) IReadOnlyCollection~Schema~
+    +Exists(databaseId : int, name : string) bool
+}
+
+class TableCatalogRepository {
+    <<Concrete Repository>>
+    +Add(table : Table)
+    +Update(table : Table)
+    +Remove(tableId : int)
+    +FindById(tableId : int) Table
+    +FindByName(schemaId : int, name : string) Table
+    +GetBySchema(schemaId : int) IReadOnlyCollection~Table~
+    +Exists(schemaId : int, name : string) bool
+}
+
+%% =====================================================
+%% Existing Facades
+%% =====================================================
+
+class DatabaseService {
+    <<Facade>>
+    -catalog : ICatalogManager
+    +CreateSchema(database : Database, name : string) Schema
+    +DropSchema(database : Database, name : string, cascade : bool)
+    +RenameSchema(database : Database, oldName : string, newName : string)
+}
+
+class SchemaService {
+    <<Facade>>
+    -catalog : ICatalogManager
+    +CreateTable(schema : Schema, definition : TableDefinition) Table
+    +DropTable(schema : Schema, name : string, cascade : bool)
+    +RenameTable(schema : Schema, oldName : string, newName : string)
+}
+
+%% =====================================================
+%% Existing Database Objects
+%% =====================================================
+
+class Database {
+    +DatabaseId : int
+    +Name : string
+    +Owner : string
+    +Schemas : IReadOnlyList~Schema~
+}
+
+class Schema {
+    +SchemaId : int
+    +Name : string
+    +Parent : Database
+    +Tables : IReadOnlyCollection~Table~
+}
+
+class Table {
+    +TableId : int
+    +Name : string
+    +Parent : Schema
+    +Columns : IReadOnlyCollection~Column~
+    +Constraints : IReadOnlyCollection~Constraint~
+    +Indexes : IReadOnlyCollection~Index~
+    +Partitions : IReadOnlyCollection~Partition~
+    +Triggers : IReadOnlyCollection~Trigger~
+}
+
+class Column
+class Constraint
+class Index
+class Partition
+class Trigger
+class TableDefinition
+
+%% =====================================================
+%% Relationships
+%% =====================================================
+
+ICatalogManager <|.. CatalogManager
+
+IDatabaseCatalogRepository <|.. DatabaseCatalogRepository
+ISchemaCatalogRepository <|.. SchemaCatalogRepository
+ITableCatalogRepository <|.. TableCatalogRepository
+
+CatalogManager --> IDatabaseCatalogRepository : database metadata
+CatalogManager --> ISchemaCatalogRepository : schema metadata
+CatalogManager --> ITableCatalogRepository : table metadata
+
+DatabaseCatalogRepository --> Database : maps metadata
+SchemaCatalogRepository --> Schema : maps metadata
+TableCatalogRepository --> Table : maps aggregate metadata
+
+DatabaseService --> ICatalogManager : persist/query schemas
+SchemaService --> ICatalogManager : persist/query tables
+
+Database "1" *-- "*" Schema
+Schema "1" *-- "*" Table
+
+Table "1" *-- "*" Column
+Table "1" *-- "*" Constraint
+Table "1" *-- "*" Index
+Table "1" *-- "*" Partition
+Table "1" *-- "*" Trigger
+```
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    actor Client
+    participant Catalog as CatalogManager
+    participant Repo as ITableCatalogRepository
+
+    Client->>Catalog: GetTable(schemaId, tableName)
+    Catalog->>Repo: FindByName(schemaId, tableName)
+    Repo-->>Catalog: table or null
+
+    alt Table found
+        Note over Repo,Catalog: Table contains Columns, Constraints,<br/>Indexes, Partitions and Triggers
+        Catalog-->>Client: table
+    else Table not found
+        Catalog--xClient: ObjectNotFoundException
+    end
+```
+
+### 9. System Initialization (Facade Pattern)
 
 **Application:** `DbEngineFacade` groups complex startup steps for Disk, Storage, and Catalog.
 

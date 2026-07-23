@@ -6,9 +6,9 @@ namespace DBMS.Domain.Services;
 
 public class DatabaseService : IDatabaseService
 {
-    private readonly CatalogManager _catalog;
+    private readonly ICatalogManager _catalog;
 
-    public DatabaseService(CatalogManager catalog)
+    public DatabaseService(ICatalogManager catalog)
     {
         _catalog = catalog;
     }
