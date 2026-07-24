@@ -1,3 +1,402 @@
+# Builder pattern
+```mermaid
+classDiagram
+direction LR
+
+%% =====================================================
+%% Builder Pattern — Table Construction
+%% =====================================================
+
+class ITableBuilder {
+    <<Builder>>
+    +Reset()
+    +SetName(name : string)
+    +AddColumn(column : Column)
+    +AddConstraint(constraint : Constraint)
+    +AddIndex(index : Index)
+    +AddPartition(partition : Partition)
+    +AddTrigger(trigger : Trigger)
+    +Build() Table
+}
+
+class TableBuilder {
+    <<Concrete Builder>>
+    -currentTable : Table
+    -hasName : bool
+
+    +Reset()
+    +SetName(name : string)
+    +AddColumn(column : Column)
+    +AddConstraint(constraint : Constraint)
+    +AddIndex(index : Index)
+    +AddPartition(partition : Partition)
+    +AddTrigger(trigger : Trigger)
+    +Build() Table
+
+    -EnsureInitialized()
+    -ValidateBeforeBuild()
+}
+
+class TableDirector {
+    <<Director>>
+    -builder : ITableBuilder
+    -constraintFactory : IConstraintFactory
+    -indexFactory : IIndexFactory
+    -partitionFactory : IPartitionFactory
+    -triggerFactory : ITriggerFactory
+
+    +TableDirector(
+        builder : ITableBuilder,
+        constraintFactory : IConstraintFactory,
+        indexFactory : IIndexFactory,
+        partitionFactory : IPartitionFactory,
+        triggerFactory : ITriggerFactory
+    )
+
+    +Construct(definition : TableDefinition) Table
+}
+
+%% =====================================================
+%% Construction Data
+%% =====================================================
+
+class TableDefinition {
+    <<Construction Data>>
+    +Name : string
+    +Columns : IReadOnlyCollection~ColumnDefinition~
+    +Constraints : IReadOnlyCollection~ConstraintOptions~
+    +Indexes : IReadOnlyCollection~IndexOptions~
+    +Partitions : IReadOnlyCollection~PartitionOptions~
+    +Triggers : IReadOnlyCollection~TriggerOptions~
+
+    +Validate() DefinitionValidationResult
+}
+
+class ColumnDefinition {
+    <<DTO>>
+    +Name : string
+    +DataType : DataType
+    +Nullable : bool
+    +DefaultValue : object
+}
+
+class ConstraintOptions {
+    <<DTO>>
+    +Type : ConstraintType
+    +Name : string
+    +Columns : IReadOnlyCollection~string~
+    +ReferenceTable : string
+    +ReferenceColumns : IReadOnlyCollection~string~
+    +Expression : string
+}
+
+class IndexOptions {
+    <<DTO>>
+    +Type : IndexType
+    +Name : string
+    +Columns : IReadOnlyCollection~string~
+    +Unique : bool
+}
+
+class PartitionOptions {
+    <<DTO>>
+    +Name : string
+    +Type : PartitionType
+    +PartitionKey : string
+    +BoundaryValues : IReadOnlyCollection~object~
+}
+
+class TriggerOptions {
+    <<DTO>>
+    +Name : string
+    +Event : TriggerEvent
+    +Timing : TriggerTiming
+    +Body : string
+}
+
+class DefinitionValidationResult {
+    <<Result>>
+    +IsValid : bool
+    +Errors : IReadOnlyCollection~string~
+}
+
+%% =====================================================
+%% Product
+%% =====================================================
+
+class Table {
+    <<Product>>
+    +TableId : int
+    +Name : string
+    +Columns : IReadOnlyCollection~Column~
+    +Constraints : IReadOnlyCollection~Constraint~
+    +Indexes : IReadOnlyCollection~Index~
+    +Partitions : IReadOnlyCollection~Partition~
+    +Triggers : IReadOnlyCollection~Trigger~
+
+    +AddColumn(column : Column)
+    +AddConstraint(constraint : Constraint)
+    +AddIndex(index : Index)
+    +AddPartition(partition : Partition)
+    +AddTrigger(trigger : Trigger)
+}
+
+class Column {
+    +ColumnId : int
+    +Name : string
+    +DataType : DataType
+    +Nullable : bool
+    +DefaultValue : object
+}
+
+class Constraint {
+    <<abstract>>
+    +Name : string
+}
+
+class Index {
+    <<abstract>>
+    +IndexId : int
+    +Name : string
+    +Unique : bool
+}
+
+class Partition {
+    +PartitionId : int
+    +Name : string
+    +PartitionType : PartitionType
+    +PartitionKey : string
+}
+
+class Trigger {
+    +TriggerId : int
+    +Name : string
+    +Event : TriggerEvent
+    +Timing : TriggerTiming
+    +Body : string
+}
+
+%% =====================================================
+%% Factories Used by Director
+%% =====================================================
+
+class IConstraintFactory {
+    <<Factory>>
+    +Create(
+        options : ConstraintOptions,
+        tableContext : TableBuildContext
+    ) Constraint
+}
+
+class IIndexFactory {
+    <<Factory>>
+    +Create(
+        options : IndexOptions,
+        tableContext : TableBuildContext
+    ) Index
+}
+
+class IPartitionFactory {
+    <<Factory>>
+    +Create(options : PartitionOptions) Partition
+}
+
+class ITriggerFactory {
+    <<Factory>>
+    +Create(options : TriggerOptions) Trigger
+}
+
+class TableBuildContext {
+    <<Build Context>>
+    +TableName : string
+    +Columns : IReadOnlyCollection~Column~
+    +FindColumn(name : string) Column
+}
+
+%% =====================================================
+%% Supporting Types
+%% =====================================================
+
+class DataType {
+    <<enumeration>>
+    INT
+    BIGINT
+    VARCHAR
+    BOOLEAN
+    FLOAT
+    DECIMAL
+    DATETIME
+}
+
+class ConstraintType {
+    <<enumeration>>
+    PRIMARY_KEY
+    UNIQUE
+    FOREIGN_KEY
+    CHECK
+}
+
+class IndexType {
+    <<enumeration>>
+    BTREE
+    HASH
+    BITMAP
+}
+
+class PartitionType {
+    <<enumeration>>
+    RANGE
+    LIST
+    HASH
+}
+
+class TriggerEvent {
+    <<enumeration>>
+    INSERT
+    UPDATE
+    DELETE
+}
+
+class TriggerTiming {
+    <<enumeration>>
+    BEFORE
+    AFTER
+    INSTEAD_OF
+}
+
+%% =====================================================
+%% Relationships
+%% =====================================================
+
+ITableBuilder <|.. TableBuilder
+
+TableDirector --> ITableBuilder : directs
+TableDirector --> IConstraintFactory : creates constraints
+TableDirector --> IIndexFactory : creates indexes
+TableDirector --> IPartitionFactory : creates partitions
+TableDirector --> ITriggerFactory : creates triggers
+TableDirector --> TableDefinition : reads
+TableDirector --> TableBuildContext : maintains context
+
+TableBuilder --> Table : builds
+
+TableDefinition --> ColumnDefinition
+TableDefinition --> ConstraintOptions
+TableDefinition --> IndexOptions
+TableDefinition --> PartitionOptions
+TableDefinition --> TriggerOptions
+TableDefinition --> DefinitionValidationResult
+
+ColumnDefinition --> DataType
+ConstraintOptions --> ConstraintType
+IndexOptions --> IndexType
+PartitionOptions --> PartitionType
+TriggerOptions --> TriggerEvent
+TriggerOptions --> TriggerTiming
+
+IConstraintFactory --> Constraint : creates
+IIndexFactory --> Index : creates
+IPartitionFactory --> Partition : creates
+ITriggerFactory --> Trigger : creates
+
+TableBuildContext --> Column
+
+Table "1" *-- "*" Column
+Table "1" *-- "*" Constraint
+Table "1" *-- "*" Index
+Table "1" *-- "*" Partition
+Table "1" *-- "*" Trigger
+```
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    actor Client
+    participant Service as ISchemaService
+    participant Definition as TableDefinition
+    participant Director as TableDirector
+    participant Builder as ITableBuilder
+    participant CFactory as IConstraintFactory
+    participant IFactory as IIndexFactory
+    participant PFactory as IPartitionFactory
+    participant TFactory as ITriggerFactory
+    participant Schema
+    participant Table
+
+    Client->>Service: CreateTable(schema, definition)
+
+    Service->>Definition: Validate()
+    Definition-->>Service: DefinitionValidationResult
+
+    alt Definition is invalid
+        Service-->>Client: throw InvalidTableDefinitionException
+    else Definition is valid
+        Service->>Director: Construct(definition)
+        activate Director
+
+        Director->>Builder: Reset()
+        Director->>Builder: SetName(definition.Name)
+
+        loop Each ColumnDefinition
+            Director->>Director: CreateColumn(columnDefinition)
+            Director->>Builder: AddColumn(column)
+        end
+
+        Note over Director: Columns must be created first<br/>because constraints and indexes reference them.
+
+        Director->>Director: Create TableBuildContext(columns)
+
+        loop Each ConstraintOptions
+            Director->>CFactory: Create(options, buildContext)
+            CFactory-->>Director: Constraint
+            Director->>Builder: AddConstraint(constraint)
+        end
+
+        loop Each IndexOptions
+            Director->>IFactory: Create(options, buildContext)
+            IFactory-->>Director: Index
+            Director->>Builder: AddIndex(index)
+        end
+
+        loop Each PartitionOptions
+            Director->>PFactory: Create(options)
+            PFactory-->>Director: Partition
+            Director->>Builder: AddPartition(partition)
+        end
+
+        loop Each TriggerOptions
+            Director->>TFactory: Create(options)
+            TFactory-->>Director: Trigger
+            Director->>Builder: AddTrigger(trigger)
+        end
+
+        Director->>Builder: Build()
+        Builder->>Builder: ValidateBeforeBuild()
+
+        alt Builder state is invalid
+            Builder-->>Director: throw TableBuildException
+            Director-->>Service: propagate exception
+            Service-->>Client: table creation failed
+        else Builder state is valid
+            Builder-->>Director: Table
+            Director-->>Service: Table
+        end
+
+        deactivate Director
+
+        Service->>Schema: AddTable(table)
+
+        alt Duplicate table name
+            Schema-->>Service: throw DuplicateTableException
+            Service-->>Client: table creation failed
+        else Table added
+            Schema-->>Service: Success
+            Service-->>Client: Table
+        end
+    end
+```
+
 # Factory pattern
 
 # Iterator

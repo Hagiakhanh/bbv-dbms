@@ -12,12 +12,12 @@ This document outlines the Design Patterns implemented within various core compo
 | 🔥 Critical | Database Object | Index Object Creation | `IndexFactory` | Encapsulates the instantiation logic for different types of indexes. | **Factory Method** | Completed |
 | 🔥 Critical | Database Object | Encapsulate DDL Requests | DDL commands and executor | Encapsulates DDL requests as objects, allowing for logging, queuing, and execution. | **Command** | Completed |
 | 🔥 Critical | Database Object | Coordinate Create/Drop/Alter | `SchemaService`, `DatabaseService` | Provides a simplified, unified interface to the complex subsystems involved in metadata modifications. | **Facade** | Completed |
-| 🔥 Critical | Database Object | Persist and Query Metadata | `CatalogManager`, catalog repositories | Abstracts the underlying data storage mechanism for database metadata. | **Repository** | Completed |
 | 🔴 High | Database Object | Metadata Traversal | `CatalogIterator`, `IIterableCatalog` | Provides a way to sequentially access metadata objects without exposing their underlying representation. | **Iterator** | Completed |
 | 🔴 High | Metadata Events | Cache, Statistics, Audit Reactions | Event publisher and handlers | Defines a one-to-many dependency so that when metadata changes, all dependent components are notified. | **Observer** | Completed |
-| 🟡 Medium | Partition | Select Target Partition | Partition strategies | Defines interchangeable algorithms for selecting the appropriate partition for data. | **Strategy** | Not Started |
-| 🟡 Medium | Trigger | Execute Trigger Actions | `TriggerExecutor`, trigger actions | Encapsulates trigger actions as objects for execution. | **Command** | Not Started |
+| 🔴 High | Database Object | Standardized DDL Execution Lifecycle | `DDLCommandTemplate`, `CreateTableCommand`, `AlterTableCommand`, `DropTableCommand` | Defines a fixed execution workflow for validating, checking permissions, applying metadata changes, persisting catalog data, and publishing events while allowing each DDL command to customize specific steps. | **Template Method** | Completed |
 | 🟡 Medium | Metadata Utility | Export DDL, Dependency Scan | Visitors or traversal services | Separates metadata analysis and export algorithms from the object structure on which they operate. | **Visitor** | Not Started |
+| 🟡 Medium | Trigger | Execute Trigger Actions | `TriggerExecutor`, trigger actions | Encapsulates trigger actions as objects for execution. | **Command** | Not Started |
+
 
 ---
 
@@ -26,18 +26,16 @@ classDiagram
 direction LR
 
 %% =====================================================
-%% 1. EXTERNAL MODULE PORTS
-%% Chỉ biểu diễn boundary, không bung Storage Engine,
-%% Query Processor, Transaction hoặc Backup module.
+%% 1. EXTERNAL PORTS
 %% =====================================================
 
 class IDdlRequestSource {
-    <<External Client Port>>
+    <<Client Port>>
     +Submit(command : IDdlCommand) DdlResult
 }
 
 class IStorageObjectPort {
-    <<External Storage Port>>
+    <<External Port>>
     +AllocateTable(table : Table)
     +DropTable(tableId : int)
     +AllocateIndex(index : Index)
@@ -45,20 +43,14 @@ class IStorageObjectPort {
 }
 
 class IMetadataTransactionPort {
-    <<External Transaction Port>>
+    <<External Port>>
     +Begin()
     +Commit()
     +Rollback()
 }
 
-class IBackupCatalogPort {
-    <<External Backup Port>>
-    +ExportMetadata(databaseId : int)
-    +ImportMetadata(source : string)
-}
-
 %% =====================================================
-%% 2. COMPOSITE HIERARCHY & DOMAIN OBJECTS
+%% 2. COMPOSITE — CATALOG OBJECT HIERARCHY
 %% =====================================================
 
 class ICatalogComponent {
@@ -101,7 +93,7 @@ class Schema {
 }
 
 class Table {
-    <<Composite>>
+    <<Composite / Product>>
     +TableId : int
     +Name : string
     +Parent : Schema
@@ -114,6 +106,8 @@ class Table {
     +RemoveColumn(name : string)
     +AddConstraint(constraint : Constraint)
     +AddIndex(index : Index)
+    +AddPartition(partition : Partition)
+    +AddTrigger(trigger : Trigger)
     +CreateColumnIterator() ICatalogIterator~Column~
 }
 
@@ -125,7 +119,6 @@ class Column {
     +Nullable : bool
     +DefaultValue : object
     +Rename(newName : string)
-    +ValidateValue(value : object) bool
 }
 
 class View {
@@ -137,13 +130,14 @@ class View {
 
 class StoredProcedure {
     <<Leaf>>
+    +ProcedureId : int
     +Name : string
-    +Parameters : IReadOnlyCollection~Column~
     +Body : string
 }
 
 class Sequence {
     <<Leaf>>
+    +SequenceId : int
     +Name : string
     +CurrentValue : long
     +Increment : long
@@ -152,6 +146,7 @@ class Sequence {
 
 class Partition {
     <<Leaf>>
+    +PartitionId : int
     +Name : string
     +PartitionKey : string
     +PartitionType : PartitionType
@@ -159,85 +154,12 @@ class Partition {
 
 class Trigger {
     <<Leaf>>
+    +TriggerId : int
     +Name : string
     +Event : TriggerEvent
     +Timing : TriggerTiming
     +Body : string
 }
-
-class Row {
-    +RowId : RID
-    +Data : RecordData
-    +Version : long
-    +GetValue(columnId : int) object
-    +SetValue(columnId : int, value : object)
-}
-
-class RID {
-    <<Value Object>>
-    +PageId : int
-    +SlotNumber : int
-    +Equals(other : RID) bool
-}
-
-class RecordData {
-    <<Value Object>>
-    +Bytes : Byte[]
-    +Length : int
-    +Serialize() Byte[]
-    +Deserialize(bytes : Byte[])
-}
-
-class DataType {
-    <<enumeration>>
-    INT
-    BIGINT
-    VARCHAR
-    BOOLEAN
-    FLOAT
-    DATETIME
-}
-
-class PartitionType {
-    <<enumeration>>
-    RANGE
-    LIST
-    HASH
-}
-
-class TriggerEvent {
-    <<enumeration>>
-    INSERT
-    UPDATE
-    DELETE
-}
-
-class TriggerTiming {
-    <<enumeration>>
-    BEFORE
-    AFTER
-    INSTEAD_OF
-}
-
-Database "1" *-- "*" Schema
-Schema "1" *-- "*" Table
-Schema "1" *-- "*" View
-Schema "1" *-- "*" StoredProcedure
-Schema "1" *-- "*" Sequence
-
-Table "1" *-- "*" Column
-Table "1" *-- "*" Constraint
-Table "1" *-- "*" Index
-Table "1" *-- "*" Partition
-Table "1" *-- "*" Trigger
-Table "1" *-- "*" Row
-
-Row *-- RID
-Row *-- RecordData
-Column --> DataType
-Partition --> PartitionType
-Trigger --> TriggerEvent
-Trigger --> TriggerTiming
 
 ICatalogComposite <|.. Database
 ICatalogComposite <|.. Schema
@@ -252,12 +174,29 @@ ICatalogComponent <|.. View
 ICatalogComponent <|.. StoredProcedure
 ICatalogComponent <|.. Sequence
 
+Database "1" *-- "*" Schema : contains
+Schema "1" *-- "*" Table : contains
+Schema "1" *-- "*" View : contains
+Schema "1" *-- "*" StoredProcedure : contains
+Schema "1" *-- "*" Sequence : contains
+Table "1" *-- "*" Column : contains
+Table "1" *-- "*" Constraint : contains
+Table "1" *-- "*" Index : contains
+Table "1" *-- "*" Partition : contains
+Table "1" *-- "*" Trigger : contains
+
+Column --> DataType
+Partition --> PartitionType
+Trigger --> TriggerEvent
+Trigger --> TriggerTiming
+
 %% =====================================================
-%% 3. CONSTRAINT VALIDATION — STRATEGY
+%% 3. STRATEGY — CONSTRAINT VALIDATION
 %% =====================================================
 
 class Constraint {
-    <<Abstract Strategy>>
+    <<Abstract Strategy / Leaf>>
+    +ConstraintId : int
     +Name : string
     +Validate(context : ConstraintValidationContext) ConstraintValidationResult
 }
@@ -274,6 +213,7 @@ class UniqueConstraint {
 
 class ForeignKeyConstraint {
     <<Concrete Strategy>>
+    +Columns : IReadOnlyCollection~Column~
     +ReferenceTable : Table
     +ReferenceColumns : IReadOnlyCollection~Column~
 }
@@ -286,7 +226,7 @@ class CheckConstraint {
 class ConstraintValidationContext {
     <<Context Data>>
     +Table : Table
-    +Row : Row
+    +Values : IReadOnlyDictionary~int, object~
     +Operation : ValidationOperation
 }
 
@@ -296,44 +236,37 @@ class ConstraintValidationResult {
     +Message : string
 }
 
-class ValidationOperation {
-    <<enumeration>>
-    INSERT
-    UPDATE
-}
-
 class IRowKeyExtractor {
-    <<Domain Service>>
-    +ExtractKey(row : Row, columns : IReadOnlyCollection~Column~) object
-    +HasNullValue(row : Row, columns : IReadOnlyCollection~Column~) bool
+    <<Collaborator>>
+    +ExtractKey(values : IReadOnlyDictionary~int, object~, columns : IReadOnlyCollection~Column~) object
+    +HasNullValue(values : IReadOnlyDictionary~int, object~, columns : IReadOnlyCollection~Column~) bool
 }
 
 Constraint <|-- PrimaryKeyConstraint
 Constraint <|-- UniqueConstraint
 Constraint <|-- ForeignKeyConstraint
 Constraint <|-- CheckConstraint
-
-Constraint --> ConstraintValidationContext
-Constraint --> ConstraintValidationResult
+Constraint --> ConstraintValidationContext : validates
+Constraint --> ConstraintValidationResult : returns
+ConstraintValidationContext --> Table
 ConstraintValidationContext --> ValidationOperation
-
 PrimaryKeyConstraint --> IRowKeyExtractor
 UniqueConstraint --> IRowKeyExtractor
 ForeignKeyConstraint --> Table : references
+PrimaryKeyConstraint --> Index : checks uniqueness
+UniqueConstraint --> Index : checks uniqueness
 
 %% =====================================================
 %% 4. INDEX DOMAIN OBJECTS
+%% Chỉ mô tả metadata; thao tác vật lý thuộc Storage Engine.
 %% =====================================================
 
 class Index {
-    <<abstract>>
+    <<abstract Leaf>>
     +IndexId : int
     +Name : string
     +Columns : IReadOnlyCollection~Column~
     +Unique : bool
-    +Insert(key : object, rid : RID)
-    +Delete(key : object)
-    +Search(key : object) RID
 }
 
 class BTreeIndex
@@ -343,9 +276,7 @@ class BitmapIndex
 Index <|-- BTreeIndex
 Index <|-- HashIndex
 Index <|-- BitmapIndex
-
-PrimaryKeyConstraint --> Index : uses
-UniqueConstraint --> Index : uses
+Index --> Column : indexes
 
 %% =====================================================
 %% 5. CONSTRUCTION DATA
@@ -354,20 +285,29 @@ UniqueConstraint --> Index : uses
 class TableDefinition {
     <<Construction Data>>
     +Name : string
-    +Columns : IReadOnlyCollection~Column~
+    +Columns : IReadOnlyCollection~ColumnDefinition~
     +Constraints : IReadOnlyCollection~ConstraintOptions~
     +Indexes : IReadOnlyCollection~IndexOptions~
-    +Partitions : IReadOnlyCollection~Partition~
-    +Triggers : IReadOnlyCollection~Trigger~
+    +Partitions : IReadOnlyCollection~PartitionDefinition~
+    +Triggers : IReadOnlyCollection~TriggerDefinition~
+    +Validate() DefinitionValidationResult
+}
+
+class ColumnDefinition {
+    <<DTO>>
+    +Name : string
+    +DataType : DataType
+    +Nullable : bool
+    +DefaultValue : object
 }
 
 class ConstraintOptions {
     <<DTO>>
     +Type : ConstraintType
     +Name : string
-    +Columns : IReadOnlyCollection~Column~
-    +ReferenceTable : Table
-    +ReferenceColumns : IReadOnlyCollection~Column~
+    +Columns : IReadOnlyCollection~string~
+    +ReferenceTable : string
+    +ReferenceColumns : IReadOnlyCollection~string~
     +Expression : string
 }
 
@@ -375,41 +315,52 @@ class IndexOptions {
     <<DTO>>
     +Type : IndexType
     +Name : string
-    +Columns : IReadOnlyCollection~Column~
+    +Columns : IReadOnlyCollection~string~
     +Unique : bool
 }
 
-class ConstraintType {
-    <<enumeration>>
-    PRIMARY_KEY
-    UNIQUE
-    FOREIGN_KEY
-    CHECK
+class PartitionDefinition {
+    <<DTO>>
+    +Name : string
+    +PartitionKey : string
+    +Type : PartitionType
 }
 
-class IndexType {
-    <<enumeration>>
-    BTREE
-    HASH
-    BITMAP
+class TriggerDefinition {
+    <<DTO>>
+    +Name : string
+    +Event : TriggerEvent
+    +Timing : TriggerTiming
+    +Body : string
 }
 
-TableDefinition --> Column
-TableDefinition --> ConstraintOptions
-TableDefinition --> IndexOptions
-TableDefinition --> Partition
-TableDefinition --> Trigger
+class DefinitionValidationResult {
+    <<Result>>
+    +IsValid : bool
+    +Errors : IReadOnlyCollection~string~
+}
 
+TableDefinition "1" *-- "*" ColumnDefinition
+TableDefinition "1" *-- "*" ConstraintOptions
+TableDefinition "1" *-- "*" IndexOptions
+TableDefinition "1" *-- "*" PartitionDefinition
+TableDefinition "1" *-- "*" TriggerDefinition
+TableDefinition --> DefinitionValidationResult : returns
+ColumnDefinition --> DataType
 ConstraintOptions --> ConstraintType
 IndexOptions --> IndexType
+PartitionDefinition --> PartitionType
+TriggerDefinition --> TriggerEvent
+TriggerDefinition --> TriggerTiming
 
 %% =====================================================
-%% 6. TABLE CONSTRUCTION — BUILDER
+%% 6. BUILDER — TABLE CONSTRUCTION
 %% =====================================================
 
 class ITableBuilder {
     <<Builder>>
-    +Reset(name : string)
+    +Reset()
+    +SetName(name : string)
     +AddColumn(column : Column)
     +AddConstraint(constraint : Constraint)
     +AddIndex(index : Index)
@@ -421,57 +372,92 @@ class ITableBuilder {
 class TableBuilder {
     <<Concrete Builder>>
     -currentTable : Table
+    -initialized : bool
+    +Reset()
+    +SetName(name : string)
+    +AddColumn(column : Column)
+    +AddConstraint(constraint : Constraint)
+    +AddIndex(index : Index)
+    +AddPartition(partition : Partition)
+    +AddTrigger(trigger : Trigger)
+    +Build() Table
+    -EnsureInitialized()
+    -ValidateBeforeBuild()
 }
 
 class TableDirector {
     <<Director>>
+    -builder : ITableBuilder
+    -constraintFactory : IConstraintFactory
+    -indexFactory : IIndexFactory
     +Construct(definition : TableDefinition) Table
+    -CreateColumn(definition : ColumnDefinition) Column
+    -CreatePartition(definition : PartitionDefinition) Partition
+    -CreateTrigger(definition : TriggerDefinition) Trigger
+    -CreateBuildContext(tableName : string, columns : IReadOnlyCollection~Column~) TableBuildContext
+}
+
+class TableBuildContext {
+    <<Build Context>>
+    +TableName : string
+    +Columns : IReadOnlyCollection~Column~
+    +FindColumn(name : string) Column
 }
 
 ITableBuilder <|.. TableBuilder
-
 TableDirector --> ITableBuilder : directs
 TableDirector --> IConstraintFactory : creates constraints
 TableDirector --> IIndexFactory : creates indexes
 TableDirector --> TableDefinition : reads
-
+TableDirector --> ColumnDefinition : creates columns
+TableDirector --> PartitionDefinition : creates partitions
+TableDirector --> TriggerDefinition : creates triggers
+TableDirector --> TableBuildContext : creates
 TableBuilder --> Table : builds
+TableBuilder --> Column : adds
+TableBuilder --> Constraint : adds
+TableBuilder --> Index : adds
+TableBuilder --> Partition : adds
+TableBuilder --> Trigger : adds
+TableBuildContext --> Column : resolves
 
 %% =====================================================
-%% 7. DYNAMIC CREATION — FACTORIES
+%% 7. FACTORY METHOD — DYNAMIC OBJECT CREATION
 %% =====================================================
 
 class IConstraintFactory {
     <<Factory>>
-    +Create(options : ConstraintOptions) Constraint
+    +Create(options : ConstraintOptions, context : TableBuildContext) Constraint
 }
 
 class ConstraintFactory {
     <<Concrete Factory>>
+    +Create(options : ConstraintOptions, context : TableBuildContext) Constraint
 }
 
 class IIndexFactory {
     <<Factory>>
-    +Create(options : IndexOptions) Index
+    +Create(options : IndexOptions, context : TableBuildContext) Index
 }
 
 class IndexFactory {
     <<Concrete Factory>>
+    +Create(options : IndexOptions, context : TableBuildContext) Index
 }
 
 IConstraintFactory <|.. ConstraintFactory
 IIndexFactory <|.. IndexFactory
-
-IConstraintFactory --> ConstraintOptions
+IConstraintFactory --> ConstraintOptions : reads
+IConstraintFactory --> TableBuildContext : resolves columns
 IConstraintFactory --> Constraint : creates
-
-IIndexFactory --> IndexOptions
+IIndexFactory --> IndexOptions : reads
+IIndexFactory --> TableBuildContext : resolves columns
 IIndexFactory --> Index : creates
 
 %% =====================================================
-%% 8. APPLICATION FACADE
-%% Chỉ giữ operation nhóm quan trọng.
-%% Chi tiết đầy đủ nằm trong Facade Pattern Diagram.
+%% 8. FACADE — APPLICATION ENTRY POINT
+%% Facade chỉ điều phối domain và subsystem.
+%% Transaction workflow thuộc DdlCommandTemplate.
 %% =====================================================
 
 class IDatabaseService {
@@ -484,8 +470,6 @@ class IDatabaseService {
 class DatabaseService {
     <<Facade>>
     -catalog : ICatalogManager
-    -metadataTransaction : IMetadataTransactionPort
-    -eventDispatcher : MetadataEventCommitDispatcher
 }
 
 class ISchemaService {
@@ -503,70 +487,23 @@ class SchemaService {
     -catalog : ICatalogManager
     -tableDirector : TableDirector
     -storage : IStorageObjectPort
-    -metadataTransaction : IMetadataTransactionPort
-    -eventDispatcher : MetadataEventCommitDispatcher
-}
-
-class TableAlterOperation {
-    <<Command Data>>
-    +Type : TableAlterType
-    +Payload : object
-}
-
-class TableAlterType {
-    <<enumeration>>
-    ADD_COLUMN
-    DROP_COLUMN
-    ADD_CONSTRAINT
-    DROP_CONSTRAINT
-    ADD_INDEX
-    DROP_INDEX
-    RENAME
-}
-
-class ViewDefinition {
-    <<DTO>>
-    +Name : string
-    +QueryDefinition : string
-}
-
-class ProcedureDefinition {
-    <<DTO>>
-    +Name : string
-    +Parameters : IReadOnlyCollection~Column~
-    +Body : string
-}
-
-class SequenceDefinition {
-    <<DTO>>
-    +Name : string
-    +StartValue : long
-    +Increment : long
 }
 
 IDatabaseService <|.. DatabaseService
 ISchemaService <|.. SchemaService
 
-DatabaseService --> ICatalogManager
-DatabaseService --> IMetadataTransactionPort
-DatabaseService --> MetadataChangeContext : supplies event context
+DatabaseService --> ICatalogManager : coordinates metadata
 DatabaseService --> Database : manages
 
-SchemaService --> ICatalogManager
-SchemaService --> TableDirector
-SchemaService --> IStorageObjectPort
-SchemaService --> IMetadataTransactionPort
-SchemaService --> MetadataChangeContext : supplies event context
+SchemaService --> ICatalogManager : coordinates metadata
+SchemaService --> TableDirector : builds tables
+SchemaService --> IStorageObjectPort : coordinates storage
 SchemaService --> Schema : manages
-SchemaService --> TableAlterOperation
-SchemaService --> ViewDefinition
-SchemaService --> ProcedureDefinition
-SchemaService --> SequenceDefinition
-
-TableAlterOperation --> TableAlterType
 
 %% =====================================================
-%% 9. DDL EXECUTION — COMMAND
+%% 9. COMMAND + TEMPLATE METHOD — DDL EXECUTION
+%% Command đóng gói yêu cầu DDL.
+%% Template Method cố định workflow chung cho mọi DDL command.
 %% =====================================================
 
 class IDdlCommand {
@@ -574,11 +511,38 @@ class IDdlCommand {
     +Execute() DdlResult
 }
 
+class DdlCommandTemplate {
+    <<Abstract Command / Template Method>>
+
+    #catalog : ICatalogManager
+    #transaction : IMetadataTransactionPort
+    #eventCollector : IMetadataEventCollector
+    #eventDispatcher : MetadataEventCommitDispatcher
+    #context : MetadataChangeContext
+    #affectedObject : ICatalogComponent
+
+    +Execute() DdlResult
+
+    #Validate()*
+    #CheckPreconditions()*
+    #ApplyChange() ICatalogComponent*
+    #PersistMetadata(component : ICatalogComponent)
+    #CreateEvent(component : ICatalogComponent) MetadataEvent*
+    #RecordEvent(event : MetadataEvent)
+    #CreateSuccessResult(component : ICatalogComponent) DdlResult
+    #CreateFailureResult(message : string) DdlResult
+}
+
 class CreateSchemaCommand {
     <<Concrete Command>>
     -receiver : IDatabaseService
     -database : Database
     -schemaName : string
+
+    #Validate()
+    #CheckPreconditions()
+    #ApplyChange() ICatalogComponent
+    #CreateEvent(component : ICatalogComponent) MetadataEvent
 }
 
 class CreateTableCommand {
@@ -586,6 +550,11 @@ class CreateTableCommand {
     -receiver : ISchemaService
     -schema : Schema
     -definition : TableDefinition
+
+    #Validate()
+    #CheckPreconditions()
+    #ApplyChange() ICatalogComponent
+    #CreateEvent(component : ICatalogComponent) MetadataEvent
 }
 
 class AlterTableCommand {
@@ -593,6 +562,11 @@ class AlterTableCommand {
     -receiver : ISchemaService
     -table : Table
     -operation : TableAlterOperation
+
+    #Validate()
+    #CheckPreconditions()
+    #ApplyChange() ICatalogComponent
+    #CreateEvent(component : ICatalogComponent) MetadataEvent
 }
 
 class DropTableCommand {
@@ -601,6 +575,11 @@ class DropTableCommand {
     -schema : Schema
     -tableName : string
     -cascade : bool
+
+    #Validate()
+    #CheckPreconditions()
+    #ApplyChange() ICatalogComponent
+    #CreateEvent(component : ICatalogComponent) MetadataEvent
 }
 
 class IDdlCommandExecutor {
@@ -610,6 +589,7 @@ class IDdlCommandExecutor {
 
 class DdlCommandExecutor {
     <<Invoker>>
+    +Execute(command : IDdlCommand) DdlResult
 }
 
 class DdlResult {
@@ -619,14 +599,25 @@ class DdlResult {
     +AffectedObject : ICatalogComponent
 }
 
-IDdlCommand <|.. CreateSchemaCommand
-IDdlCommand <|.. CreateTableCommand
-IDdlCommand <|.. AlterTableCommand
-IDdlCommand <|.. DropTableCommand
+IDdlCommand <|.. DdlCommandTemplate
+
+DdlCommandTemplate <|-- CreateSchemaCommand
+DdlCommandTemplate <|-- CreateTableCommand
+DdlCommandTemplate <|-- AlterTableCommand
+DdlCommandTemplate <|-- DropTableCommand
 
 IDdlCommandExecutor <|.. DdlCommandExecutor
-IDdlCommandExecutor --> IDdlCommand : executes
-IDdlCommand --> DdlResult : returns
+IDdlCommandExecutor --> IDdlCommand : invokes
+IDdlRequestSource --> IDdlCommandExecutor : submits
+
+DdlCommandTemplate --> ICatalogManager : persists metadata
+DdlCommandTemplate --> IMetadataTransactionPort : controls transaction
+DdlCommandTemplate --> IMetadataEventCollector : records events
+DdlCommandTemplate --> MetadataEventCommitDispatcher : dispatches after commit
+DdlCommandTemplate --> MetadataChangeContext : uses
+DdlCommandTemplate --> MetadataEvent : creates
+DdlCommandTemplate --> ICatalogComponent : processes
+DdlCommandTemplate --> DdlResult : returns
 
 CreateSchemaCommand --> IDatabaseService : receiver
 CreateSchemaCommand --> Database : target
@@ -642,126 +633,41 @@ AlterTableCommand --> TableAlterOperation : carries
 DropTableCommand --> ISchemaService : receiver
 DropTableCommand --> Schema : target
 
-IDdlRequestSource --> IDdlCommandExecutor : submits
+DdlResult --> ICatalogComponent : affected object
 
 %% =====================================================
 %% 10. CATALOG COORDINATION
-%% CatalogManager persists metadata and records events.
-%% Observers are notified only after a successful commit
-%% through MetadataEventCommitDispatcher.
+%% Không biểu diễn Repository Pattern hoặc persistence implementation.
 %% =====================================================
 
 class ICatalogManager {
-    <<Metadata Coordinator>>
+    <<Subsystem Interface>>
     +Register(component : ICatalogComponent, context : MetadataChangeContext)
     +Update(component : ICatalogComponent, context : MetadataChangeContext)
-    +Remove(componentId : int, objectType : CatalogObjectType, context : MetadataChangeContext)
+    +Remove(component : ICatalogComponent, context : MetadataChangeContext)
     +GetDatabase(name : string) Database
     +GetSchema(databaseId : int, name : string) Schema
     +GetTable(schemaId : int, name : string) Table
-    +ObjectExists(parentId : int, parentType : CatalogObjectType, name : string, objectType : CatalogObjectType) bool
+    +ObjectExists(parent : ICatalogComposite, name : string) bool
 }
 
 class CatalogManager {
-    <<Metadata Coordinator>>
-    -databaseRepository : IDatabaseCatalogRepository
-    -schemaRepository : ISchemaCatalogRepository
-    -tableRepository : ITableCatalogRepository
-    -eventCollector : IMetadataEventCollector
+    <<Subsystem>>
     +Register(component : ICatalogComponent, context : MetadataChangeContext)
     +Update(component : ICatalogComponent, context : MetadataChangeContext)
-    +Remove(componentId : int, objectType : CatalogObjectType, context : MetadataChangeContext)
+    +Remove(component : ICatalogComponent, context : MetadataChangeContext)
     +GetDatabase(name : string) Database
     +GetSchema(databaseId : int, name : string) Schema
     +GetTable(schemaId : int, name : string) Table
-    +ObjectExists(parentId : int, parentType : CatalogObjectType, name : string, objectType : CatalogObjectType) bool
-}
-
-class CatalogObjectType {
-    <<enumeration>>
-    DATABASE
-    SCHEMA
-    TABLE
-    COLUMN
-    CONSTRAINT
-    INDEX
-    PARTITION
-    TRIGGER
-    VIEW
-    PROCEDURE
-    SEQUENCE
+    +ObjectExists(parent : ICatalogComposite, name : string) bool
 }
 
 ICatalogManager <|.. CatalogManager
-ICatalogManager --> CatalogObjectType
-CatalogManager --> IMetadataEventCollector : records changes
+ICatalogManager --> ICatalogComponent : manages
+ICatalogManager --> ICatalogComposite : searches
 
 %% =====================================================
-%% 11. CATALOG REPOSITORIES — REPOSITORY PATTERN
-%% Concrete repository không lặp lại toàn bộ method.
-%% =====================================================
-
-class IDatabaseCatalogRepository {
-    <<Repository>>
-    +Add(database : Database)
-    +Update(database : Database)
-    +Remove(databaseId : int)
-    +FindById(databaseId : int) Database
-    +FindByName(name : string) Database
-    +GetAll() IReadOnlyCollection~Database~
-    +Exists(name : string) bool
-}
-
-class ISchemaCatalogRepository {
-    <<Repository>>
-    +Add(schema : Schema)
-    +Update(schema : Schema)
-    +Remove(schemaId : int)
-    +FindById(schemaId : int) Schema
-    +FindByName(databaseId : int, name : string) Schema
-    +GetByDatabase(databaseId : int) IReadOnlyCollection~Schema~
-    +Exists(databaseId : int, name : string) bool
-}
-
-class ITableCatalogRepository {
-    <<Repository>>
-    +Add(table : Table)
-    +Update(table : Table)
-    +Remove(tableId : int)
-    +FindById(tableId : int) Table
-    +FindByName(schemaId : int, name : string) Table
-    +GetBySchema(schemaId : int) IReadOnlyCollection~Table~
-    +Exists(schemaId : int, name : string) bool
-}
-
-class DatabaseCatalogRepository {
-    <<Concrete Repository>>
-}
-
-class SchemaCatalogRepository {
-    <<Concrete Repository>>
-}
-
-class TableCatalogRepository {
-    <<Concrete Repository>>
-}
-
-IDatabaseCatalogRepository <|.. DatabaseCatalogRepository
-ISchemaCatalogRepository <|.. SchemaCatalogRepository
-ITableCatalogRepository <|.. TableCatalogRepository
-
-CatalogManager --> IDatabaseCatalogRepository
-CatalogManager --> ISchemaCatalogRepository
-CatalogManager --> ITableCatalogRepository
-
-DatabaseCatalogRepository --> Database : maps metadata
-SchemaCatalogRepository --> Schema : maps metadata
-TableCatalogRepository --> Table : maps metadata
-
-%% =====================================================
-%% 12. METADATA EVENTS — OBSERVER PATTERN
-%% Cache, statistics and audit react to committed metadata
-%% changes without coupling CatalogManager to each subsystem.
+%% 11. OBSERVER — METADATA EVENTS
 %% =====================================================
 
 class MetadataChangeContext {
@@ -776,10 +682,7 @@ class MetadataEvent {
     <<Event>>
     +EventId : Guid
     +EventType : MetadataEventType
-    +ObjectId : int
-    +ObjectType : CatalogObjectType
     +ObjectName : string
-    +ParentId : int
     +Context : MetadataChangeContext
     +PreviousSnapshot : MetadataSnapshot
     +CurrentSnapshot : MetadataSnapshot
@@ -788,14 +691,6 @@ class MetadataEvent {
 class MetadataSnapshot {
     <<Event Data>>
     +Properties : IReadOnlyDictionary~string, object~
-}
-
-class MetadataEventType {
-    <<enumeration>>
-    CREATED
-    UPDATED
-    RENAMED
-    REMOVED
 }
 
 class IMetadataEventCollector {
@@ -855,81 +750,52 @@ class MetadataStatisticsObserver {
 
 class MetadataAuditObserver {
     <<Concrete Observer>>
-    -auditRepository : IMetadataAuditRepository
+    -auditStore : IMetadataAuditStore
     +OnMetadataChanged(event : MetadataEvent)
 }
 
 class ICatalogCache {
     <<Cache Port>>
-    +Get(objectType : CatalogObjectType, objectId : int) ICatalogComponent
+    +Get(name : string) ICatalogComponent
     +Set(component : ICatalogComponent)
-    +Remove(objectType : CatalogObjectType, objectId : int)
-    +InvalidateChildren(parentId : int)
+    +Remove(name : string)
+    +InvalidateChildren(parentName : string)
 }
 
 class IMetadataStatisticsStore {
     <<Statistics Port>>
-    +IncrementObjectCount(objectType : CatalogObjectType)
-    +DecrementObjectCount(objectType : CatalogObjectType)
-    +RecordModification(objectType : CatalogObjectType, timestamp : DateTime)
+    +IncrementObjectCount()
+    +DecrementObjectCount()
+    +RecordModification(timestamp : DateTime)
 }
 
-class IMetadataAuditRepository {
-    <<Audit Repository>>
-    +Add(entry : MetadataAuditEntry)
-}
-
-class MetadataAuditEntry {
-    <<Audit Record>>
-    +AuditId : Guid
-    +EventType : MetadataEventType
-    +ObjectType : CatalogObjectType
-    +ObjectId : int
-    +ObjectName : string
-    +Actor : string
-    +TransactionId : string
-    +Timestamp : DateTime
-    +PreviousValues : MetadataSnapshot
-    +CurrentValues : MetadataSnapshot
+class IMetadataAuditStore {
+    <<Audit Port>>
+    +Append(event : MetadataEvent)
 }
 
 IMetadataEventCollector <|.. MetadataEventCollector
 IMetadataEventPublisher <|.. MetadataEventPublisher
-
 IMetadataObserver <|.. CatalogCacheObserver
 IMetadataObserver <|.. MetadataStatisticsObserver
 IMetadataObserver <|.. MetadataAuditObserver
-
-MetadataEventCollector o-- "*" MetadataEvent : pending events
-
+MetadataEventCollector o-- "*" MetadataEvent : pending
 MetadataEventCommitDispatcher --> IMetadataEventCollector : reads or clears
-MetadataEventCommitDispatcher --> IMetadataEventPublisher : dispatches after commit
-
+MetadataEventCommitDispatcher --> IMetadataEventPublisher : publishes after commit
 MetadataEventPublisher o-- "*" IMetadataObserver : notifies
 MetadataEventPublisher --> MetadataEvent : publishes
 IMetadataObserver --> MetadataEvent : receives
-
-CatalogCacheObserver --> ICatalogCache : updates or invalidates
-MetadataStatisticsObserver --> IMetadataStatisticsStore : updates counters
-MetadataAuditObserver --> IMetadataAuditRepository : writes audit
-MetadataAuditObserver --> MetadataAuditEntry : creates
-
+CatalogCacheObserver --> ICatalogCache
+MetadataStatisticsObserver --> IMetadataStatisticsStore
+MetadataAuditObserver --> IMetadataAuditStore
 MetadataEvent --> MetadataEventType
-MetadataEvent --> CatalogObjectType
 MetadataEvent --> MetadataChangeContext
 MetadataEvent --> MetadataSnapshot
-
-MetadataAuditEntry --> MetadataEventType
-MetadataAuditEntry --> CatalogObjectType
-MetadataAuditEntry --> MetadataSnapshot
-
 ICatalogCache --> ICatalogComponent : caches
-
-DatabaseService --> MetadataEventCommitDispatcher : dispatches after commit
-SchemaService --> MetadataEventCommitDispatcher : dispatches after commit
+IMetadataAuditStore --> MetadataEvent : stores
 
 %% =====================================================
-%% 13. METADATA TRAVERSAL — GENERIC ITERATOR
+%% 12. ITERATOR — METADATA TRAVERSAL
 %% =====================================================
 
 class ICatalogIterator~T~ {
@@ -942,6 +808,8 @@ class CatalogIterator~T~ {
     <<Concrete Iterator>>
     -items : IReadOnlyList~T~
     -position : int
+    +MoveNext() bool
+    +Current : T
 }
 
 class CatalogTraversalService {
@@ -952,20 +820,119 @@ class CatalogTraversalService {
 }
 
 ICatalogIterator~T~ <|.. CatalogIterator~T~
-
 Database --> ICatalogIterator~Schema~ : creates
 Schema --> ICatalogIterator~Table~ : creates
 Table --> ICatalogIterator~Column~ : creates
-
 CatalogTraversalService --> Database
 CatalogTraversalService --> Schema
 CatalogTraversalService --> Table
 
 %% =====================================================
-%% 14. OPTIONAL EXTERNAL INTEGRATIONS
+%% 13. SUPPORTING TYPES
 %% =====================================================
 
-IBackupCatalogPort --> Database : exports metadata
+class TableAlterOperation {
+    <<Command Data>>
+    +Type : TableAlterType
+    +Payload : object
+}
+
+class ViewDefinition {
+    <<DTO>>
+    +Name : string
+    +QueryDefinition : string
+}
+
+class ProcedureDefinition {
+    <<DTO>>
+    +Name : string
+    +Body : string
+}
+
+class SequenceDefinition {
+    <<DTO>>
+    +Name : string
+    +StartValue : long
+    +Increment : long
+}
+
+class DataType {
+    <<enumeration>>
+    INT
+    BIGINT
+    VARCHAR
+    BOOLEAN
+    FLOAT
+    DECIMAL
+    DATETIME
+}
+
+class ConstraintType {
+    <<enumeration>>
+    PRIMARY_KEY
+    UNIQUE
+    FOREIGN_KEY
+    CHECK
+}
+
+class IndexType {
+    <<enumeration>>
+    BTREE
+    HASH
+    BITMAP
+}
+
+class PartitionType {
+    <<enumeration>>
+    RANGE
+    LIST
+    HASH
+}
+
+class TriggerEvent {
+    <<enumeration>>
+    INSERT
+    UPDATE
+    DELETE
+}
+
+class TriggerTiming {
+    <<enumeration>>
+    BEFORE
+    AFTER
+    INSTEAD_OF
+}
+
+class ValidationOperation {
+    <<enumeration>>
+    INSERT
+    UPDATE
+}
+
+class TableAlterType {
+    <<enumeration>>
+    ADD_COLUMN
+    DROP_COLUMN
+    ADD_CONSTRAINT
+    DROP_CONSTRAINT
+    ADD_INDEX
+    DROP_INDEX
+    RENAME
+}
+
+class MetadataEventType {
+    <<enumeration>>
+    CREATED
+    UPDATED
+    RENAMED
+    REMOVED
+}
+
+TableAlterOperation --> TableAlterType
+SchemaService --> TableAlterOperation
+SchemaService --> ViewDefinition
+SchemaService --> ProcedureDefinition
+SchemaService --> SequenceDefinition
 ```
 
 ## Visual Summary Database Server & Database Lifecycle
@@ -973,7 +940,7 @@ IBackupCatalogPort --> Database : exports metadata
 | Priority | Module | Main Feature | Main Classes | Application | Design Pattern | Progress |
 | :---: | :--- | :--- | :--- | :--- | :--- | :---: |
 | 🔥 Critical | Server Management | Server Lifecycle | `DatabaseServer` | Provides a unified interface for starting, stopping, restarting, and recovering the database server. | **Facade** | Completed |
-| 🔥 Critical | Server Management | Server State Management | `DatabaseServer`, `IServerState` | Encapsulates behaviors for Stopped, Running, Recovering, and Failed states. | **State** | Not Started |
+| 🔥 Critical | Server Management | Server State Management | `DatabaseServer`, `IServerState` | Encapsulates behaviors for Stopped, Running, Recovering, and Failed states. | **State** | Completed |
 | 🔥 Critical | Database Management | Database Lifecycle | `DatabaseManager` | Coordinates catalog and connection pool operations for creating, opening, closing, and dropping databases. | **Facade** | Not Started |
 | 🔥 Critical | Security | Authentication | `SecurityManager`, `IAuthenticationStrategy` | Supports password, token, certificate, and external authentication mechanisms. | **Strategy** | Not Started |
 | 🔥 Critical | Security | Authorization | `SecurityManager`, `IAuthorizationStrategy` | Supports RBAC, ACL, and policy-based permission checking. | **Strategy** | Not Started |
@@ -986,8 +953,6 @@ IBackupCatalogPort --> Database : exports metadata
 | 🟡 Medium | Server Management | Administrative Operations | `StartServerCommand`, `StopServerCommand`, `RecoverServerCommand` | Encapsulates server operations for auditing, scheduling, and retrying. | **Command** | Not Started |
 | 🟡 Medium | Configuration | Dynamic Configuration | `ConfigurationManager`, configuration observers | Notifies dependent components when configuration values change. | **Observer** | Not Started |
 | 🟢 Low | Monitoring | Metrics Export | `PrometheusMetricsAdapter`, `OpenTelemetryAdapter` | Converts internal server metrics into external monitoring formats. | **Adapter** | Not Started |
-
-
 
 
 ## Sequence Diagrams (Database Manager & Metadata)
@@ -1660,14 +1625,9 @@ public class ComputerDirector
 classDiagram
 direction LR
 
-%% =====================================================
-%% Builder Pattern — Table Construction
-%% =====================================================
-
 class ITableBuilder {
     <<Builder>>
-    +Reset()
-    +SetName(name : string)
+    +Reset(name : string)
     +AddColumn(column : Column)
     +AddConstraint(constraint : Constraint)
     +AddIndex(index : Index)
@@ -1679,43 +1639,26 @@ class ITableBuilder {
 class TableBuilder {
     <<Concrete Builder>>
     -currentTable : Table
-    -hasName : bool
-
-    +Reset()
-    +SetName(name : string)
+    +Reset(name : string)
     +AddColumn(column : Column)
     +AddConstraint(constraint : Constraint)
     +AddIndex(index : Index)
     +AddPartition(partition : Partition)
     +AddTrigger(trigger : Trigger)
     +Build() Table
-
-    -EnsureInitialized()
     -ValidateBeforeBuild()
 }
 
 class TableDirector {
     <<Director>>
     -builder : ITableBuilder
+    -columnFactory : IColumnFactory
     -constraintFactory : IConstraintFactory
     -indexFactory : IIndexFactory
     -partitionFactory : IPartitionFactory
     -triggerFactory : ITriggerFactory
-
-    +TableDirector(
-        builder : ITableBuilder,
-        constraintFactory : IConstraintFactory,
-        indexFactory : IIndexFactory,
-        partitionFactory : IPartitionFactory,
-        triggerFactory : ITriggerFactory
-    )
-
     +Construct(definition : TableDefinition) Table
 }
-
-%% =====================================================
-%% Construction Data
-%% =====================================================
 
 class TableDefinition {
     <<Construction Data>>
@@ -1725,147 +1668,7 @@ class TableDefinition {
     +Indexes : IReadOnlyCollection~IndexOptions~
     +Partitions : IReadOnlyCollection~PartitionOptions~
     +Triggers : IReadOnlyCollection~TriggerOptions~
-
     +Validate() DefinitionValidationResult
-}
-
-class ColumnDefinition {
-    <<DTO>>
-    +Name : string
-    +DataType : DataType
-    +Nullable : bool
-    +DefaultValue : object
-}
-
-class ConstraintOptions {
-    <<DTO>>
-    +Type : ConstraintType
-    +Name : string
-    +Columns : IReadOnlyCollection~string~
-    +ReferenceTable : string
-    +ReferenceColumns : IReadOnlyCollection~string~
-    +Expression : string
-}
-
-class IndexOptions {
-    <<DTO>>
-    +Type : IndexType
-    +Name : string
-    +Columns : IReadOnlyCollection~string~
-    +Unique : bool
-}
-
-class PartitionOptions {
-    <<DTO>>
-    +Name : string
-    +Type : PartitionType
-    +PartitionKey : string
-    +BoundaryValues : IReadOnlyCollection~object~
-}
-
-class TriggerOptions {
-    <<DTO>>
-    +Name : string
-    +Event : TriggerEvent
-    +Timing : TriggerTiming
-    +Body : string
-}
-
-class DefinitionValidationResult {
-    <<Result>>
-    +IsValid : bool
-    +Errors : IReadOnlyCollection~string~
-}
-
-%% =====================================================
-%% Product
-%% =====================================================
-
-class Table {
-    <<Product>>
-    +TableId : int
-    +Name : string
-    +Columns : IReadOnlyCollection~Column~
-    +Constraints : IReadOnlyCollection~Constraint~
-    +Indexes : IReadOnlyCollection~Index~
-    +Partitions : IReadOnlyCollection~Partition~
-    +Triggers : IReadOnlyCollection~Trigger~
-
-    +AddColumn(column : Column)
-    +AddConstraint(constraint : Constraint)
-    +AddIndex(index : Index)
-    +AddPartition(partition : Partition)
-    +AddTrigger(trigger : Trigger)
-}
-
-class Column {
-    +ColumnId : int
-    +Name : string
-    +DataType : DataType
-    +Nullable : bool
-    +DefaultValue : object
-}
-
-class Constraint {
-    <<abstract>>
-    +Name : string
-}
-
-class Index {
-    <<abstract>>
-    +IndexId : int
-    +Name : string
-    +Unique : bool
-}
-
-class Partition {
-    +PartitionId : int
-    +Name : string
-    +PartitionType : PartitionType
-    +PartitionKey : string
-}
-
-class Trigger {
-    +TriggerId : int
-    +Name : string
-    +Event : TriggerEvent
-    +Timing : TriggerTiming
-    +Body : string
-}
-
-%% =====================================================
-%% Factories Used by Director
-%% =====================================================
-
-class IColumnFactory {
-    <<Factory>>
-    +Create(definition : ColumnDefinition) Column
-}
-
-class IConstraintFactory {
-    <<Factory>>
-    +Create(
-        options : ConstraintOptions,
-        tableContext : TableBuildContext
-    ) Constraint
-}
-
-class IIndexFactory {
-    <<Factory>>
-    +Create(
-        options : IndexOptions,
-        tableContext : TableBuildContext
-    ) Index
-}
-
-class IPartitionFactory {
-    <<Factory>>
-    +Create(options : PartitionOptions) Partition
-}
-
-class ITriggerFactory {
-    <<Factory>>
-    +Create(options : TriggerOptions) Trigger
 }
 
 class TableBuildContext {
@@ -1875,95 +1678,66 @@ class TableBuildContext {
     +FindColumn(name : string) Column
 }
 
-%% =====================================================
-%% Supporting Types
-%% =====================================================
-
-class DataType {
-    <<enumeration>>
-    INT
-    BIGINT
-    VARCHAR
-    BOOLEAN
-    FLOAT
-    DECIMAL
-    DATETIME
+class Table {
+    <<Product>>
 }
 
-class ConstraintType {
-    <<enumeration>>
-    PRIMARY_KEY
-    UNIQUE
-    FOREIGN_KEY
-    CHECK
+class Column
+class Constraint
+class Index
+class Partition
+class Trigger
+
+class IColumnFactory {
+    <<Collaborator>>
+    +Create(definition : ColumnDefinition) Column
 }
 
-class IndexType {
-    <<enumeration>>
-    BTREE
-    HASH
-    BITMAP
+class IConstraintFactory {
+    <<Collaborator>>
+    +Create(options : ConstraintOptions, context : TableBuildContext) Constraint
 }
 
-class PartitionType {
-    <<enumeration>>
-    RANGE
-    LIST
-    HASH
+class IIndexFactory {
+    <<Collaborator>>
+    +Create(options : IndexOptions, context : TableBuildContext) Index
 }
 
-class TriggerEvent {
-    <<enumeration>>
-    INSERT
-    UPDATE
-    DELETE
+class IPartitionFactory {
+    <<Collaborator>>
+    +Create(options : PartitionOptions) Partition
 }
 
-class TriggerTiming {
-    <<enumeration>>
-    BEFORE
-    AFTER
-    INSTEAD_OF
+class ITriggerFactory {
+    <<Collaborator>>
+    +Create(options : TriggerOptions) Trigger
 }
 
-%% =====================================================
-%% Relationships
-%% =====================================================
+class ColumnDefinition
+class ConstraintOptions
+class IndexOptions
+class PartitionOptions
+class TriggerOptions
+class DefinitionValidationResult
 
 ITableBuilder <|.. TableBuilder
-
-TableDirector --> ITableBuilder : directs
-TableDirector --> IColumnFactory : creates columns
-TableDirector --> IConstraintFactory : creates constraints
-TableDirector --> IIndexFactory : creates indexes
-TableDirector --> IPartitionFactory : creates partitions
-TableDirector --> ITriggerFactory : creates triggers
-TableDirector --> TableDefinition : reads
-TableDirector --> TableBuildContext : maintains context
-
 TableBuilder --> Table : builds
 
-TableDefinition --> ColumnDefinition
-TableDefinition --> ConstraintOptions
-TableDefinition --> IndexOptions
-TableDefinition --> PartitionOptions
-TableDefinition --> TriggerOptions
-TableDefinition --> DefinitionValidationResult
+TableDirector --> ITableBuilder : directs
+TableDirector --> TableDefinition : reads
+TableDirector ..> TableBuildContext : creates
 
-ColumnDefinition --> DataType
-ConstraintOptions --> ConstraintType
-IndexOptions --> IndexType
-PartitionOptions --> PartitionType
-TriggerOptions --> TriggerEvent
-TriggerOptions --> TriggerTiming
+TableDirector --> IColumnFactory
+TableDirector --> IConstraintFactory
+TableDirector --> IIndexFactory
+TableDirector --> IPartitionFactory
+TableDirector --> ITriggerFactory
 
-IColumnFactory --> Column : creates
-IConstraintFactory --> Constraint : creates
-IIndexFactory --> Index : creates
-IPartitionFactory --> Partition : creates
-ITriggerFactory --> Trigger : creates
-
-TableBuildContext --> Column
+TableDefinition *-- ColumnDefinition
+TableDefinition *-- ConstraintOptions
+TableDefinition *-- IndexOptions
+TableDefinition *-- PartitionOptions
+TableDefinition *-- TriggerOptions
 
 Table "1" *-- "*" Column
 Table "1" *-- "*" Constraint
@@ -1976,32 +1750,23 @@ Table "1" *-- "*" Trigger
 sequenceDiagram
     autonumber
 
-    actor Client
-    participant Service as ISchemaService
+    participant Caller
     participant Definition as TableDefinition
     participant Director as TableDirector
     participant Builder as ITableBuilder
     participant ColFactory as IColumnFactory
-    participant CFactory as IConstraintFactory
-    participant IFactory as IIndexFactory
-    participant PFactory as IPartitionFactory
-    participant TFactory as ITriggerFactory
-    participant Schema
-    participant Table
+    participant Factory as Table Part Factories
 
-    Client->>Service: CreateTable(schema, definition)
-
-    Service->>Definition: Validate()
-    Definition-->>Service: DefinitionValidationResult
+    Caller->>Definition: Validate()
+    Definition-->>Caller: validationResult
 
     alt Definition is invalid
-        Service-->>Client: throw InvalidTableDefinitionException
+        Caller-->>Caller: throw InvalidTableDefinitionException
     else Definition is valid
-        Service->>Director: Construct(definition)
+        Caller->>Director: Construct(definition)
         activate Director
 
-        Director->>Builder: Reset()
-        Director->>Builder: SetName(definition.Name)
+        Director->>Builder: Reset(definition.Name)
 
         loop Each ColumnDefinition
             Director->>ColFactory: Create(columnDefinition)
@@ -2009,57 +1774,32 @@ sequenceDiagram
             Director->>Builder: AddColumn(column)
         end
 
-        Note over Director: Column objects must be created first<br/>because constraints and indexes reference columns.
-
         Director->>Director: Create TableBuildContext(columns)
 
         loop Each ConstraintOptions
-            Director->>CFactory: Create(options, buildContext)
-            CFactory-->>Director: Constraint
+            Director->>Factory: CreateConstraint(options, context)
+            Factory-->>Director: Constraint
             Director->>Builder: AddConstraint(constraint)
         end
 
         loop Each IndexOptions
-            Director->>IFactory: Create(options, buildContext)
-            IFactory-->>Director: Index
+            Director->>Factory: CreateIndex(options, context)
+            Factory-->>Director: Index
             Director->>Builder: AddIndex(index)
         end
 
-        loop Each PartitionOptions
-            Director->>PFactory: Create(options)
-            PFactory-->>Director: Partition
-            Director->>Builder: AddPartition(partition)
-        end
-
-        loop Each TriggerOptions
-            Director->>TFactory: Create(options)
-            TFactory-->>Director: Trigger
-            Director->>Builder: AddTrigger(trigger)
+        loop Each remaining table part
+            Director->>Factory: Create(options)
+            Factory-->>Director: Partition or Trigger
+            Director->>Builder: Add(part)
         end
 
         Director->>Builder: Build()
         Builder->>Builder: ValidateBeforeBuild()
+        Builder-->>Director: Table
 
-        alt Builder state is invalid
-            Builder-->>Director: throw TableBuildException
-            Director-->>Service: propagate exception
-            Service-->>Client: table creation failed
-        else Builder state is valid
-            Builder-->>Director: Table
-            Director-->>Service: Table
-        end
-
+        Director-->>Caller: Table
         deactivate Director
-
-        Service->>Schema: AddTable(table)
-
-        alt Duplicate table name
-            Schema-->>Service: throw DuplicateTableException
-            Service-->>Client: table creation failed
-        else Table added
-            Schema-->>Service: Success
-            Service-->>Client: Table
-        end
     end
 ```
 
@@ -3767,662 +3507,7 @@ sequenceDiagram
     end
 ```
 
-
-
-### 8. Persist and Query Metadata (Repository Pattern)
-
-**Purpose:**
-Encapsulate data access logic behind a repository interface.
-
-**Example:**
-A user management system retrieves and stores users without exposing where the data comes from (database, file, or memory).
-
-#### Class Diagram
-
-```mermaid
-classDiagram
-direction LR
-
-class IUserRepository {
-    <<Repository>>
-    +GetById(id : int) User
-    +GetAll() List~User~
-    +Add(user : User)
-    +Remove(id : int)
-}
-
-class UserRepository {
-    <<Concrete Repository>>
-}
-
-class User {
-    +Id : int
-    +Name : string
-}
-
-class UserService {
-    <<Client>>
-    +Register(user : User)
-    +FindUser(id : int)
-}
-
-IUserRepository <|.. UserRepository
-
-UserRepository --> User : stores
-UserService --> IUserRepository : uses
-```
-
-#### Sequence Diagram
-
-```mermaid
-sequenceDiagram
-    actor Client
-    participant Service as UserService
-    participant Repository as IUserRepository
-
-    Client->>Service: FindUser(1)
-    Service->>Repository: GetById(1)
-    Repository-->>Service: User
-    Service-->>Client: User
-```
-
-#### Simplified Code
-
-```csharp
-public class User
-{
-    public int Id { get; init; }
-    public string Name { get; init; } = string.Empty;
-}
-
-public interface IUserRepository
-{
-    // Find a user by id
-    User? GetById(int id);
-
-    // Return all users
-    IReadOnlyCollection<User> GetAll();
-
-    // Store a new user
-    void Add(User user);
-
-    // Remove an existing user
-    void Remove(int id);
-}
-
-public class UserRepository : IUserRepository
-{
-    public User? GetById(int id)
-    {
-        // Retrieve a user from the data source
-        return default;
-    }
-
-    public IReadOnlyCollection<User> GetAll()
-    {
-        // Retrieve all users
-        return [];
-    }
-
-    public void Add(User user)
-    {
-        // Save the user
-    }
-
-    public void Remove(int id)
-    {
-        // Delete the user
-    }
-}
-
-public class UserService
-{
-    private readonly IUserRepository _repository;
-
-    public UserService(IUserRepository repository)
-    {
-        _repository = repository;
-    }
-
-    // Delegate data access to the repository
-    public User? FindUser(int id)
-    {
-        return _repository.GetById(id);
-    }
-
-    // Delegate persistence to the repository
-    public void Register(User user)
-    {
-        _repository.Add(user);
-    }
-}
-```
-
-**Benefits**
-
-* Separates business logic from data access logic.
-* Makes the data source easy to replace.
-* Improves testability through repository interfaces.
-* Centralizes CRUD operations in one place.
-
-**Application:** `CatalogManager` and catalog repositories manage the persistence and retrieval of database metadata.
-
-**Why apply?** The Repository Pattern acts as an in-memory collection interface for accessing domain objects (metadata like schemas, tables, columns, indexes). It abstracts away the underlying storage details (such as reading or writing to system tables or files) and provides a clean, domain-centric interface. This shields the `CatalogManager` and Facade services from the complexities of data access, allowing them to focus purely on metadata coordination and DDL logic.
-
-```mermaid
-classDiagram
-direction LR
-
-%% =====================================================
-%% Catalog Application Contract
-%% =====================================================
-
-class ICatalogManager {
-    <<Catalog Service Interface>>
-
-    +Register(component : ICatalogComponent)
-    +Update(component : ICatalogComponent)
-    +Remove(component : ICatalogComponent)
-
-    +GetDatabase(name : string) Database
-
-    +GetSchema(
-        databaseId : int,
-        name : string
-    ) Schema
-
-    +GetTable(
-        schemaId : int,
-        name : string
-    ) Table
-
-    +ObjectExists(
-        parent : ICatalogComposite,
-        name : string,
-        objectType : CatalogObjectType
-    ) bool
-}
-
-class CatalogManager {
-    <<Catalog Service>>
-
-    -databaseRepository : IDatabaseCatalogRepository
-    -schemaRepository : ISchemaCatalogRepository
-    -tableRepository : ITableCatalogRepository
-
-    +Register(component : ICatalogComponent)
-    +Update(component : ICatalogComponent)
-    +Remove(component : ICatalogComponent)
-
-    +GetDatabase(name : string) Database
-
-    +GetSchema(
-        databaseId : int,
-        name : string
-    ) Schema
-
-    +GetTable(
-        schemaId : int,
-        name : string
-    ) Table
-
-    +ObjectExists(
-        parent : ICatalogComposite,
-        name : string,
-        objectType : CatalogObjectType
-    ) bool
-}
-
-%% =====================================================
-%% Repository Contracts
-%% =====================================================
-
-class IDatabaseCatalogRepository {
-    <<Repository>>
-
-    +Add(database : Database)
-    +Update(database : Database)
-    +Remove(databaseId : int)
-
-    +FindById(databaseId : int) Database
-    +FindByName(name : string) Database
-
-    +GetAll() IReadOnlyCollection~Database~
-    +Exists(name : string) bool
-}
-
-class ISchemaCatalogRepository {
-    <<Repository>>
-
-    +Add(schema : Schema)
-    +Update(schema : Schema)
-    +Remove(schemaId : int)
-
-    +FindById(schemaId : int) Schema
-
-    +FindByName(
-        databaseId : int,
-        name : string
-    ) Schema
-
-    +GetByDatabase(
-        databaseId : int
-    ) IReadOnlyCollection~Schema~
-
-    +Exists(
-        databaseId : int,
-        name : string
-    ) bool
-}
-
-class ITableCatalogRepository {
-    <<Repository>>
-
-    +Add(table : Table)
-    +Update(table : Table)
-    +Remove(tableId : int)
-
-    +FindById(tableId : int) Table
-
-    +FindByName(
-        schemaId : int,
-        name : string
-    ) Table
-
-    +GetBySchema(
-        schemaId : int
-    ) IReadOnlyCollection~Table~
-
-    +Exists(
-        schemaId : int,
-        name : string
-    ) bool
-}
-
-%% =====================================================
-%% Concrete Repositories
-%% =====================================================
-
-class DatabaseCatalogRepository {
-    <<Concrete Repository>>
-
-    -store : ICatalogDataStore
-
-    +Add(database : Database)
-    +Update(database : Database)
-    +Remove(databaseId : int)
-
-    +FindById(databaseId : int) Database
-    +FindByName(name : string) Database
-
-    +GetAll() IReadOnlyCollection~Database~
-    +Exists(name : string) bool
-}
-
-class SchemaCatalogRepository {
-    <<Concrete Repository>>
-
-    -store : ICatalogDataStore
-
-    +Add(schema : Schema)
-    +Update(schema : Schema)
-    +Remove(schemaId : int)
-
-    +FindById(schemaId : int) Schema
-
-    +FindByName(
-        databaseId : int,
-        name : string
-    ) Schema
-
-    +GetByDatabase(
-        databaseId : int
-    ) IReadOnlyCollection~Schema~
-
-    +Exists(
-        databaseId : int,
-        name : string
-    ) bool
-}
-
-class TableCatalogRepository {
-    <<Concrete Repository>>
-
-    -store : ICatalogDataStore
-
-    +Add(table : Table)
-    +Update(table : Table)
-    +Remove(tableId : int)
-
-    +FindById(tableId : int) Table
-
-    +FindByName(
-        schemaId : int,
-        name : string
-    ) Table
-
-    +GetBySchema(
-        schemaId : int
-    ) IReadOnlyCollection~Table~
-
-    +Exists(
-        schemaId : int,
-        name : string
-    ) bool
-}
-
-%% =====================================================
-%% Catalog Persistence Port
-%% =====================================================
-
-class ICatalogDataStore {
-    <<Persistence Port>>
-
-    +Insert(
-        catalogName : string,
-        record : CatalogRecord
-    )
-
-    +Update(
-        catalogName : string,
-        id : int,
-        record : CatalogRecord
-    )
-
-    +Delete(
-        catalogName : string,
-        id : int
-    )
-
-    +FindById(
-        catalogName : string,
-        id : int
-    ) CatalogRecord
-
-    +FindOne(
-        catalogName : string,
-        criteria : CatalogCriteria
-    ) CatalogRecord
-
-    +FindMany(
-        catalogName : string,
-        criteria : CatalogCriteria
-    ) IReadOnlyCollection~CatalogRecord~
-
-    +Exists(
-        catalogName : string,
-        criteria : CatalogCriteria
-    ) bool
-}
-
-class CatalogRecord {
-    <<Persistence Model>>
-
-    +Id : int
-    +Values : IReadOnlyDictionary~string, object~
-}
-
-class CatalogCriteria {
-    <<Query Object>>
-
-    +Conditions : IReadOnlyDictionary~string, object~
-}
-
-%% =====================================================
-%% Existing Facades
-%% =====================================================
-
-class DatabaseService {
-    <<Facade>>
-
-    -catalog : ICatalogManager
-
-    +CreateSchema(
-        database : Database,
-        name : string
-    ) Schema
-
-    +DropSchema(
-        database : Database,
-        name : string,
-        cascade : bool
-    )
-
-    +RenameSchema(
-        database : Database,
-        oldName : string,
-        newName : string
-    )
-}
-
-class SchemaService {
-    <<Facade>>
-
-    -catalog : ICatalogManager
-
-    +CreateTable(
-        schema : Schema,
-        definition : TableDefinition
-    ) Table
-
-    +DropTable(
-        schema : Schema,
-        name : string,
-        cascade : bool
-    )
-
-    +RenameTable(
-        schema : Schema,
-        oldName : string,
-        newName : string
-    )
-}
-
-%% =====================================================
-%% Catalog Domain Contracts
-%% =====================================================
-
-class ICatalogComponent {
-    <<Component>>
-
-    +CatalogId : int
-    +Name : string
-    +ObjectType : CatalogObjectType
-}
-
-class ICatalogComposite {
-    <<Composite>>
-
-    +Children : IReadOnlyCollection~ICatalogComponent~
-}
-
-ICatalogComponent <|-- ICatalogComposite
-
-class CatalogObjectType {
-    <<enumeration>>
-
-    DATABASE
-    SCHEMA
-    TABLE
-    COLUMN
-    CONSTRAINT
-    INDEX
-    PARTITION
-    TRIGGER
-    VIEW
-    STORED_PROCEDURE
-    SEQUENCE
-}
-
-%% =====================================================
-%% Database Objects
-%% =====================================================
-
-class Database {
-    <<Aggregate Root>>
-
-    +DatabaseId : int
-    +Name : string
-    +Owner : string
-    +Schemas : IReadOnlyCollection~Schema~
-}
-
-class Schema {
-    <<Aggregate>>
-
-    +SchemaId : int
-    +Name : string
-    +Parent : Database
-    +Tables : IReadOnlyCollection~Table~
-}
-
-class Table {
-    <<Aggregate Root>>
-
-    +TableId : int
-    +Name : string
-    +Parent : Schema
-    +Columns : IReadOnlyCollection~Column~
-    +Constraints : IReadOnlyCollection~Constraint~
-    +Indexes : IReadOnlyCollection~Index~
-    +Partitions : IReadOnlyCollection~Partition~
-    +Triggers : IReadOnlyCollection~Trigger~
-}
-
-class Column {
-    +ColumnId : int
-    +Name : string
-}
-
-class Constraint {
-    <<abstract>>
-
-    +ConstraintId : int
-    +Name : string
-}
-
-class Index {
-    <<abstract>>
-
-    +IndexId : int
-    +Name : string
-}
-
-class Partition {
-    +PartitionId : int
-    +Name : string
-}
-
-class Trigger {
-    +TriggerId : int
-    +Name : string
-}
-
-class TableDefinition
-
-%% =====================================================
-%% Catalog Service Relationships
-%% =====================================================
-
-ICatalogManager <|.. CatalogManager
-
-CatalogManager --> IDatabaseCatalogRepository : routes database metadata
-CatalogManager --> ISchemaCatalogRepository : routes schema metadata
-CatalogManager --> ITableCatalogRepository : routes table metadata
-
-CatalogManager --> ICatalogComponent : registers
-CatalogManager --> ICatalogComposite : searches parent
-CatalogManager --> CatalogObjectType : resolves type
-
-%% =====================================================
-%% Repository Relationships
-%% =====================================================
-
-IDatabaseCatalogRepository <|.. DatabaseCatalogRepository
-ISchemaCatalogRepository <|.. SchemaCatalogRepository
-ITableCatalogRepository <|.. TableCatalogRepository
-
-DatabaseCatalogRepository --> ICatalogDataStore : persists metadata
-SchemaCatalogRepository --> ICatalogDataStore : persists metadata
-TableCatalogRepository --> ICatalogDataStore : persists aggregate metadata
-
-DatabaseCatalogRepository --> Database : maps
-SchemaCatalogRepository --> Schema : maps
-TableCatalogRepository --> Table : maps
-
-ICatalogDataStore --> CatalogRecord : reads/writes
-ICatalogDataStore --> CatalogCriteria : queries
-
-%% =====================================================
-%% Facade Relationships
-%% =====================================================
-
-DatabaseService --> ICatalogManager : persists and queries schemas
-SchemaService --> ICatalogManager : persists and queries tables
-
-%% =====================================================
-%% Composite Relationships
-%% =====================================================
-
-ICatalogComposite <|.. Database
-ICatalogComposite <|.. Schema
-ICatalogComposite <|.. Table
-
-ICatalogComponent <|.. Column
-ICatalogComponent <|.. Constraint
-ICatalogComponent <|.. Index
-ICatalogComponent <|.. Partition
-ICatalogComponent <|.. Trigger
-
-Database "1" *-- "*" Schema : contains
-Schema "1" *-- "*" Table : contains
-
-Table "1" *-- "*" Column : contains
-Table "1" *-- "*" Constraint : contains
-Table "1" *-- "*" Index : contains
-Table "1" *-- "*" Partition : contains
-Table "1" *-- "*" Trigger : contains
-```
-
-```mermaid
-sequenceDiagram
-    autonumber
-
-    participant Service as SchemaService
-    participant Catalog as ICatalogManager
-    participant Manager as CatalogManager
-    participant TableRepo as ITableCatalogRepository
-    participant Store as ICatalogDataStore
-
-    Service->>Catalog: GetTable(schemaId, tableName)
-    Catalog->>Manager: GetTable(schemaId, tableName)
-
-    Manager->>TableRepo: FindByName(schemaId, tableName)
-
-    TableRepo->>Store: FindOne("sys_tables", criteria)
-    Store-->>TableRepo: tableRecord
-
-    alt Table not found
-        TableRepo-->>Manager: null
-        Manager-->>Service: null
-
-    else Table found
-        TableRepo->>Store: FindMany("sys_columns", tableId)
-        Store-->>TableRepo: columnRecords
-
-        TableRepo->>Store: FindMany("sys_constraints", tableId)
-        Store-->>TableRepo: constraintRecords
-
-        TableRepo->>Store: FindMany("sys_indexes", tableId)
-        Store-->>TableRepo: indexRecords
-
-        TableRepo->>TableRepo: Map records to Table aggregate
-        TableRepo-->>Manager: Table
-        Manager-->>Service: Table
-    end
-```
-
-### 9. Metadata Events (Observer Pattern)
+### 8. Metadata Events (Observer Pattern)
 
 **Purpose:**
 Define a one-to-many dependency so that when an object's state changes, all registered observers are notified automatically.
@@ -4808,6 +3893,356 @@ sequenceDiagram
         Dispatcher->>Collector: Clear()
         Service-->>Client: DDL failure
     end
+```
+
+### 9. Standardized DDL Execution Lifecycle (Template Pattern)
+
+**Purpose:**
+Define the skeleton of an algorithm in a base class while allowing subclasses to customize specific steps without changing the overall process.
+
+**Example:**
+A document generator follows the same process for creating reports, but PDF and HTML reports implement formatting differently.
+
+#### Class Diagram
+
+```mermaid
+classDiagram
+direction LR
+
+class ReportGenerator {
+    <<Abstract Class>>
+    +GenerateReport()
+    #LoadData()
+    #FormatData()*
+    #ExportReport()*
+}
+
+class PdfReportGenerator {
+    <<Concrete Class>>
+    #FormatData()
+    #ExportReport()
+}
+
+class HtmlReportGenerator {
+    <<Concrete Class>>
+    #FormatData()
+    #ExportReport()
+}
+
+ReportGenerator <|-- PdfReportGenerator
+ReportGenerator <|-- HtmlReportGenerator
+```
+
+#### Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant Generator as PdfReportGenerator
+
+    Client->>Generator: GenerateReport()
+    Generator->>Generator: LoadData()
+    Generator->>Generator: FormatData()
+    Generator->>Generator: ExportReport()
+    Generator-->>Client: Report completed
+```
+
+#### Simplified Code
+
+```csharp
+public abstract class ReportGenerator
+{
+    // Template Method: define the fixed algorithm sequence
+    public void GenerateReport()
+    {
+        LoadData();
+        FormatData();
+        ExportReport();
+    }
+
+    // Common step shared by all report types
+    protected void LoadData()
+    {
+        // Load report data from the data source
+    }
+
+    // Allow subclasses to define how data is formatted
+    protected abstract void FormatData();
+
+    // Allow subclasses to define how the report is exported
+    protected abstract void ExportReport();
+}
+
+public class PdfReportGenerator : ReportGenerator
+{
+    protected override void FormatData()
+    {
+        // Format data for a PDF document
+    }
+
+    protected override void ExportReport()
+    {
+        // Export the report as a PDF file
+    }
+}
+
+public class HtmlReportGenerator : ReportGenerator
+{
+    protected override void FormatData()
+    {
+        // Format data as HTML content
+    }
+
+    protected override void ExportReport()
+    {
+        // Export the report as an HTML file
+    }
+}
+```
+
+**Benefits**
+
+* Reuses common algorithm steps in the base class.
+* Keeps the overall workflow consistent.
+* Allows subclasses to customize specific steps.
+* Reduces duplicated code between similar processes.
+* Applies the Hollywood Principle: the base class controls when subclass methods are called.
+
+**Application:** `DDLCommandTemplate` and concrete classes like `CreateTableCommand`, `AlterTableCommand`, and `DropTableCommand`.
+
+**Why apply?** The Template Method Pattern provides a fixed execution workflow for DDL operations. The base template class defines the overarching skeleton—such as validating permissions, starting a transaction, applying the specific metadata change, persisting the catalog, and publishing events. Concrete command subclasses implement only the specific metadata logic (e.g., how to create or alter a table), ensuring that the complex, overarching lifecycle is consistently enforced without duplicating code across every DDL command.
+
+```mermaid
+classDiagram
+direction TB
+
+class DDLCommandTemplate {
+    <<abstract Template>>
+    +Execute() DDLResult
+    #Validate() void
+    #CheckPermission() void
+    #CheckPreconditions() void
+    #ApplyChange() void
+    #PersistMetadata() void
+    #PublishEvent() void
+}
+
+class CreateTableCommand {
+    #Validate() void
+    #CheckPreconditions() void
+    #ApplyChange() void
+}
+
+class AlterTableCommand {
+    #Validate() void
+    #CheckPreconditions() void
+    #ApplyChange() void
+}
+
+class DropTableCommand {
+    #Validate() void
+    #CheckPreconditions() void
+    #ApplyChange() void
+}
+
+class DDLResult {
+    <<enumeration>>
+    Success
+    Failure
+}
+
+DDLCommandTemplate <|-- CreateTableCommand
+DDLCommandTemplate <|-- AlterTableCommand
+DDLCommandTemplate <|-- DropTableCommand
+DDLCommandTemplate ..> DDLResult
+```
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    actor Client
+    participant Command as CreateTableCommand
+    participant Director as TableDirector
+    participant Schema as Schema
+    participant Catalog as CatalogManager
+    participant Publisher as MetadataEventPublisher
+
+    Client->>Command: Execute()
+
+    Note over Command: Template Method starts
+
+    Command->>Command: Validate()
+
+    alt Invalid TableDefinition
+        Command-->>Client: DDLResult.FAILURE
+    else Valid definition
+        Command->>Command: CheckPreconditions()
+        Command->>Catalog: ContainsTable(schemaName, tableName)
+        Catalog-->>Command: exists
+
+        alt Table already exists
+            Command-->>Client: DDLResult.FAILURE
+        else Table does not exist
+            Command->>Command: ApplyChange()
+
+            Command->>Director: Construct(definition)
+            Director-->>Command: table
+
+            Command->>Schema: AddTable(table)
+            Schema-->>Command: added
+
+            Command->>Command: PersistMetadata()
+            Command->>Catalog: SaveTable(table)
+            Catalog-->>Command: saved
+
+            Command->>Command: PublishEvent()
+            Command->>Publisher: Publish(TableCreatedEvent)
+            Publisher-->>Command: published
+
+            Command-->>Client: DDLResult.SUCCESS
+        end
+    end
+```
+
+### 10. Metadata Utility (Visitor Pattern)
+
+```mermaid
+classDiagram
+direction LR
+
+class IMetadataElement {
+    <<Element>>
+    +Accept(visitor : IMetadataVisitor) void
+}
+
+class IMetadataVisitor {
+    <<Visitor>>
+    +VisitDatabase(database : Database) void
+    +VisitSchema(schema : Schema) void
+    +VisitTable(table : Table) void
+    +VisitColumn(column : Column) void
+    +VisitConstraint(constraint : Constraint) void
+    +VisitIndex(index : Index) void
+}
+
+class Database {
+    <<Concrete Element>>
+    +Accept(visitor : IMetadataVisitor) void
+}
+
+class Schema {
+    <<Concrete Element>>
+    +Accept(visitor : IMetadataVisitor) void
+}
+
+class Table {
+    <<Concrete Element>>
+    +Accept(visitor : IMetadataVisitor) void
+}
+
+class Column {
+    <<Concrete Element>>
+    +Accept(visitor : IMetadataVisitor) void
+}
+
+class Constraint {
+    <<Concrete Element>>
+    +Accept(visitor : IMetadataVisitor) void
+}
+
+class Index {
+    <<Concrete Element>>
+    +Accept(visitor : IMetadataVisitor) void
+}
+
+class DDLExportVisitor {
+    <<Concrete Visitor>>
+    -ddl : StringBuilder
+    +VisitDatabase(database : Database) void
+    +VisitSchema(schema : Schema) void
+    +VisitTable(table : Table) void
+    +VisitColumn(column : Column) void
+    +VisitConstraint(constraint : Constraint) void
+    +VisitIndex(index : Index) void
+    +GetResult() string
+}
+
+class DependencyScanVisitor {
+    <<Concrete Visitor>>
+    -dependencies : List~MetadataDependency~
+    +VisitDatabase(database : Database) void
+    +VisitSchema(schema : Schema) void
+    +VisitTable(table : Table) void
+    +VisitColumn(column : Column) void
+    +VisitConstraint(constraint : Constraint) void
+    +VisitIndex(index : Index) void
+    +GetDependencies() IReadOnlyCollection~MetadataDependency~
+}
+
+class MetadataDependency {
+    +SourceName : string
+    +TargetName : string
+    +DependencyType : string
+}
+
+IMetadataElement <|.. Database
+IMetadataElement <|.. Schema
+IMetadataElement <|.. Table
+IMetadataElement <|.. Column
+IMetadataElement <|.. Constraint
+IMetadataElement <|.. Index
+
+IMetadataVisitor <|.. DDLExportVisitor
+IMetadataVisitor <|.. DependencyScanVisitor
+
+Database ..> IMetadataVisitor : accepts
+Schema ..> IMetadataVisitor : accepts
+Table ..> IMetadataVisitor : accepts
+Column ..> IMetadataVisitor : accepts
+Constraint ..> IMetadataVisitor : accepts
+Index ..> IMetadataVisitor : accepts
+
+DependencyScanVisitor --> MetadataDependency : creates
+```
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    actor Client
+    participant Table as Table
+    participant Visitor as DDLExportVisitor
+    participant Column as Column
+    participant Constraint as Constraint
+    participant Index as Index
+
+    Client->>Visitor: new DDLExportVisitor()
+    Client->>Table: Accept(visitor)
+
+    Table->>Visitor: VisitTable(this)
+    Visitor->>Visitor: Append CREATE TABLE
+
+    loop Each Column
+        Table->>Column: Accept(visitor)
+        Column->>Visitor: VisitColumn(this)
+        Visitor->>Visitor: Append column definition
+    end
+
+    loop Each Constraint
+        Table->>Constraint: Accept(visitor)
+        Constraint->>Visitor: VisitConstraint(this)
+        Visitor->>Visitor: Append constraint definition
+    end
+
+    loop Each Index
+        Table->>Index: Accept(visitor)
+        Index->>Visitor: VisitIndex(this)
+        Visitor->>Visitor: Append index definition
+    end
+
+    Client->>Visitor: GetResult()
+    Visitor-->>Client: CREATE TABLE DDL
 ```
 
 ### 10. System Initialization (Facade Pattern)
