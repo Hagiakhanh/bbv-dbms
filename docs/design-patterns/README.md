@@ -54,8 +54,9 @@ class IMetadataTransactionPort {
 %% =====================================================
 
 class ICatalogComponent {
-    <<Component>>
+    <<Component / Visitable Element>>
     +Name : string
+    +Accept(visitor : IMetadataVisitor)
 }
 
 class ICatalogComposite {
@@ -828,7 +829,77 @@ CatalogTraversalService --> Schema
 CatalogTraversalService --> Table
 
 %% =====================================================
-%% 13. SUPPORTING TYPES
+%% 13. VISITOR — METADATA UTILITY
+%% Adds metadata operations without modifying catalog objects.
+%% =====================================================
+
+class IMetadataVisitor {
+    <<Visitor>>
+    +VisitDatabase(database : Database)
+    +VisitSchema(schema : Schema)
+    +VisitTable(table : Table)
+    +VisitColumn(column : Column)
+    +VisitConstraint(constraint : Constraint)
+    +VisitIndex(index : Index)
+    +VisitPartition(partition : Partition)
+    +VisitTrigger(trigger : Trigger)
+    +VisitView(view : View)
+    +VisitStoredProcedure(procedure : StoredProcedure)
+    +VisitSequence(sequence : Sequence)
+}
+
+class DdlExportVisitor {
+    <<Concrete Visitor>>
+    -ddl : StringBuilder
+    +VisitDatabase(database : Database)
+    +VisitSchema(schema : Schema)
+    +VisitTable(table : Table)
+    +VisitColumn(column : Column)
+    +VisitConstraint(constraint : Constraint)
+    +VisitIndex(index : Index)
+    +VisitPartition(partition : Partition)
+    +VisitTrigger(trigger : Trigger)
+    +VisitView(view : View)
+    +VisitStoredProcedure(procedure : StoredProcedure)
+    +VisitSequence(sequence : Sequence)
+    +GetResult() string
+}
+
+class DependencyScanVisitor {
+    <<Concrete Visitor>>
+    -dependencies : List~MetadataDependency~
+    +VisitDatabase(database : Database)
+    +VisitSchema(schema : Schema)
+    +VisitTable(table : Table)
+    +VisitColumn(column : Column)
+    +VisitConstraint(constraint : Constraint)
+    +VisitIndex(index : Index)
+    +VisitPartition(partition : Partition)
+    +VisitTrigger(trigger : Trigger)
+    +VisitView(view : View)
+    +VisitStoredProcedure(procedure : StoredProcedure)
+    +VisitSequence(sequence : Sequence)
+    +GetDependencies() IReadOnlyCollection~MetadataDependency~
+}
+
+class MetadataDependency {
+    <<Visitor Result>>
+    +SourceName : string
+    +TargetName : string
+    +DependencyType : MetadataDependencyType
+}
+
+IMetadataVisitor <|.. DdlExportVisitor
+IMetadataVisitor <|.. DependencyScanVisitor
+
+ICatalogComponent ..> IMetadataVisitor : accepts
+DdlExportVisitor --> ICatalogComponent : visits
+DependencyScanVisitor --> ICatalogComponent : scans
+DependencyScanVisitor --> MetadataDependency : creates
+MetadataDependency --> MetadataDependencyType
+
+%% =====================================================
+%% 14. SUPPORTING TYPES
 %% =====================================================
 
 class TableAlterOperation {
@@ -926,6 +997,15 @@ class MetadataEventType {
     UPDATED
     RENAMED
     REMOVED
+}
+
+class MetadataDependencyType {
+    <<enumeration>>
+    CONTAINS
+    REFERENCES
+    DEPENDS_ON
+    INDEXES
+    TRIGGERS
 }
 
 TableAlterOperation --> TableAlterType
