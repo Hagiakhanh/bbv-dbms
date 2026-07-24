@@ -1,31 +1,32 @@
 # Progress Summary
 
-| Class/Section | Total | Completed | Missing | Progress |
-| ------------- | ----- | --------- | ------- | -------- |
-| DatabaseServer | 3 | 3 | 0 | 100% |
-| DatabaseManager | 7 | 7 | 0 | 100% |
-| Database Operations | 6 | 6 | 0 | 100% |
-| Schema & Table Operations | 10 | 10 | 0 | 100% |
-| Primary Key Constraints | 3 | 3 | 0 | 100% |
-| Unique Constraints | 3 | 3 | 0 | 100% |
-| Foreign Key Constraints | 5 | 5 | 0 | 100% |
-| Check Constraints | 4 | 4 | 0 | 100% |
-| Index & IndexManager | 8 | 0 | 8 | 0% |
-| Schema & Table Services | 9 | 3 | 6 | 33% |
-| RecordManager | 7 | 0 | 7 | 0% |
-| BufferPool Operations | 9 | 0 | 9 | 0% |
-| Page & FileManager | 7 | 0 | 7 | 0% |
-| Logging & Recovery | 8 | 0 | 8 | 0% |
-| Transaction Lifecycle & TransactionManager | 10 | 0 | 10 | 0% |
-| LockManager & MVCC | 9 | 0 | 9 | 0% |
-| SQL Parsing & Semantic Analysis | 7 | 0 | 7 | 0% |
-| Query Optimization | 6 | 0 | 6 | 0% |
-| Query Execution | 11 | 0 | 11 | 0% |
-| Catalog Registration (Database, Schema, Table) | 7 | 0 | 7 | 0% |
-| Metadata Lookup & Dependency Management | 4 | 1 | 3 | 25% |
-| Authentication | 3 | 0 | 3 | 0% |
-| Permission & Authorization | 8 | 0 | 8 | 0% |
-| **TOTAL** | **154** | **45** | **109** | **29%** |
+| Class/Section | Total | Green (Passed) | Red (Implemented) | Missing | Test Coverage |
+| ------------- | ----- | -------------- | ----------------- | ------- | ------------- |
+| DatabaseServer | 3 | 3 | 0 | 0 | 100% |
+| DatabaseManager | 7 | 7 | 0 | 0 | 100% |
+| Database Operations | 6 | 6 | 0 | 0 | 100% |
+| Schema & Table Operations | 10 | 10 | 0 | 0 | 100% |
+| Primary Key Constraints | 3 | 3 | 0 | 0 | 100% |
+| Unique Constraints | 3 | 3 | 0 | 0 | 100% |
+| Foreign Key Constraints | 5 | 5 | 0 | 0 | 100% |
+| Check Constraints | 4 | 4 | 0 | 0 | 100% |
+| Index & IndexManager | 8 | 0 | 8 | 0 | 100% |
+| Schema & Table Services | 9 | 3 | 6 | 0 | 100% |
+| RecordManager | 7 | 0 | 7 | 0 | 100% |
+| BufferPool Operations | 9 | 0 | 9 | 0 | 100% |
+| Page & FileManager | 7 | 0 | 7 | 0 | 100% |
+| Logging & Recovery | 8 | 0 | 8 | 0 | 100% |
+| Transaction Lifecycle & TransactionManager | 10 | 0 | 10 | 0 | 100% |
+| LockManager & MVCC | 9 | 0 | 9 | 0 | 100% |
+| SQL Parsing & Semantic Analysis | 7 | 0 | 7 | 0 | 100% |
+| Query Optimization | 6 | 0 | 6 | 0 | 100% |
+| Query Execution | 11 | 0 | 11 | 0 | 100% |
+| Catalog Registration (Database, Schema, Table) | 7 | 0 | 7 | 0 | 100% |
+| Metadata Lookup & Dependency Management | 4 | 1 | 3 | 0 | 100% |
+| Authentication | 3 | 0 | 3 | 0 | 100% |
+| Permission & Authorization | 8 | 0 | 8 | 0 | 100% |
+| **TOTAL** | **154** | **45** | **109** | **0** | **100%** |
+
 
 ## 1. Database Server & Database Lifecycle
 
@@ -875,10 +876,10 @@ flowchart LR
 
     classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
     classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
-    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+    classDef redPhaseTest fill:#fef3c7,stroke:#f59e0b,color:#111827,stroke-width:2px
 
     class ClassNode classNode
-    class Index___IndexManager_1,Index___IndexManager_2,Index___IndexManager_3,Index___IndexManager_4,Index___IndexManager_5,Index___IndexManager_6,Index___IndexManager_7,Index___IndexManager_8 missingTest
+    class Index___IndexManager_1,Index___IndexManager_2,Index___IndexManager_3,Index___IndexManager_4,Index___IndexManager_5,Index___IndexManager_6,Index___IndexManager_7,Index___IndexManager_8 redPhaseTest
 ```
 
 ```mermaid
@@ -937,11 +938,11 @@ flowchart LR
 
     classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
     classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
-    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+    classDef redPhaseTest fill:#fef3c7,stroke:#f59e0b,color:#111827,stroke-width:2px
 
     class ClassNode classNode
     class Schema___Table_Services_2,Schema___Table_Services_6,Schema___Table_Services_9 completedTest
-    class Schema___Table_Services_1,Schema___Table_Services_3,Schema___Table_Services_4,Schema___Table_Services_5,Schema___Table_Services_7,Schema___Table_Services_8 missingTest
+    class Schema___Table_Services_1,Schema___Table_Services_3,Schema___Table_Services_4,Schema___Table_Services_5,Schema___Table_Services_7,Schema___Table_Services_8 redPhaseTest
 ```
 
 ```mermaid
@@ -1018,10 +1019,10 @@ flowchart LR
 
     classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
     classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
-    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+    classDef redPhaseTest fill:#fef3c7,stroke:#f59e0b,color:#111827,stroke-width:2px
 
     class ClassNode classNode
-    class RecordManager_1,RecordManager_2,RecordManager_3,RecordManager_4,RecordManager_5,RecordManager_6,RecordManager_7 missingTest
+    class RecordManager_1,RecordManager_2,RecordManager_3,RecordManager_4,RecordManager_5,RecordManager_6,RecordManager_7 redPhaseTest
 ```
 
 ```mermaid
@@ -1131,10 +1132,10 @@ flowchart LR
 
     classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
     classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
-    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+    classDef redPhaseTest fill:#fef3c7,stroke:#f59e0b,color:#111827,stroke-width:2px
 
     class ClassNode classNode
-    class BufferPool_Operations_1,BufferPool_Operations_2,BufferPool_Operations_3,BufferPool_Operations_4,BufferPool_Operations_5,BufferPool_Operations_6,BufferPool_Operations_7,BufferPool_Operations_8,BufferPool_Operations_9 missingTest
+    class BufferPool_Operations_1,BufferPool_Operations_2,BufferPool_Operations_3,BufferPool_Operations_4,BufferPool_Operations_5,BufferPool_Operations_6,BufferPool_Operations_7,BufferPool_Operations_8,BufferPool_Operations_9 redPhaseTest
 ```
 
 ```mermaid
@@ -1189,10 +1190,10 @@ flowchart LR
 
     classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
     classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
-    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+    classDef redPhaseTest fill:#fef3c7,stroke:#f59e0b,color:#111827,stroke-width:2px
 
     class ClassNode classNode
-    class Page___FileManager_1,Page___FileManager_2,Page___FileManager_3,Page___FileManager_4,Page___FileManager_5,Page___FileManager_6,Page___FileManager_7 missingTest
+    class Page___FileManager_1,Page___FileManager_2,Page___FileManager_3,Page___FileManager_4,Page___FileManager_5,Page___FileManager_6,Page___FileManager_7 redPhaseTest
 ```
 
 ```mermaid
@@ -1246,10 +1247,10 @@ flowchart LR
 
     classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
     classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
-    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+    classDef redPhaseTest fill:#fef3c7,stroke:#f59e0b,color:#111827,stroke-width:2px
 
     class ClassNode classNode
-    class Logging___Recovery_1,Logging___Recovery_2,Logging___Recovery_3,Logging___Recovery_4,Logging___Recovery_5,Logging___Recovery_6,Logging___Recovery_7,Logging___Recovery_8 missingTest
+    class Logging___Recovery_1,Logging___Recovery_2,Logging___Recovery_3,Logging___Recovery_4,Logging___Recovery_5,Logging___Recovery_6,Logging___Recovery_7,Logging___Recovery_8 redPhaseTest
 ```
 
 ```mermaid
@@ -1348,10 +1349,10 @@ flowchart LR
 
     classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
     classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
-    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+    classDef redPhaseTest fill:#fef3c7,stroke:#f59e0b,color:#111827,stroke-width:2px
 
     class ClassNode classNode
-    class Transaction_Lifecycle___TransactionManager_1,Transaction_Lifecycle___TransactionManager_2,Transaction_Lifecycle___TransactionManager_3,Transaction_Lifecycle___TransactionManager_4,Transaction_Lifecycle___TransactionManager_5,Transaction_Lifecycle___TransactionManager_6,Transaction_Lifecycle___TransactionManager_7,Transaction_Lifecycle___TransactionManager_8,Transaction_Lifecycle___TransactionManager_9,Transaction_Lifecycle___TransactionManager_10 missingTest
+    class Transaction_Lifecycle___TransactionManager_1,Transaction_Lifecycle___TransactionManager_2,Transaction_Lifecycle___TransactionManager_3,Transaction_Lifecycle___TransactionManager_4,Transaction_Lifecycle___TransactionManager_5,Transaction_Lifecycle___TransactionManager_6,Transaction_Lifecycle___TransactionManager_7,Transaction_Lifecycle___TransactionManager_8,Transaction_Lifecycle___TransactionManager_9,Transaction_Lifecycle___TransactionManager_10 redPhaseTest
 ```
 
 ```mermaid
@@ -1412,10 +1413,10 @@ flowchart LR
 
     classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
     classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
-    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+    classDef redPhaseTest fill:#fef3c7,stroke:#f59e0b,color:#111827,stroke-width:2px
 
     class ClassNode classNode
-    class LockManager___MVCC_1,LockManager___MVCC_2,LockManager___MVCC_3,LockManager___MVCC_4,LockManager___MVCC_5,LockManager___MVCC_6,LockManager___MVCC_7,LockManager___MVCC_8,LockManager___MVCC_9 missingTest
+    class LockManager___MVCC_1,LockManager___MVCC_2,LockManager___MVCC_3,LockManager___MVCC_4,LockManager___MVCC_5,LockManager___MVCC_6,LockManager___MVCC_7,LockManager___MVCC_8,LockManager___MVCC_9 redPhaseTest
 ```
 
 ```mermaid
@@ -1518,10 +1519,10 @@ flowchart LR
 
     classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
     classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
-    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+    classDef redPhaseTest fill:#fef3c7,stroke:#f59e0b,color:#111827,stroke-width:2px
 
     class ClassNode classNode
-    class SQL_Parsing___Semantic_Analysis_1,SQL_Parsing___Semantic_Analysis_2,SQL_Parsing___Semantic_Analysis_3,SQL_Parsing___Semantic_Analysis_4,SQL_Parsing___Semantic_Analysis_5,SQL_Parsing___Semantic_Analysis_6,SQL_Parsing___Semantic_Analysis_7 missingTest
+    class SQL_Parsing___Semantic_Analysis_1,SQL_Parsing___Semantic_Analysis_2,SQL_Parsing___Semantic_Analysis_3,SQL_Parsing___Semantic_Analysis_4,SQL_Parsing___Semantic_Analysis_5,SQL_Parsing___Semantic_Analysis_6,SQL_Parsing___Semantic_Analysis_7 redPhaseTest
 ```
 
 ```mermaid
@@ -1565,10 +1566,10 @@ flowchart LR
 
     classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
     classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
-    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+    classDef redPhaseTest fill:#fef3c7,stroke:#f59e0b,color:#111827,stroke-width:2px
 
     class ClassNode classNode
-    class Query_Optimization_1,Query_Optimization_2,Query_Optimization_3,Query_Optimization_4,Query_Optimization_5,Query_Optimization_6 missingTest
+    class Query_Optimization_1,Query_Optimization_2,Query_Optimization_3,Query_Optimization_4,Query_Optimization_5,Query_Optimization_6 redPhaseTest
 ```
 
 ```mermaid
@@ -1613,10 +1614,10 @@ flowchart LR
 
     classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
     classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
-    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+    classDef redPhaseTest fill:#fef3c7,stroke:#f59e0b,color:#111827,stroke-width:2px
 
     class ClassNode classNode
-    class Query_Execution_1,Query_Execution_2,Query_Execution_3,Query_Execution_4,Query_Execution_5,Query_Execution_6,Query_Execution_7,Query_Execution_8,Query_Execution_9,Query_Execution_10,Query_Execution_11 missingTest
+    class Query_Execution_1,Query_Execution_2,Query_Execution_3,Query_Execution_4,Query_Execution_5,Query_Execution_6,Query_Execution_7,Query_Execution_8,Query_Execution_9,Query_Execution_10,Query_Execution_11 redPhaseTest
 ```
 
 ```mermaid
@@ -1688,10 +1689,10 @@ flowchart LR
 
     classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
     classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
-    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+    classDef redPhaseTest fill:#fef3c7,stroke:#f59e0b,color:#111827,stroke-width:2px
 
     class ClassNode classNode
-    class Catalog_Registration__Database__Schema__Table__1,Catalog_Registration__Database__Schema__Table__2,Catalog_Registration__Database__Schema__Table__3,Catalog_Registration__Database__Schema__Table__4,Catalog_Registration__Database__Schema__Table__5,Catalog_Registration__Database__Schema__Table__6,Catalog_Registration__Database__Schema__Table__7 missingTest
+    class Catalog_Registration__Database__Schema__Table__1,Catalog_Registration__Database__Schema__Table__2,Catalog_Registration__Database__Schema__Table__3,Catalog_Registration__Database__Schema__Table__4,Catalog_Registration__Database__Schema__Table__5,Catalog_Registration__Database__Schema__Table__6,Catalog_Registration__Database__Schema__Table__7 redPhaseTest
 ```
 
 ```mermaid
@@ -1740,11 +1741,11 @@ flowchart LR
 
     classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
     classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
-    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+    classDef redPhaseTest fill:#fef3c7,stroke:#f59e0b,color:#111827,stroke-width:2px
 
     class ClassNode classNode
     class Metadata_Lookup___Dependency_Management_3 completedTest
-    class Metadata_Lookup___Dependency_Management_1,Metadata_Lookup___Dependency_Management_2,Metadata_Lookup___Dependency_Management_4 missingTest
+    class Metadata_Lookup___Dependency_Management_1,Metadata_Lookup___Dependency_Management_2,Metadata_Lookup___Dependency_Management_4 redPhaseTest
 ```
 
 ```mermaid
@@ -1825,10 +1826,10 @@ flowchart LR
 
     classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
     classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
-    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+    classDef redPhaseTest fill:#fef3c7,stroke:#f59e0b,color:#111827,stroke-width:2px
 
     class ClassNode classNode
-    class Authentication_1,Authentication_2,Authentication_3 missingTest
+    class Authentication_1,Authentication_2,Authentication_3 redPhaseTest
 ```
 
 ```mermaid
@@ -1865,10 +1866,10 @@ flowchart LR
 
     classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
     classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
-    classDef missingTest fill:#fee2e2,stroke:#ef4444,color:#111827,stroke-width:2px,stroke-dasharray:5 5
+    classDef redPhaseTest fill:#fef3c7,stroke:#f59e0b,color:#111827,stroke-width:2px
 
     class ClassNode classNode
-    class Permission___Authorization_1,Permission___Authorization_2,Permission___Authorization_3,Permission___Authorization_4,Permission___Authorization_5,Permission___Authorization_6,Permission___Authorization_7,Permission___Authorization_8 missingTest
+    class Permission___Authorization_1,Permission___Authorization_2,Permission___Authorization_3,Permission___Authorization_4,Permission___Authorization_5,Permission___Authorization_6,Permission___Authorization_7,Permission___Authorization_8 redPhaseTest
 ```
 
 ```mermaid

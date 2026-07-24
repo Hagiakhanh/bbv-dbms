@@ -24,4 +24,19 @@ public class TransactionManager
     {
         throw new NotImplementedException();
     }
+
+    public void Rollback(int txId)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void RollbackToSavepoint(int txId, string savepointName)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void DetectDeadlock()
+    {
+        throw new NotImplementedException();
+    }
 }

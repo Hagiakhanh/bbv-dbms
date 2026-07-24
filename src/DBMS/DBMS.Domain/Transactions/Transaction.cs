@@ -22,4 +22,9 @@ public class Transaction
     {
         throw new NotImplementedException();
     }
+
+    public void RollbackToSavepoint(string name)
+    {
+        throw new NotImplementedException();
+    }
 }
