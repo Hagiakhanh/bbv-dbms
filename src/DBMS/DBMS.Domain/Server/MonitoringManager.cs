@@ -3,7 +3,14 @@ using System.Collections.Generic;
 
 namespace DBMS.Domain.Server;
 
-public class MonitoringManager
+public interface IMonitoringManager
+{
+    void Monitor();
+    ServerMetrics GetMetrics();
+    void StartCollection();
+}
+
+public class MonitoringManager : IMonitoringManager
 {
     public void Monitor()
     {
@@ -11,6 +18,11 @@ public class MonitoringManager
     }
 
     public ServerMetrics GetMetrics()
+    {
+        throw new NotImplementedException();
+    }
+
+    public void StartCollection()
     {
         throw new NotImplementedException();
     }

@@ -22,6 +22,7 @@ public class DatabaseManagerTests
         var bufferPoolMock = new Mock<IBufferPool>();
         var fileManagerMock = new Mock<IFileManager>();
         var securityManagerMock = new Mock<ISecurityManager>();
+        securityManagerMock.Setup(s => s.CheckPermission(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>())).Returns(true);
         
         var manager = new DatabaseManager(
             catalogMock.Object, 
