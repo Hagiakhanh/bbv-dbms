@@ -3,7 +3,14 @@ using System.Collections.Generic;
 
 namespace DBMS.Domain.Server;
 
-public class ConfigurationManager
+public interface IConfigurationManager
+{
+    void Configure(string key, string value);
+    string Get(string key);
+    void LoadConfiguration(string filePath);
+}
+
+public class ConfigurationManager : IConfigurationManager
 {
     public void Configure(string key, string value)
     {
@@ -11,6 +18,11 @@ public class ConfigurationManager
     }
 
     public string Get(string key)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void LoadConfiguration(string filePath)
     {
         throw new NotImplementedException();
     }

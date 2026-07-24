@@ -1,24 +1,23 @@
 # Features and Design Pattern Follow
 This document outlines the Design Patterns implemented within various core components of the BBV-DBMS.
 
-## Visual Summary
+## Visual Summary Database Object
 
-| Module | Feature | Main Classes | Pattern | Status | Priority |
-| :--- | :--- | :--- | :--- | :---: | :---: |
-| Database Object | Metadata Hierarchy | `Database`, `Schema`, `Table`, child objects | **Composite** | ✅ | 🔥 |
-| Database Object | Table Definition, Complex Table Construction | `TableDefinition`, `TableBuilder`, `TableDirector` | **Builder** | ✅ | 🔥 |
-| Database Object | Constraint Object Creation | `ConstraintFactory` | **Factory** | ✅ | 🔥 |
-| Database Object | Constraint Validation | Constraint validators | **Strategy** | ✅ | 🔥 |
-| Database Object | Index Object Creation | `IndexFactory` | **Factory** | ✅ | 🔥 |
-| Database Object | Encapsulate DDL Requests | DDL commands and executor | **Command** | ✅ | 🔥 |
-| Database Object | Coordinate Create/Drop/Alter | `SchemaService`, `DatabaseService` | **Facade** | ✅ | 🔥 |
-| Database Object | Persist and Query Metadata | `CatalogManager`, catalog repositories | **Repository** | ✅ | 🔥 |
-| Database Object | Metadata Traversal | `CatalogIterator`, `IIterableCatalog` | **Iterator** | ✅ | ⭐ |
-| Metadata Events | Cache, Statistics, Audit Reactions | Event publisher and handlers | **Observer** | ✅ | ⭐ |
-| Partition | Select Target Partition | Partition strategies | **Strategy** | Not Started | △ |
-| Trigger | Execute Trigger Actions | `TriggerExecutor`, trigger actions | **Command/Pipeline** | Not Started | △ |
-| Metadata Utility | Export DDL, Dependency Scan | Visitors or traversal services | **Visitor** | Not Started | △ |
-| Record | CRUD and Scan | `RecordManager` | None | Incomplete |  |
+| Priority | Module | Main Feature | Main Classes | Application | Design Pattern | Progress |
+| :---: | :--- | :--- | :--- | :--- | :--- | :---: |
+| 🔥 Critical | Database Object | Metadata Hierarchy | `Database`, `Schema`, `Table`, child objects | Treats Database, Schema, Table, and Column objects uniformly as nodes in a hierarchy. | **Composite** | Completed |
+| 🔥 Critical | Database Object | Table Definition, Complex Table Construction | `TableDefinition`, `TableBuilder`, `TableDirector` | Separates the construction of complex Table objects from their representation. | **Builder** | Completed |
+| 🔥 Critical | Database Object | Constraint Object Creation | `ConstraintFactory` | Encapsulates the instantiation logic for various types of constraints. | **Factory Method** | Completed |
+| 🔥 Critical | Database Object | Constraint Validation | Constraint validators | Defines a family of validation algorithms for different constraints and makes them interchangeable. | **Strategy** | Completed |
+| 🔥 Critical | Database Object | Index Object Creation | `IndexFactory` | Encapsulates the instantiation logic for different types of indexes. | **Factory Method** | Completed |
+| 🔥 Critical | Database Object | Encapsulate DDL Requests | DDL commands and executor | Encapsulates DDL requests as objects, allowing for logging, queuing, and execution. | **Command** | Completed |
+| 🔥 Critical | Database Object | Coordinate Create/Drop/Alter | `SchemaService`, `DatabaseService` | Provides a simplified, unified interface to the complex subsystems involved in metadata modifications. | **Facade** | Completed |
+| 🔥 Critical | Database Object | Persist and Query Metadata | `CatalogManager`, catalog repositories | Abstracts the underlying data storage mechanism for database metadata. | **Repository** | Completed |
+| 🔴 High | Database Object | Metadata Traversal | `CatalogIterator`, `IIterableCatalog` | Provides a way to sequentially access metadata objects without exposing their underlying representation. | **Iterator** | Completed |
+| 🔴 High | Metadata Events | Cache, Statistics, Audit Reactions | Event publisher and handlers | Defines a one-to-many dependency so that when metadata changes, all dependent components are notified. | **Observer** | Completed |
+| 🟡 Medium | Partition | Select Target Partition | Partition strategies | Defines interchangeable algorithms for selecting the appropriate partition for data. | **Strategy** | Not Started |
+| 🟡 Medium | Trigger | Execute Trigger Actions | `TriggerExecutor`, trigger actions | Encapsulates trigger actions as objects for execution. | **Command** | Not Started |
+| 🟡 Medium | Metadata Utility | Export DDL, Dependency Scan | Visitors or traversal services | Separates metadata analysis and export algorithms from the object structure on which they operate. | **Visitor** | Not Started |
 
 ---
 
@@ -968,6 +967,28 @@ CatalogTraversalService --> Table
 
 IBackupCatalogPort --> Database : exports metadata
 ```
+
+## Visual Summary Database Server & Database Lifecycle
+
+| Priority | Module | Main Feature | Main Classes | Application | Design Pattern | Progress |
+| :---: | :--- | :--- | :--- | :--- | :--- | :---: |
+| 🔥 Critical | Server Management | Server Lifecycle | `DatabaseServer` | Provides a unified interface for starting, stopping, restarting, and recovering the database server. | **Facade** | Completed |
+| 🔥 Critical | Server Management | Server State Management | `DatabaseServer`, `IServerState` | Encapsulates behaviors for Stopped, Running, Recovering, and Failed states. | **State** | Not Started |
+| 🔥 Critical | Database Management | Database Lifecycle | `DatabaseManager` | Coordinates catalog and connection pool operations for creating, opening, closing, and dropping databases. | **Facade** | Not Started |
+| 🔥 Critical | Security | Authentication | `SecurityManager`, `IAuthenticationStrategy` | Supports password, token, certificate, and external authentication mechanisms. | **Strategy** | Not Started |
+| 🔥 Critical | Security | Authorization | `SecurityManager`, `IAuthorizationStrategy` | Supports RBAC, ACL, and policy-based permission checking. | **Strategy** | Not Started |
+| 🔴 High | Database Management | Database Creation | `IDatabaseFactory`, `DatabaseFactory` | Centralizes the construction and initialization of database objects. | **Factory Method** | Not Started |
+| 🔴 High | Database Management | Database State | `Database`, `IDatabaseState` | Controls database behavior in Online, Offline, ReadOnly, and Restoring states. | **State** | Not Started |
+| 🔴 High | Configuration | Configuration Loading | `ConfigurationManager`, `IConfigurationLoader` | Supports loading configuration from JSON, XML, environment variables, or command-line sources. | **Strategy** | Not Started |
+| 🔴 High | Security | Protected Database Access | `SecuredDatabaseProxy` | Validates permissions before forwarding operations to database objects. | **Proxy** | Not Started |
+| 🔴 High | Monitoring | Metrics Collection | `MonitoringManager`, `IMetricCollector` | Separates CPU, memory, query, transaction, and connection metric collection. | **Strategy** | Not Started |
+| 🔴 High | Monitoring | Runtime Event Monitoring | `MonitoringManager`, event publishers | Receives query, transaction, connection, and error events from server components. | **Observer** | Not Started |
+| 🟡 Medium | Server Management | Administrative Operations | `StartServerCommand`, `StopServerCommand`, `RecoverServerCommand` | Encapsulates server operations for auditing, scheduling, and retrying. | **Command** | Not Started |
+| 🟡 Medium | Configuration | Dynamic Configuration | `ConfigurationManager`, configuration observers | Notifies dependent components when configuration values change. | **Observer** | Not Started |
+| 🟢 Low | Monitoring | Metrics Export | `PrometheusMetricsAdapter`, `OpenTelemetryAdapter` | Converts internal server metrics into external monitoring formats. | **Adapter** | Not Started |
+
+
+
 
 ## Sequence Diagrams (Database Manager & Metadata)
 
@@ -4907,4 +4928,310 @@ sequenceDiagram
     Facade-->>Server: startupCompleted
     Server->>Server: Status = Running
     Server-->>Admin: ServerStatus.Running
+```
+
+### 11. Server State Management (State Pattern)
+
+**Purpose:**  
+Encapsulate behaviors for Stopped, Running, Recovering, and Failed states of the Database Server to allow it to change its behavior when its internal state changes.
+
+**Application:**  
+`DatabaseServer`, `IServerState`
+
+#### Class Diagram
+
+```mermaid
+classDiagram
+direction TB
+
+class DatabaseServer{
+    <<Context>>
+    -currentState : IServerState
+    +SetState(state: IServerState)
+    +Start()
+    +Stop()
+    +Restart()
+    +Recover()
+}
+
+class IServerState{
+    <<State>>
+    +Start(server: DatabaseServer)
+    +Stop(server: DatabaseServer)
+    +Restart(server: DatabaseServer)
+    +Recover(server: DatabaseServer)
+}
+
+class StoppedState{
+    <<ConcreteState>>
+    +Start(server: DatabaseServer)
+    +Stop(server: DatabaseServer)
+}
+
+class RunningState{
+    <<ConcreteState>>
+    +Start(server: DatabaseServer)
+    +Stop(server: DatabaseServer)
+}
+
+class RecoveringState{
+    <<ConcreteState>>
+    +Recover(server: DatabaseServer)
+}
+
+class FailedState{
+    <<ConcreteState>>
+    +Recover(server: DatabaseServer)
+    +Stop(server: DatabaseServer)
+}
+
+DatabaseServer o-- IServerState : current state
+IServerState <|.. StoppedState
+IServerState <|.. RunningState
+IServerState <|.. RecoveringState
+IServerState <|.. FailedState
+```
+
+#### Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    actor Admin
+    participant Server as DatabaseServer
+    participant Stopped as StoppedState
+    participant Running as RunningState
+
+    Note over Server: Initially in StoppedState
+    Admin->>Server: Start()
+    Server->>Stopped: Start(this)
+    Stopped->>Server: Initialize Engine
+    Stopped->>Server: SetState(new RunningState())
+    Server-->>Admin: Success
+
+    Note over Server: Now in RunningState
+    Admin->>Server: Start()
+    Server->>Running: Start(this)
+    Running-->>Server: throw InvalidOperationException("Already running")
+    Server-->>Admin: Error
+```
+
+#### Simplified Code
+
+```csharp
+public class DatabaseServer
+{
+    private IServerState _currentState;
+
+    public DatabaseServer()
+    {
+        _currentState = new StoppedState();
+    }
+
+    public void SetState(IServerState state)
+    {
+        _currentState = state;
+    }
+
+    public void Start() => _currentState.Start(this);
+    public void Stop() => _currentState.Stop(this);
+    public void Recover() => _currentState.Recover(this);
+}
+
+public interface IServerState
+{
+    void Start(DatabaseServer server);
+    void Stop(DatabaseServer server);
+    void Recover(DatabaseServer server);
+}
+
+public class StoppedState : IServerState
+{
+    public void Start(DatabaseServer server)
+    {
+        // Start engine...
+        server.SetState(new RunningState());
+    }
+
+    public void Stop(DatabaseServer server)
+    {
+        // Already stopped, do nothing or log
+    }
+
+    public void Recover(DatabaseServer server)
+    {
+        server.SetState(new RecoveringState());
+        // Do recovery...
+    }
+}
+
+public class RunningState : IServerState
+{
+    public void Start(DatabaseServer server)
+    {
+        throw new InvalidOperationException("Server is already running.");
+    }
+
+    public void Stop(DatabaseServer server)
+    {
+        // Stop engine...
+        server.SetState(new StoppedState());
+    }
+
+    public void Recover(DatabaseServer server)
+    {
+        throw new InvalidOperationException("Cannot recover while running.");
+    }
+}
+```
+
+**Benefits**
+
+- Localizes state-specific behavior in individual classes (`StoppedState`, `RunningState`, etc.).
+- Avoids large monolithic `switch` or `if-else` statements in `DatabaseServer`.
+- Makes state transitions explicit and easier to maintain.
+
+**Application:** State pattern is applied to `DatabaseServer` to handle its lifecycle states.
+
+**Why apply?** The `DatabaseServer` has complex behaviors that vary depending on its current state (e.g., starting an already running server should fail, stopping a stopped server is a no-op). The State Pattern encapsulates these state-specific rules into separate classes, making the `DatabaseServer` cleaner and making it simple to add new states in the future.
+
+```mermaid
+classDiagram
+direction TB
+
+class DatabaseServer {
+    <<Context>>
+
+    +ServerId : int
+    +Version : string
+    +Status : ServerStatus
+
+    -currentState : IServerState
+    -databaseManager : DatabaseManager
+    -configurationManager : ConfigurationManager
+    -securityManager : SecurityManager
+    -monitoringManager : MonitoringManager
+
+    +SetState(state : IServerState)
+    +Start(safeMode : bool)
+    +Stop(force : bool)
+    +Restart()
+    +Recover()
+    +HandleSignal(signal : string)
+    +GetStatus() ServerStatus
+
+    ~InitializeComponents(safeMode : bool)
+    ~ShutdownComponents(force : bool)
+    ~RestartComponents()
+    ~RecoverComponents()
+}
+
+class IServerState {
+    <<State>>
+
+    +Status : ServerStatus
+    +Start(server : DatabaseServer, safeMode : bool)
+    +Stop(server : DatabaseServer, force : bool)
+    +Restart(server : DatabaseServer)
+    +Recover(server : DatabaseServer)
+}
+
+class StoppedState {
+    <<ConcreteState>>
+
+    +Status : ServerStatus
+    +Start(server : DatabaseServer, safeMode : bool)
+    +Stop(server : DatabaseServer, force : bool)
+    +Restart(server : DatabaseServer)
+    +Recover(server : DatabaseServer)
+}
+
+class RunningState {
+    <<ConcreteState>>
+
+    +Status : ServerStatus
+    +Start(server : DatabaseServer, safeMode : bool)
+    +Stop(server : DatabaseServer, force : bool)
+    +Restart(server : DatabaseServer)
+    +Recover(server : DatabaseServer)
+}
+
+class RecoveringState {
+    <<ConcreteState>>
+
+    +Status : ServerStatus
+    +Start(server : DatabaseServer, safeMode : bool)
+    +Stop(server : DatabaseServer, force : bool)
+    +Restart(server : DatabaseServer)
+    +Recover(server : DatabaseServer)
+}
+
+class FailedState {
+    <<ConcreteState>>
+
+    +Status : ServerStatus
+    +Start(server : DatabaseServer, safeMode : bool)
+    +Stop(server : DatabaseServer, force : bool)
+    +Restart(server : DatabaseServer)
+    +Recover(server : DatabaseServer)
+}
+
+class DatabaseManager
+class ConfigurationManager
+class SecurityManager
+class MonitoringManager
+
+DatabaseServer o-- IServerState : current state
+
+IServerState <|.. StoppedState
+IServerState <|.. RunningState
+IServerState <|.. RecoveringState
+IServerState <|.. FailedState
+
+DatabaseServer --> DatabaseManager
+DatabaseServer --> ConfigurationManager
+DatabaseServer --> SecurityManager
+DatabaseServer --> MonitoringManager
+```
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    actor Admin
+    participant Server as DatabaseServer
+    participant Stopped as StoppedState
+    participant Config as ConfigurationManager
+    participant Security as SecurityManager
+    participant DBManager as DatabaseManager
+    participant Monitoring as MonitoringManager
+    participant Running as RunningState
+
+    Note over Server: currentState = StoppedState
+
+    Admin->>Server: Start(safeMode)
+    Server->>Stopped: Start(this, safeMode)
+
+    Stopped->>Server: InitializeComponents(safeMode)
+
+    Server->>Config: LoadConfiguration(configPath)
+    Config-->>Server: Configuration loaded
+
+    Server->>Security: Initialize security services
+    Security-->>Server: Ready
+
+    Server->>DBManager: Initialize database management
+    DBManager-->>Server: Ready
+
+    Server->>Monitoring: Start metric collection
+    Monitoring-->>Server: Ready
+
+    Stopped->>Server: SetState(new RunningState())
+    Server-->>Admin: Success
+
+    Note over Server: currentState = RunningState
+
+    Admin->>Server: Start(safeMode)
+    Server->>Running: Start(this, safeMode)
+    Running-->>Server: throw InvalidServerStateException
+    Server-->>Admin: Error: Server is already running
 ```

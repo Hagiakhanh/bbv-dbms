@@ -8,7 +8,9 @@ public enum ServerStatus
     Starting,
     Running,
     Stopping,
-    Stopped
+    Stopped,
+    Recovering,
+    Failed
 }
 
 public class ServerMetrics
