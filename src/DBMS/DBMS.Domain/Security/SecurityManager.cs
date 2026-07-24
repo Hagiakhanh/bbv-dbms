@@ -17,6 +17,16 @@ public class SecurityManager
         throw new NotImplementedException();
     }
 
+    public bool HasPermission(string user, int obj, string action)
+    {
+        throw new NotImplementedException();
+    }
+
+    public bool Authorize(string user, int obj, string action)
+    {
+        throw new NotImplementedException();
+    }
+
     public void GrantRole(string user, string role)
     {
         throw new NotImplementedException();

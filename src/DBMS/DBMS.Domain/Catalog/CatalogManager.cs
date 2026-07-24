@@ -12,7 +12,6 @@ public class CatalogManager : ICatalogManager
     {
     }
 
-    // Legacy methods
     public void RegisterDatabase(string name) { throw new NotImplementedException(); }
     public void RemoveDatabase(string name) { throw new NotImplementedException(); }
     public Composite.Database GetDatabase(string name) { throw new NotImplementedException(); }
@@ -26,9 +25,13 @@ public class CatalogManager : ICatalogManager
     public void RegisterExistingDatabaseFiles(string name, string filePath) { throw new NotImplementedException(); }
     public void Unregister(string name) { throw new NotImplementedException(); }
 
+    public void RegisterSchema(string dbName, string schemaName) { throw new NotImplementedException(); }
+    public void RegisterTable(Table table) { throw new NotImplementedException(); }
+    public Table FindTable(string name) { throw new NotImplementedException(); }
+    public object ResolveObjectName(string name) { throw new NotImplementedException(); }
+    public void DropSchema(string name) { throw new NotImplementedException(); }
+
     public Index GetIndex(string name) { throw new NotImplementedException(); }
     public void DeleteMeta(int id) { throw new NotImplementedException(); }
     public Table GetTable(string name) { throw new NotImplementedException(); }
-
 }
-

@@ -27,4 +27,14 @@ public class BufferPool
     {
         throw new NotImplementedException();
     }
+
+    public Page EvictPage()
+    {
+        throw new NotImplementedException();
+    }
+
+    public void FlushAll()
+    {
+        throw new NotImplementedException();
+    }
 }

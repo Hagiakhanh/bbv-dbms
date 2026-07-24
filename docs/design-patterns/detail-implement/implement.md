@@ -42,18 +42,16 @@ class TableDirector {
     -builder : ITableBuilder
     -constraintFactory : IConstraintFactory
     -indexFactory : IIndexFactory
-    -partitionFactory : IPartitionFactory
-    -triggerFactory : ITriggerFactory
 
     +TableDirector(
         builder : ITableBuilder,
         constraintFactory : IConstraintFactory,
-        indexFactory : IIndexFactory,
-        partitionFactory : IPartitionFactory,
-        triggerFactory : ITriggerFactory
+        indexFactory : IIndexFactory
     )
 
     +Construct(definition : TableDefinition) Table
+    -CreatePartition(options : PartitionOptions) Partition
+    -CreateTrigger(options : TriggerOptions) Trigger
 }
 
 %% =====================================================
@@ -196,15 +194,7 @@ class IIndexFactory {
     ) Index
 }
 
-class IPartitionFactory {
-    <<Factory>>
-    +Create(options : PartitionOptions) Partition
-}
 
-class ITriggerFactory {
-    <<Factory>>
-    +Create(options : TriggerOptions) Trigger
-}
 
 class TableBuildContext {
     <<Build Context>>
@@ -273,8 +263,6 @@ ITableBuilder <|.. TableBuilder
 TableDirector --> ITableBuilder : directs
 TableDirector --> IConstraintFactory : creates constraints
 TableDirector --> IIndexFactory : creates indexes
-TableDirector --> IPartitionFactory : creates partitions
-TableDirector --> ITriggerFactory : creates triggers
 TableDirector --> TableDefinition : reads
 TableDirector --> TableBuildContext : maintains context
 
@@ -296,8 +284,6 @@ TriggerOptions --> TriggerTiming
 
 IConstraintFactory --> Constraint : creates
 IIndexFactory --> Index : creates
-IPartitionFactory --> Partition : creates
-ITriggerFactory --> Trigger : creates
 
 TableBuildContext --> Column
 
@@ -319,8 +305,6 @@ sequenceDiagram
     participant Builder as ITableBuilder
     participant CFactory as IConstraintFactory
     participant IFactory as IIndexFactory
-    participant PFactory as IPartitionFactory
-    participant TFactory as ITriggerFactory
     participant Schema
     participant Table
 
@@ -360,14 +344,12 @@ sequenceDiagram
         end
 
         loop Each PartitionOptions
-            Director->>PFactory: Create(options)
-            PFactory-->>Director: Partition
+            Director->>Director: CreatePartition(options)
             Director->>Builder: AddPartition(partition)
         end
 
         loop Each TriggerOptions
-            Director->>TFactory: Create(options)
-            TFactory-->>Director: Trigger
+            Director->>Director: CreateTrigger(options)
             Director->>Builder: AddTrigger(trigger)
         end
 
@@ -781,7 +763,7 @@ direction LR
 
 class IDdlCommand {
     <<Command>>
-    +Execute(context : DdlExecutionContext) DdlResult
+    +Execute() DdlResult
 }
 
 class CreateTableCommand {
@@ -796,7 +778,7 @@ class CreateTableCommand {
         definition : TableDefinition
     )
 
-    +Execute(context : DdlExecutionContext) DdlResult
+    +Execute() DdlResult
 }
 
 class CreateSchemaCommand {
@@ -811,7 +793,7 @@ class CreateSchemaCommand {
         schemaName : string
     )
 
-    +Execute(context : DdlExecutionContext) DdlResult
+    +Execute() DdlResult
 }
 
 class DropTableCommand {
@@ -828,7 +810,7 @@ class DropTableCommand {
         cascade : bool
     )
 
-    +Execute(context : DdlExecutionContext) DdlResult
+    +Execute() DdlResult
 }
 
 class AlterTableCommand {
@@ -845,7 +827,7 @@ class AlterTableCommand {
         operation : TableAlterOperation
     )
 
-    +Execute(context : DdlExecutionContext) DdlResult
+    +Execute() DdlResult
 }
 
 %% =====================================================
@@ -854,18 +836,12 @@ class AlterTableCommand {
 
 class IDdlCommandExecutor {
     <<Invoker>>
-    +Execute(
-        command : IDdlCommand,
-        context : DdlExecutionContext
-    ) DdlResult
+    +Execute(command : IDdlCommand) DdlResult
 }
 
 class DdlCommandExecutor {
     <<Concrete Invoker>>
-    +Execute(
-        command : IDdlCommand,
-        context : DdlExecutionContext
-    ) DdlResult
+    +Execute(command : IDdlCommand) DdlResult
 }
 
 %% =====================================================
@@ -958,7 +934,6 @@ class IDatabaseService {
 class DatabaseService {
     <<Concrete Receiver>>
     -catalog : ICatalogManager
-    -transactionPort : IMetadataTransactionPort
 
     +CreateSchema(
         database : Database,
@@ -999,7 +974,6 @@ class SchemaService {
     -director : TableDirector
     -catalog : ICatalogManager
     -storagePort : IStorageObjectPort
-    -transactionPort : IMetadataTransactionPort
 
     +CreateTable(
         schema : Schema,
@@ -1118,7 +1092,6 @@ IDdlCommand <|.. AlterTableCommand
 IDdlCommandExecutor <|.. DdlCommandExecutor
 
 DdlCommandExecutor --> IDdlCommand : invokes
-DdlCommandExecutor --> DdlExecutionContext : supplies
 
 CreateSchemaCommand --> IDatabaseService : receiver
 CreateSchemaCommand --> Database : target
@@ -1158,13 +1131,11 @@ ISchemaService <|.. SchemaService
 
 DatabaseService --> Database : modifies
 DatabaseService --> ICatalogManager : persists metadata
-DatabaseService --> IMetadataTransactionPort : transaction boundary
 
 SchemaService --> TableDirector : constructs table
 SchemaService --> Schema : modifies
 SchemaService --> ICatalogManager : persists metadata
 SchemaService --> IStorageObjectPort : manages physical object
-SchemaService --> IMetadataTransactionPort : transaction boundary
 
 TableDirector --> TableDefinition
 TableDirector --> Table
@@ -1282,7 +1253,6 @@ class DatabaseService {
     <<Facade>>
 
     -catalog : ICatalogManager
-    -transactionPort : IMetadataTransactionPort
 
     +CreateSchema(
         database : Database,
@@ -1321,7 +1291,6 @@ class SchemaService {
     -catalog : ICatalogManager
     -tableDirector : TableDirector
     -storagePort : IStorageObjectPort
-    -transactionPort : IMetadataTransactionPort
     -dependencyService : ICatalogDependencyService
 
     +CreateTable(
@@ -1659,8 +1628,8 @@ class TableDefinition {
     +Columns : IReadOnlyCollection~ColumnDefinition~
     +Constraints : IReadOnlyCollection~ConstraintOptions~
     +Indexes : IReadOnlyCollection~IndexOptions~
-    +Partitions : IReadOnlyCollection~PartitionDefinition~
-    +Triggers : IReadOnlyCollection~TriggerDefinition~
+    +Partitions : IReadOnlyCollection~PartitionOptions~
+    +Triggers : IReadOnlyCollection~TriggerOptions~
 }
 
 class ColumnDefinition {
@@ -1689,7 +1658,7 @@ class IndexOptions {
     +Unique : bool
 }
 
-class PartitionDefinition {
+class PartitionOptions {
     <<DTO>>
 
     +Name : string
@@ -1697,7 +1666,7 @@ class PartitionDefinition {
     +Type : PartitionType
 }
 
-class TriggerDefinition {
+class TriggerOptions {
     <<DTO>>
 
     +Name : string
@@ -1852,14 +1821,12 @@ IDatabaseService <|.. DatabaseService
 ISchemaService <|.. SchemaService
 
 DatabaseService --> ICatalogManager : manages metadata
-DatabaseService --> IMetadataTransactionPort : controls transaction
 DatabaseService --> Database : manages schemas
 
 SchemaService --> ICatalogManager : manages metadata
 SchemaService --> ICatalogDependencyService : checks dependencies
 SchemaService --> TableDirector : builds tables
 SchemaService --> IStorageObjectPort : coordinates storage
-SchemaService --> IMetadataTransactionPort : controls transaction
 
 SchemaService --> Schema : manages objects
 SchemaService --> Table : alters table
@@ -1914,17 +1881,17 @@ Table "1" *-- "*" Trigger : contains
 TableDefinition --> ColumnDefinition
 TableDefinition --> ConstraintOptions
 TableDefinition --> IndexOptions
-TableDefinition --> PartitionDefinition
-TableDefinition --> TriggerDefinition
+TableDefinition --> PartitionOptions
+TableDefinition --> TriggerOptions
 
 ProcedureDefinition --> ProcedureParameterDefinition
 
 ColumnDefinition --> DataType
 ConstraintOptions --> ConstraintType
 IndexOptions --> IndexType
-PartitionDefinition --> PartitionType
-TriggerDefinition --> TriggerEvent
-TriggerDefinition --> TriggerTiming
+PartitionOptions --> PartitionType
+TriggerOptions --> TriggerEvent
+TriggerOptions --> TriggerTiming
 ProcedureParameterDefinition --> DataType
 ProcedureParameterDefinition --> ParameterDirection
 

@@ -12,12 +12,22 @@ public class WALManager
         throw new NotImplementedException();
     }
 
+    public long WriteLog(object record)
+    {
+        throw new NotImplementedException();
+    }
+
     public void Flush(long upToLSN)
     {
         throw new NotImplementedException();
     }
 
     public void Truncate(long beforeLSN)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void Checkpoint()
     {
         throw new NotImplementedException();
     }

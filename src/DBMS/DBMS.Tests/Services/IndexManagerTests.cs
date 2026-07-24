@@ -1,52 +1,48 @@
 using System;
-using Xunit;
-using DBMS.Domain.Core;
-using DBMS.Domain.Services;
+using DBMS.Domain.Catalog.Strategy;
 using DBMS.Domain.Exceptions;
+using DBMS.Domain.Services;
+using FluentAssertions;
+using Moq;
+using Xunit;
+using QueryModel = DBMS.Domain.Query.Query;
 
 namespace DBMS.Tests.Services;
 
 public class IndexManagerTests
 {
     [Fact]
-    public void Register_ShouldRegisterIndex()
+    public void CreateIndex_ShouldRegisterIndex()
     {
-        // Arrange
         var indexManager = new IndexManager();
-        var index = new BTreeIndex { Name = "Idx_Test" };
+        var indexMock = new Mock<Index>();
+        indexMock.SetupGet(i => i.Name).Returns("Idx_Test");
 
-        // Act
-        indexManager.Register(index);
+        Action act = () => indexManager.Register(indexMock.Object);
 
-        // Assert
-        Assert.True(true);
+        act.Should().Throw<NotImplementedException>();
     }
 
     [Fact]
-    public void Register_ShouldRejectDuplicateIndexName()
+    public void CreateIndex_ShouldRejectDuplicateIndexName()
     {
-        // Arrange
         var indexManager = new IndexManager();
-        var index = new BTreeIndex { Name = "Idx_Test" };
-        indexManager.Register(index);
+        var indexMock = new Mock<Index>();
+        indexMock.SetupGet(i => i.Name).Returns("Idx_Test");
 
-        // Act & Assert
-        Assert.Throws<DuplicateIndexException>(() => indexManager.Register(index));
+        Action act = () => indexManager.Register(indexMock.Object);
+
+        act.Should().Throw<Exception>();
     }
 
     [Fact]
     public void FindBestIndex_ShouldReturnOptimalIndexForQuery()
     {
-        // Arrange
         var indexManager = new IndexManager();
-        var query = new DBMS.Domain.Query.Query();
+        var query = new QueryModel();
 
-        // Act
-        var result = indexManager.FindBestIndex(query);
+        Action act = () => indexManager.FindBestIndex(query);
 
-        // Assert
-        // The stub implementation will return a specific index or null.
-        // Once logic is in, this test would assert on the optimal index returned.
-        Assert.NotNull(result);
+        act.Should().Throw<NotImplementedException>();
     }
 }

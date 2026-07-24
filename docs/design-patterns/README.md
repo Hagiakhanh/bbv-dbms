@@ -289,8 +289,8 @@ class TableDefinition {
     +Columns : IReadOnlyCollection~ColumnDefinition~
     +Constraints : IReadOnlyCollection~ConstraintOptions~
     +Indexes : IReadOnlyCollection~IndexOptions~
-    +Partitions : IReadOnlyCollection~PartitionDefinition~
-    +Triggers : IReadOnlyCollection~TriggerDefinition~
+    +Partitions : IReadOnlyCollection~PartitionOptions~
+    +Triggers : IReadOnlyCollection~TriggerOptions~
     +Validate() DefinitionValidationResult
 }
 
@@ -320,14 +320,14 @@ class IndexOptions {
     +Unique : bool
 }
 
-class PartitionDefinition {
+class PartitionOptions {
     <<DTO>>
     +Name : string
     +PartitionKey : string
     +Type : PartitionType
 }
 
-class TriggerDefinition {
+class TriggerOptions {
     <<DTO>>
     +Name : string
     +Event : TriggerEvent
@@ -344,15 +344,15 @@ class DefinitionValidationResult {
 TableDefinition "1" *-- "*" ColumnDefinition
 TableDefinition "1" *-- "*" ConstraintOptions
 TableDefinition "1" *-- "*" IndexOptions
-TableDefinition "1" *-- "*" PartitionDefinition
-TableDefinition "1" *-- "*" TriggerDefinition
+TableDefinition "1" *-- "*" PartitionOptions
+TableDefinition "1" *-- "*" TriggerOptions
 TableDefinition --> DefinitionValidationResult : returns
 ColumnDefinition --> DataType
 ConstraintOptions --> ConstraintType
 IndexOptions --> IndexType
-PartitionDefinition --> PartitionType
-TriggerDefinition --> TriggerEvent
-TriggerDefinition --> TriggerTiming
+PartitionOptions --> PartitionType
+TriggerOptions --> TriggerEvent
+TriggerOptions --> TriggerTiming
 
 %% =====================================================
 %% 6. BUILDER — TABLE CONSTRUCTION
@@ -393,8 +393,8 @@ class TableDirector {
     -indexFactory : IIndexFactory
     +Construct(definition : TableDefinition) Table
     -CreateColumn(definition : ColumnDefinition) Column
-    -CreatePartition(definition : PartitionDefinition) Partition
-    -CreateTrigger(definition : TriggerDefinition) Trigger
+    -CreatePartition(options : PartitionOptions) Partition
+    -CreateTrigger(options : TriggerOptions) Trigger
     -CreateBuildContext(tableName : string, columns : IReadOnlyCollection~Column~) TableBuildContext
 }
 
@@ -411,8 +411,8 @@ TableDirector --> IConstraintFactory : creates constraints
 TableDirector --> IIndexFactory : creates indexes
 TableDirector --> TableDefinition : reads
 TableDirector --> ColumnDefinition : creates columns
-TableDirector --> PartitionDefinition : creates partitions
-TableDirector --> TriggerDefinition : creates triggers
+TableDirector --> PartitionOptions : creates partitions
+TableDirector --> TriggerOptions : creates triggers
 TableDirector --> TableBuildContext : creates
 TableBuilder --> Table : builds
 TableBuilder --> Column : adds
@@ -1327,9 +1327,6 @@ class Index {
     +Columns : IReadOnlyCollection~Column~
     +Unique : bool
 
-    +Insert(key : object, rid : RID)
-    +Delete(key : object)
-    +Search(key : object) RID
     +Rename(newName : string)
 }
 
@@ -1735,9 +1732,9 @@ class TableDirector {
     -columnFactory : IColumnFactory
     -constraintFactory : IConstraintFactory
     -indexFactory : IIndexFactory
-    -partitionFactory : IPartitionFactory
-    -triggerFactory : ITriggerFactory
     +Construct(definition : TableDefinition) Table
+    -CreatePartition(options : PartitionOptions) Partition
+    -CreateTrigger(options : TriggerOptions) Trigger
 }
 
 class TableDefinition {
@@ -1783,15 +1780,7 @@ class IIndexFactory {
     +Create(options : IndexOptions, context : TableBuildContext) Index
 }
 
-class IPartitionFactory {
-    <<Collaborator>>
-    +Create(options : PartitionOptions) Partition
-}
 
-class ITriggerFactory {
-    <<Collaborator>>
-    +Create(options : TriggerOptions) Trigger
-}
 
 class ColumnDefinition
 class ConstraintOptions
@@ -1810,8 +1799,6 @@ TableDirector ..> TableBuildContext : creates
 TableDirector --> IColumnFactory
 TableDirector --> IConstraintFactory
 TableDirector --> IIndexFactory
-TableDirector --> IPartitionFactory
-TableDirector --> ITriggerFactory
 
 TableDefinition *-- ColumnDefinition
 TableDefinition *-- ConstraintOptions
@@ -1835,7 +1822,8 @@ sequenceDiagram
     participant Director as TableDirector
     participant Builder as ITableBuilder
     participant ColFactory as IColumnFactory
-    participant Factory as Table Part Factories
+    participant CFactory as IConstraintFactory
+    participant IFactory as IIndexFactory
 
     Caller->>Definition: Validate()
     Definition-->>Caller: validationResult
@@ -1857,21 +1845,25 @@ sequenceDiagram
         Director->>Director: Create TableBuildContext(columns)
 
         loop Each ConstraintOptions
-            Director->>Factory: CreateConstraint(options, context)
-            Factory-->>Director: Constraint
+            Director->>CFactory: Create(options, context)
+            CFactory-->>Director: Constraint
             Director->>Builder: AddConstraint(constraint)
         end
 
         loop Each IndexOptions
-            Director->>Factory: CreateIndex(options, context)
-            Factory-->>Director: Index
+            Director->>IFactory: Create(options, context)
+            IFactory-->>Director: Index
             Director->>Builder: AddIndex(index)
         end
 
-        loop Each remaining table part
-            Director->>Factory: Create(options)
-            Factory-->>Director: Partition or Trigger
-            Director->>Builder: Add(part)
+        loop Each PartitionOptions
+            Director->>Director: CreatePartition(options)
+            Director->>Builder: AddPartition(partition)
+        end
+
+        loop Each TriggerOptions
+            Director->>Director: CreateTrigger(options)
+            Director->>Builder: AddTrigger(trigger)
         end
 
         Director->>Builder: Build()
@@ -3447,7 +3439,6 @@ class DatabaseService {
     <<Facade>>
 
     -catalog : ICatalogManager
-    -transactionPort : IMetadataTransactionPort
 }
 
 class SchemaService {
@@ -3457,7 +3448,6 @@ class SchemaService {
     -dependencyService : ICatalogDependencyService
     -tableDirector : TableDirector
     -storagePort : IStorageObjectPort
-    -transactionPort : IMetadataTransactionPort
 }
 
 class ICatalogManager {
@@ -3517,14 +3507,12 @@ IDatabaseService <|.. DatabaseService
 ISchemaService <|.. SchemaService
 
 DatabaseService --> ICatalogManager
-DatabaseService --> IMetadataTransactionPort
 DatabaseService --> Database
 
 SchemaService --> ICatalogManager
 SchemaService --> ICatalogDependencyService
 SchemaService --> TableDirector
 SchemaService --> IStorageObjectPort
-SchemaService --> IMetadataTransactionPort
 
 SchemaService --> Schema
 SchemaService --> Table
