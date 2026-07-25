@@ -14,8 +14,8 @@ This document outlines the Design Patterns implemented within various core compo
 | 🔥 Critical | Database Object | Coordinate Create/Drop/Alter | `SchemaService`, `DatabaseService` | Provides a simplified, unified interface to the complex subsystems involved in metadata modifications. | **Facade** | Completed |
 | 🔴 High | Database Object | Metadata Traversal | `CatalogIterator`, `IIterableCatalog` | Provides a way to sequentially access metadata objects without exposing their underlying representation. | **Iterator** | Completed |
 | 🔴 High | Metadata Events | Cache, Statistics, Audit Reactions | Event publisher and handlers | Defines a one-to-many dependency so that when metadata changes, all dependent components are notified. | **Observer** | Completed |
-| 🔴 High | Database Object | Standardized DDL Execution Lifecycle | `DDLCommandTemplate`, `CreateTableCommand`, `AlterTableCommand`, `DropTableCommand` | Defines a fixed execution workflow for validating, checking permissions, applying metadata changes, persisting catalog data, and publishing events while allowing each DDL command to customize specific steps. | **Template Method** | Completed |
-| 🟡 Medium | Metadata Utility | Export DDL, Dependency Scan | Visitors or traversal services | Separates metadata analysis and export algorithms from the object structure on which they operate. | **Visitor** | Not Started |
+| 🔴 High | Database Object | DDL Script Generation | `DdlScriptGenerator`, `CreateTableScriptGenerator`, `AlterTableScriptGenerator`, `DropTableScriptGenerator` | Defines a fixed script-generation workflow—header, body, and footer—that each DDL statement type customizes to emit valid SQL DDL output. | **Template Method** | Completed |
+| 🟡 Medium | Metadata Utility | Export DDL, Dependency Scan | Visitors or traversal services | Separates metadata analysis and export algorithms from the object structure on which they operate. | **Visitor** | Completed |
 | 🟡 Medium | Trigger | Execute Trigger Actions | `TriggerExecutor`, trigger actions | Encapsulates trigger actions as objects for execution. | **Command** | Not Started |
 
 
@@ -502,10 +502,10 @@ SchemaService --> IStorageObjectPort : coordinates storage
 SchemaService --> Schema : manages
 
 %% =====================================================
-%% 9. COMMAND + TEMPLATE METHOD — DDL EXECUTION
-%% Command đóng gói yêu cầu DDL.
-%% Template Method cố định workflow chung cho mọi DDL command.
+%% 9. COMMAND — DDL EXECUTION
+%% Command đóng gói yêu cầu DDL thành các object độc lập.
 %% =====================================================
+
 
 class IDdlCommand {
     <<Command>>
@@ -513,7 +513,7 @@ class IDdlCommand {
 }
 
 class DdlCommandTemplate {
-    <<Abstract Command / Template Method>>
+    <<Abstract Command>>
 
     #catalog : ICatalogManager
     #transaction : IMetadataTransactionPort
@@ -523,12 +523,7 @@ class DdlCommandTemplate {
     #affectedObject : ICatalogComponent
 
     +Execute() DdlResult
-
-    #Validate()*
-    #CheckPreconditions()*
-    #ApplyChange() ICatalogComponent*
     #PersistMetadata(component : ICatalogComponent)
-    #CreateEvent(component : ICatalogComponent) MetadataEvent*
     #RecordEvent(event : MetadataEvent)
     #CreateSuccessResult(component : ICatalogComponent) DdlResult
     #CreateFailureResult(message : string) DdlResult
@@ -539,11 +534,7 @@ class CreateSchemaCommand {
     -receiver : IDatabaseService
     -database : Database
     -schemaName : string
-
-    #Validate()
-    #CheckPreconditions()
-    #ApplyChange() ICatalogComponent
-    #CreateEvent(component : ICatalogComponent) MetadataEvent
+    +Execute() DdlResult
 }
 
 class CreateTableCommand {
@@ -551,11 +542,7 @@ class CreateTableCommand {
     -receiver : ISchemaService
     -schema : Schema
     -definition : TableDefinition
-
-    #Validate()
-    #CheckPreconditions()
-    #ApplyChange() ICatalogComponent
-    #CreateEvent(component : ICatalogComponent) MetadataEvent
+    +Execute() DdlResult
 }
 
 class AlterTableCommand {
@@ -563,11 +550,7 @@ class AlterTableCommand {
     -receiver : ISchemaService
     -table : Table
     -operation : TableAlterOperation
-
-    #Validate()
-    #CheckPreconditions()
-    #ApplyChange() ICatalogComponent
-    #CreateEvent(component : ICatalogComponent) MetadataEvent
+    +Execute() DdlResult
 }
 
 class DropTableCommand {
@@ -576,11 +559,7 @@ class DropTableCommand {
     -schema : Schema
     -tableName : string
     -cascade : bool
-
-    #Validate()
-    #CheckPreconditions()
-    #ApplyChange() ICatalogComponent
-    #CreateEvent(component : ICatalogComponent) MetadataEvent
+    +Execute() DdlResult
 }
 
 class IDdlCommandExecutor {
@@ -899,7 +878,61 @@ DependencyScanVisitor --> MetadataDependency : creates
 MetadataDependency --> MetadataDependencyType
 
 %% =====================================================
-%% 14. SUPPORTING TYPES
+%% 14. TEMPLATE METHOD — DDL SCRIPT GENERATION
+%% Defines a fixed Generate() skeleton; subclasses customize
+%% BuildHeader() and BuildBody() per DDL object type.
+%% =====================================================
+
+class DdlScriptGenerator {
+    <<Abstract Template>>
+    +Generate() string
+    #BuildHeader() string*
+    #BuildBody() string*
+    #BuildFooter() string
+}
+
+class CreateTableScriptGenerator {
+    <<Concrete Template>>
+    -table : Table
+    #BuildHeader() string
+    #BuildBody() string
+}
+
+class AlterTableScriptGenerator {
+    <<Concrete Template>>
+    -table : Table
+    -operation : TableAlterOperation
+    #BuildHeader() string
+    #BuildBody() string
+}
+
+class DropTableScriptGenerator {
+    <<Concrete Template>>
+    -tableName : string
+    -cascade : bool
+    #BuildHeader() string
+    #BuildBody() string
+}
+
+class CreateSchemaScriptGenerator {
+    <<Concrete Template>>
+    -schema : Schema
+    #BuildHeader() string
+    #BuildBody() string
+}
+
+DdlScriptGenerator <|-- CreateTableScriptGenerator
+DdlScriptGenerator <|-- AlterTableScriptGenerator
+DdlScriptGenerator <|-- DropTableScriptGenerator
+DdlScriptGenerator <|-- CreateSchemaScriptGenerator
+
+CreateTableScriptGenerator --> Table : reads
+AlterTableScriptGenerator --> Table : reads
+AlterTableScriptGenerator --> TableAlterOperation : reads
+DropTableScriptGenerator --> Schema : references
+
+%% =====================================================
+%% 15. SUPPORTING TYPES
 %% =====================================================
 
 class TableAlterOperation {
@@ -3963,7 +3996,7 @@ sequenceDiagram
     end
 ```
 
-### 9. Standardized DDL Execution Lifecycle (Template Pattern)
+### 9. DDL Script Generation (Template Pattern)
 
 **Purpose:**
 Define the skeleton of an algorithm in a base class while allowing subclasses to customize specific steps without changing the overall process.
@@ -4084,45 +4117,71 @@ public class HtmlReportGenerator : ReportGenerator
 classDiagram
 direction TB
 
-class DDLCommandTemplate {
+class DdlScriptGenerator {
     <<abstract Template>>
-    +Execute() DDLResult
-    #Validate() void
-    #CheckPermission() void
-    #CheckPreconditions() void
-    #ApplyChange() void
-    #PersistMetadata() void
-    #PublishEvent() void
+    +Generate() string
+    #BuildHeader() string*
+    #BuildBody() string*
+    #BuildFooter() string
 }
 
-class CreateTableCommand {
-    #Validate() void
-    #CheckPreconditions() void
-    #ApplyChange() void
+class CreateTableScriptGenerator {
+    <<Concrete Template>>
+    -table : Table
+    +CreateTableScriptGenerator(table : Table)
+    #BuildHeader() string
+    #BuildBody() string
 }
 
-class AlterTableCommand {
-    #Validate() void
-    #CheckPreconditions() void
-    #ApplyChange() void
+class AlterTableScriptGenerator {
+    <<Concrete Template>>
+    -table : Table
+    -operation : TableAlterOperation
+    +AlterTableScriptGenerator(table : Table, operation : TableAlterOperation)
+    #BuildHeader() string
+    #BuildBody() string
 }
 
-class DropTableCommand {
-    #Validate() void
-    #CheckPreconditions() void
-    #ApplyChange() void
+class DropTableScriptGenerator {
+    <<Concrete Template>>
+    -tableName : string
+    -cascade : bool
+    +DropTableScriptGenerator(tableName : string, cascade : bool)
+    #BuildHeader() string
+    #BuildBody() string
 }
 
-class DDLResult {
-    <<enumeration>>
-    Success
-    Failure
+class CreateSchemaScriptGenerator {
+    <<Concrete Template>>
+    -schema : Schema
+    +CreateSchemaScriptGenerator(schema : Schema)
+    #BuildHeader() string
+    #BuildBody() string
 }
 
-DDLCommandTemplate <|-- CreateTableCommand
-DDLCommandTemplate <|-- AlterTableCommand
-DDLCommandTemplate <|-- DropTableCommand
-DDLCommandTemplate ..> DDLResult
+class Table {
+    +TableId : int
+    +Name : string
+    +Parent : Schema
+    +Columns : IReadOnlyCollection~Column~
+    +Constraints : IReadOnlyCollection~Constraint~
+    +Indexes : IReadOnlyCollection~Index~
+}
+
+class TableAlterOperation {
+    <<Command Data>>
+    +Type : TableAlterType
+    +Definition : object
+}
+
+DdlScriptGenerator <|-- CreateTableScriptGenerator
+DdlScriptGenerator <|-- AlterTableScriptGenerator
+DdlScriptGenerator <|-- DropTableScriptGenerator
+DdlScriptGenerator <|-- CreateSchemaScriptGenerator
+
+CreateTableScriptGenerator --> Table : reads
+AlterTableScriptGenerator --> Table : reads
+AlterTableScriptGenerator --> TableAlterOperation : reads
 ```
 
 ```mermaid
@@ -4130,47 +4189,42 @@ sequenceDiagram
     autonumber
 
     actor Client
-    participant Command as CreateTableCommand
-    participant Director as TableDirector
-    participant Schema as Schema
-    participant Catalog as CatalogManager
-    participant Publisher as MetadataEventPublisher
+    participant Generator as CreateTableScriptGenerator
+    participant Table
+    participant Column
+    participant Constraint
+    participant Index
 
-    Client->>Command: Execute()
+    Client->>Generator: new CreateTableScriptGenerator(table)
+    Client->>Generator: Generate()
 
-    Note over Command: Template Method starts
+    Note over Generator: Template Method starts
 
-    Command->>Command: Validate()
+    Generator->>Generator: BuildHeader()
+    Generator->>Table: Name, Parent.Name
+    Table-->>Generator: schema and table name
 
-    alt Invalid TableDefinition
-        Command-->>Client: DDLResult.FAILURE
-    else Valid definition
-        Command->>Command: CheckPreconditions()
-        Command->>Catalog: ContainsTable(schemaName, tableName)
-        Catalog-->>Command: exists
+    Generator->>Generator: BuildBody()
 
-        alt Table already exists
-            Command-->>Client: DDLResult.FAILURE
-        else Table does not exist
-            Command->>Command: ApplyChange()
-
-            Command->>Director: Construct(definition)
-            Director-->>Command: table
-
-            Command->>Schema: AddTable(table)
-            Schema-->>Command: added
-
-            Command->>Command: PersistMetadata()
-            Command->>Catalog: SaveTable(table)
-            Catalog-->>Command: saved
-
-            Command->>Command: PublishEvent()
-            Command->>Publisher: Publish(TableCreatedEvent)
-            Publisher-->>Command: published
-
-            Command-->>Client: DDLResult.SUCCESS
-        end
+    loop Each Column
+        Generator->>Column: Name, DataType, Nullable, DefaultValue
+        Column-->>Generator: column definition fragment
     end
+
+    loop Each Constraint
+        Generator->>Constraint: Name, Type, Columns
+        Constraint-->>Generator: constraint definition fragment
+    end
+
+    loop Each Index
+        Generator->>Index: Name, Columns, Unique
+        Index-->>Generator: index definition fragment
+    end
+
+    Generator->>Generator: BuildFooter()
+    Note over Generator: Shared base returns
+
+    Generator-->>Client: Complete CREATE TABLE DDL script
 ```
 
 ### 10. Metadata Utility (Visitor Pattern)
