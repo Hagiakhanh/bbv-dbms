@@ -65,14 +65,6 @@ class ConfigurationManager {
     +UpdateConfiguration(key : string, value : string)
     +GetConfiguration(key : string) string
 }
-class SecurityManager {
-    -userDb : Map~string, HashedCredential~
-    +Authenticate(username : string, password : string) Session
-    +CheckPermission(user : string, obj : int, action : string) bool
-    +GrantRole(user : string, role : string)
-    +RevokeRole(user : string, role : string)
-}
-note for SecurityManager "Authenticate() throws\nPermissionDeniedException if invalid"
 class MonitoringManager {
     -metrics : ServerMetrics
     +CollectMetrics()
@@ -80,7 +72,6 @@ class MonitoringManager {
 }
 DatabaseServer --> DatabaseManager
 DatabaseServer --> ConfigurationManager
-DatabaseServer --> SecurityManager
 DatabaseServer --> MonitoringManager
 ```
 
@@ -1066,7 +1057,202 @@ sequenceDiagram
 
 ---
 
-## 3. Storage Engine
+## 3. Query Processor
+
+```mermaid
+classDiagram
+direction LR
+class SQLParser {
+    +Parse(sql : string) ASTNode
+    -Tokenize(sql : string) Token[]
+    -BuildAST(tokens : Token[]) ASTNode
+}
+note for SQLParser "Parse() throws SqlSyntaxException\non invalid input"
+class Lexer {
+    +Tokenize(sql : string) Token[]
+}
+class SemanticAnalyzer {
+    -catalog : CatalogManager
+    +Bind(ast : ASTNode) LogicalPlan
+}
+note for SemanticAnalyzer "Bind() throws\nObjectNotFoundException if invalid"
+class AST {
+    +Root : ASTNode
+    +ToLogicalPlan() LogicalPlan
+}
+class QueryOptimizer {
+    -costModel : CostModel
+    -catalog : CatalogManager
+    +Optimize(plan : LogicalPlan) PhysicalPlan
+}
+class LogicalPlan {
+    +Operators : List~Operator~
+}
+class PhysicalPlan {
+    +Operators : List~Operator~
+}
+class StatisticsManager {
+    +Collect(table : Table)
+    +GetStats(tableId : int) TableStats
+}
+class QueryExecutor {
+    +Execute(plan : PhysicalPlan, tx : Transaction) ResultCursor
+}
+class RuntimeContext {
+    +TransactionId : int
+    +SessionId : string
+}
+SQLParser --> Lexer
+SQLParser --> AST
+AST --> LogicalPlan
+SemanticAnalyzer --> LogicalPlan
+QueryOptimizer --> LogicalPlan
+QueryOptimizer --> PhysicalPlan
+QueryOptimizer --> StatisticsManager
+QueryExecutor --> PhysicalPlan
+QueryExecutor --> RuntimeContext
+```
+
+### SQL Parsing & Semantic Analysis
+Covers: `ParseSelect_ShouldGenerateAST`, `ParseInsert_ShouldGenerateAST`, `ParseCreate_ShouldGenerateASTForDDL`, `Parse_ShouldThrow_WhenSqlSyntaxIsInvalid`, `Bind_ShouldResolveTableNames`, `Bind_ShouldThrow_WhenTableDoesNotExist`, `Bind_ShouldThrow_WhenColumnDoesNotExist`
+```mermaid
+flowchart LR
+    ClassNode["SQL Parsing & Semantic Analysis"]
+
+    ClassNode --> SQL_Parsing___Semantic_Analysis_1["ParseSelect_ShouldGenerateAST"]
+    ClassNode --> SQL_Parsing___Semantic_Analysis_2["ParseInsert_ShouldGenerateAST"]
+    ClassNode --> SQL_Parsing___Semantic_Analysis_3["ParseCreate_ShouldGenerateASTForDDL"]
+    ClassNode --> SQL_Parsing___Semantic_Analysis_4["Parse_ShouldThrow_WhenSqlSyntaxIsInvalid"]
+    ClassNode --> SQL_Parsing___Semantic_Analysis_5["Bind_ShouldResolveTableNames"]
+    ClassNode --> SQL_Parsing___Semantic_Analysis_6["Bind_ShouldThrow_WhenTableDoesNotExist"]
+    ClassNode --> SQL_Parsing___Semantic_Analysis_7["Bind_ShouldThrow_WhenColumnDoesNotExist"]
+
+    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
+    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
+    classDef redPhaseTest fill:#fef3c7,stroke:#f59e0b,color:#111827,stroke-width:2px
+
+    class ClassNode classNode
+    class SQL_Parsing___Semantic_Analysis_1,SQL_Parsing___Semantic_Analysis_2,SQL_Parsing___Semantic_Analysis_3,SQL_Parsing___Semantic_Analysis_4,SQL_Parsing___Semantic_Analysis_5,SQL_Parsing___Semantic_Analysis_6,SQL_Parsing___Semantic_Analysis_7 redPhaseTest
+```
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Client
+    participant Parser as SQLParser
+    participant Analyzer as SemanticAnalyzer
+    participant CatMgr as CatalogManager
+    
+    Client->>Parser: Parse("SELECT * FROM Users")
+    alt Invalid Syntax
+        Parser-->>Client: throws SqlSyntaxException
+    else Valid Syntax
+        Parser->>Parser: Tokenize & BuildAST
+        Parser-->>Client: return ASTNode
+    end
+    
+    Client->>Analyzer: Bind(ASTNode)
+    Analyzer->>CatMgr: Lookup Table/Columns
+    alt Not Found
+        Analyzer-->>Client: throws ObjectNotFoundException
+    else Resolved
+        Analyzer->>Analyzer: Generate LogicalPlan
+        Analyzer-->>Client: return LogicalPlan
+    end
+```
+
+### Query Optimization
+Covers: `Optimize_ShouldChooseIndexScan_WhenIndexExists`, `Optimize_ShouldChooseTableScan_WhenNoIndexExists`, `Optimize_ShouldOptimizeJoinOrder`, `Optimize_ShouldApplyPredicatePushdown`, `Optimize_ShouldUseCoveringIndex_WhenPossible`, `Optimize_ShouldChooseHashJoin_ForEquiJoins`
+```mermaid
+flowchart LR
+    ClassNode["Query Optimization"]
+
+    ClassNode --> Query_Optimization_1["Optimize_ShouldChooseIndexScan_WhenIndexExists"]
+    ClassNode --> Query_Optimization_2["Optimize_ShouldChooseTableScan_WhenNoIndexExists"]
+    ClassNode --> Query_Optimization_3["Optimize_ShouldOptimizeJoinOrder"]
+    ClassNode --> Query_Optimization_4["Optimize_ShouldApplyPredicatePushdown"]
+    ClassNode --> Query_Optimization_5["Optimize_ShouldUseCoveringIndex_WhenPossible"]
+    ClassNode --> Query_Optimization_6["Optimize_ShouldChooseHashJoin_ForEquiJoins"]
+
+    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
+    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
+    classDef redPhaseTest fill:#fef3c7,stroke:#f59e0b,color:#111827,stroke-width:2px
+
+    class ClassNode classNode
+    class Query_Optimization_1,Query_Optimization_2,Query_Optimization_3,Query_Optimization_4,Query_Optimization_5,Query_Optimization_6 redPhaseTest
+```
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant System
+    participant Optimizer as QueryOptimizer
+    participant Stats as StatisticsManager
+    
+    System->>Optimizer: Optimize(LogicalPlan)
+    Optimizer->>Stats: GetStats(TableId)
+    Stats-->>Optimizer: TableStats
+    
+    Optimizer->>Optimizer: Apply Predicate Pushdown
+    Optimizer->>Optimizer: Optimize Join Order
+    
+    alt Index Exists (High Selectivity)
+        Optimizer->>Optimizer: Choose IndexScan
+    else No Index (or Low Selectivity)
+        Optimizer->>Optimizer: Choose TableScan
+    end
+    Optimizer-->>System: return PhysicalPlan
+```
+
+### Query Execution
+Covers: `ExecuteSelect_ShouldReturnMatchingRows`, `ExecuteInsert_ShouldInsertRecord`, `ExecuteUpdate_ShouldModifyExistingRows`, `ExecuteDelete_ShouldDeleteMatchingRows`, `ExecuteJoin_ShouldReturnJoinedRows`, `ExecuteAggregate_ShouldReturnAggregatedResult`, `Execute_ShouldThrow_WhenExecutionPlanIsInvalid`, `ExecuteAggregate_ShouldHandleEmptyTables`, `ExecuteJoin_ShouldReturnEmpty_WhenNoMatches`, `ExecuteLimit_ShouldReturnOnlySpecifiedRows`, `ExecuteOrderBy_ShouldSortResultsCorrectly`
+```mermaid
+flowchart LR
+    ClassNode["Query Execution"]
+
+    ClassNode --> Query_Execution_1["ExecuteSelect_ShouldReturnMatchingRows"]
+    ClassNode --> Query_Execution_2["ExecuteInsert_ShouldInsertRecord"]
+    ClassNode --> Query_Execution_3["ExecuteUpdate_ShouldModifyExistingRows"]
+    ClassNode --> Query_Execution_4["ExecuteDelete_ShouldDeleteMatchingRows"]
+    ClassNode --> Query_Execution_5["ExecuteJoin_ShouldReturnJoinedRows"]
+    ClassNode --> Query_Execution_6["ExecuteAggregate_ShouldReturnAggregatedResult"]
+    ClassNode --> Query_Execution_7["Execute_ShouldThrow_WhenExecutionPlanIsInvalid"]
+    ClassNode --> Query_Execution_8["ExecuteAggregate_ShouldHandleEmptyTables"]
+    ClassNode --> Query_Execution_9["ExecuteJoin_ShouldReturnEmpty_WhenNoMatches"]
+    ClassNode --> Query_Execution_10["ExecuteLimit_ShouldReturnOnlySpecifiedRows"]
+    ClassNode --> Query_Execution_11["ExecuteOrderBy_ShouldSortResultsCorrectly"]
+
+    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
+    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
+    classDef redPhaseTest fill:#fef3c7,stroke:#f59e0b,color:#111827,stroke-width:2px
+
+    class ClassNode classNode
+    class Query_Execution_1,Query_Execution_2,Query_Execution_3,Query_Execution_4,Query_Execution_5,Query_Execution_6,Query_Execution_7,Query_Execution_8,Query_Execution_9,Query_Execution_10,Query_Execution_11 redPhaseTest
+```
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Client
+    participant Exec as QueryExecutor
+    participant Plan as PhysicalPlan
+    participant Storage as StorageEngine/RecordManager
+    
+    Client->>Exec: Execute(PhysicalPlan, Transaction)
+    alt Invalid Plan
+        Exec-->>Client: throws InvalidExecutionPlanException
+    else Valid Plan
+        Exec->>Plan: Execute Operators (Select/Join/Aggregate)
+        Plan->>Storage: Read/Write Data
+        Storage-->>Plan: Rows
+        Plan-->>Exec: ResultCursor
+        Exec-->>Client: return ResultCursor
+    end
+```
+
+---
+
+## 4. Storage Engine
 
 ```mermaid
 classDiagram
@@ -1281,7 +1467,7 @@ sequenceDiagram
 
 ---
 
-## 4. Transaction
+## 5. Transaction
 
 ```mermaid
 classDiagram
@@ -1443,201 +1629,6 @@ sequenceDiagram
     TxMgr->>MVCC: ReadVersion(rid, snapshotId)
     MVCC->>MVCC: Filter uncommitted versions
     MVCC-->>TxMgr: return Committed Row
-```
-
----
-
-## 5. Query Processor
-
-```mermaid
-classDiagram
-direction LR
-class SQLParser {
-    +Parse(sql : string) ASTNode
-    -Tokenize(sql : string) Token[]
-    -BuildAST(tokens : Token[]) ASTNode
-}
-note for SQLParser "Parse() throws SqlSyntaxException\non invalid input"
-class Lexer {
-    +Tokenize(sql : string) Token[]
-}
-class SemanticAnalyzer {
-    -catalog : CatalogManager
-    +Bind(ast : ASTNode) LogicalPlan
-}
-note for SemanticAnalyzer "Bind() throws\nObjectNotFoundException if invalid"
-class AST {
-    +Root : ASTNode
-    +ToLogicalPlan() LogicalPlan
-}
-class QueryOptimizer {
-    -costModel : CostModel
-    -catalog : CatalogManager
-    +Optimize(plan : LogicalPlan) PhysicalPlan
-}
-class LogicalPlan {
-    +Operators : List~Operator~
-}
-class PhysicalPlan {
-    +Operators : List~Operator~
-}
-class StatisticsManager {
-    +Collect(table : Table)
-    +GetStats(tableId : int) TableStats
-}
-class QueryExecutor {
-    +Execute(plan : PhysicalPlan, tx : Transaction) ResultCursor
-}
-class RuntimeContext {
-    +TransactionId : int
-    +SessionId : string
-}
-SQLParser --> Lexer
-SQLParser --> AST
-AST --> LogicalPlan
-SemanticAnalyzer --> LogicalPlan
-QueryOptimizer --> LogicalPlan
-QueryOptimizer --> PhysicalPlan
-QueryOptimizer --> StatisticsManager
-QueryExecutor --> PhysicalPlan
-QueryExecutor --> RuntimeContext
-```
-
-### SQL Parsing & Semantic Analysis
-Covers: `ParseSelect_ShouldGenerateAST`, `ParseInsert_ShouldGenerateAST`, `ParseCreate_ShouldGenerateASTForDDL`, `Parse_ShouldThrow_WhenSqlSyntaxIsInvalid`, `Bind_ShouldResolveTableNames`, `Bind_ShouldThrow_WhenTableDoesNotExist`, `Bind_ShouldThrow_WhenColumnDoesNotExist`
-```mermaid
-flowchart LR
-    ClassNode["SQL Parsing & Semantic Analysis"]
-
-    ClassNode --> SQL_Parsing___Semantic_Analysis_1["ParseSelect_ShouldGenerateAST"]
-    ClassNode --> SQL_Parsing___Semantic_Analysis_2["ParseInsert_ShouldGenerateAST"]
-    ClassNode --> SQL_Parsing___Semantic_Analysis_3["ParseCreate_ShouldGenerateASTForDDL"]
-    ClassNode --> SQL_Parsing___Semantic_Analysis_4["Parse_ShouldThrow_WhenSqlSyntaxIsInvalid"]
-    ClassNode --> SQL_Parsing___Semantic_Analysis_5["Bind_ShouldResolveTableNames"]
-    ClassNode --> SQL_Parsing___Semantic_Analysis_6["Bind_ShouldThrow_WhenTableDoesNotExist"]
-    ClassNode --> SQL_Parsing___Semantic_Analysis_7["Bind_ShouldThrow_WhenColumnDoesNotExist"]
-
-    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
-    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
-    classDef redPhaseTest fill:#fef3c7,stroke:#f59e0b,color:#111827,stroke-width:2px
-
-    class ClassNode classNode
-    class SQL_Parsing___Semantic_Analysis_1,SQL_Parsing___Semantic_Analysis_2,SQL_Parsing___Semantic_Analysis_3,SQL_Parsing___Semantic_Analysis_4,SQL_Parsing___Semantic_Analysis_5,SQL_Parsing___Semantic_Analysis_6,SQL_Parsing___Semantic_Analysis_7 redPhaseTest
-```
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Client
-    participant Parser as SQLParser
-    participant Analyzer as SemanticAnalyzer
-    participant CatMgr as CatalogManager
-    
-    Client->>Parser: Parse("SELECT * FROM Users")
-    alt Invalid Syntax
-        Parser-->>Client: throws SqlSyntaxException
-    else Valid Syntax
-        Parser->>Parser: Tokenize & BuildAST
-        Parser-->>Client: return ASTNode
-    end
-    
-    Client->>Analyzer: Bind(ASTNode)
-    Analyzer->>CatMgr: Lookup Table/Columns
-    alt Not Found
-        Analyzer-->>Client: throws ObjectNotFoundException
-    else Resolved
-        Analyzer->>Analyzer: Generate LogicalPlan
-        Analyzer-->>Client: return LogicalPlan
-    end
-```
-
-### Query Optimization
-Covers: `Optimize_ShouldChooseIndexScan_WhenIndexExists`, `Optimize_ShouldChooseTableScan_WhenNoIndexExists`, `Optimize_ShouldOptimizeJoinOrder`, `Optimize_ShouldApplyPredicatePushdown`, `Optimize_ShouldUseCoveringIndex_WhenPossible`, `Optimize_ShouldChooseHashJoin_ForEquiJoins`
-```mermaid
-flowchart LR
-    ClassNode["Query Optimization"]
-
-    ClassNode --> Query_Optimization_1["Optimize_ShouldChooseIndexScan_WhenIndexExists"]
-    ClassNode --> Query_Optimization_2["Optimize_ShouldChooseTableScan_WhenNoIndexExists"]
-    ClassNode --> Query_Optimization_3["Optimize_ShouldOptimizeJoinOrder"]
-    ClassNode --> Query_Optimization_4["Optimize_ShouldApplyPredicatePushdown"]
-    ClassNode --> Query_Optimization_5["Optimize_ShouldUseCoveringIndex_WhenPossible"]
-    ClassNode --> Query_Optimization_6["Optimize_ShouldChooseHashJoin_ForEquiJoins"]
-
-    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
-    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
-    classDef redPhaseTest fill:#fef3c7,stroke:#f59e0b,color:#111827,stroke-width:2px
-
-    class ClassNode classNode
-    class Query_Optimization_1,Query_Optimization_2,Query_Optimization_3,Query_Optimization_4,Query_Optimization_5,Query_Optimization_6 redPhaseTest
-```
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant System
-    participant Optimizer as QueryOptimizer
-    participant Stats as StatisticsManager
-    
-    System->>Optimizer: Optimize(LogicalPlan)
-    Optimizer->>Stats: GetStats(TableId)
-    Stats-->>Optimizer: TableStats
-    
-    Optimizer->>Optimizer: Apply Predicate Pushdown
-    Optimizer->>Optimizer: Optimize Join Order
-    
-    alt Index Exists (High Selectivity)
-        Optimizer->>Optimizer: Choose IndexScan
-    else No Index (or Low Selectivity)
-        Optimizer->>Optimizer: Choose TableScan
-    end
-    Optimizer-->>System: return PhysicalPlan
-```
-
-### Query Execution
-Covers: `ExecuteSelect_ShouldReturnMatchingRows`, `ExecuteInsert_ShouldInsertRecord`, `ExecuteUpdate_ShouldModifyExistingRows`, `ExecuteDelete_ShouldDeleteMatchingRows`, `ExecuteJoin_ShouldReturnJoinedRows`, `ExecuteAggregate_ShouldReturnAggregatedResult`, `Execute_ShouldThrow_WhenExecutionPlanIsInvalid`, `ExecuteAggregate_ShouldHandleEmptyTables`, `ExecuteJoin_ShouldReturnEmpty_WhenNoMatches`, `ExecuteLimit_ShouldReturnOnlySpecifiedRows`, `ExecuteOrderBy_ShouldSortResultsCorrectly`
-```mermaid
-flowchart LR
-    ClassNode["Query Execution"]
-
-    ClassNode --> Query_Execution_1["ExecuteSelect_ShouldReturnMatchingRows"]
-    ClassNode --> Query_Execution_2["ExecuteInsert_ShouldInsertRecord"]
-    ClassNode --> Query_Execution_3["ExecuteUpdate_ShouldModifyExistingRows"]
-    ClassNode --> Query_Execution_4["ExecuteDelete_ShouldDeleteMatchingRows"]
-    ClassNode --> Query_Execution_5["ExecuteJoin_ShouldReturnJoinedRows"]
-    ClassNode --> Query_Execution_6["ExecuteAggregate_ShouldReturnAggregatedResult"]
-    ClassNode --> Query_Execution_7["Execute_ShouldThrow_WhenExecutionPlanIsInvalid"]
-    ClassNode --> Query_Execution_8["ExecuteAggregate_ShouldHandleEmptyTables"]
-    ClassNode --> Query_Execution_9["ExecuteJoin_ShouldReturnEmpty_WhenNoMatches"]
-    ClassNode --> Query_Execution_10["ExecuteLimit_ShouldReturnOnlySpecifiedRows"]
-    ClassNode --> Query_Execution_11["ExecuteOrderBy_ShouldSortResultsCorrectly"]
-
-    classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
-    classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
-    classDef redPhaseTest fill:#fef3c7,stroke:#f59e0b,color:#111827,stroke-width:2px
-
-    class ClassNode classNode
-    class Query_Execution_1,Query_Execution_2,Query_Execution_3,Query_Execution_4,Query_Execution_5,Query_Execution_6,Query_Execution_7,Query_Execution_8,Query_Execution_9,Query_Execution_10,Query_Execution_11 redPhaseTest
-```
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Client
-    participant Exec as QueryExecutor
-    participant Plan as PhysicalPlan
-    participant Storage as StorageEngine/RecordManager
-    
-    Client->>Exec: Execute(PhysicalPlan, Transaction)
-    alt Invalid Plan
-        Exec-->>Client: throws InvalidExecutionPlanException
-    else Valid Plan
-        Exec->>Plan: Execute Operators (Select/Join/Aggregate)
-        Plan->>Storage: Read/Write Data
-        Storage-->>Plan: Rows
-        Plan-->>Exec: ResultCursor
-        Exec-->>Client: return ResultCursor
-    end
 ```
 
 ---

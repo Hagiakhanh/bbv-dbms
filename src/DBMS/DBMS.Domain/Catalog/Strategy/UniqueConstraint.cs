@@ -22,22 +22,23 @@ public class UniqueConstraint : Constraint
 
     public override bool Validate(Row row)
     {
-        if (row == null) throw new ArgumentNullException(nameof(row));
+        // if (row == null) throw new ArgumentNullException(nameof(row));
 
-        if (Extractor.HasNullValue(row, Columns))
-        {
-            return true;
-        }
+        // if (Extractor.HasNullValue(row, Columns))
+        // {
+        //     return true;
+        // }
 
-        var key = Extractor.ExtractKey(row, Columns);
-        var existingRid = Index.Search(key);
+        // var key = Extractor.ExtractKey(row, Columns);
+        // var existingRid = Index.Search(key);
 
-        if (existingRid != null)
-        {
-            throw new UniqueConstraintViolationException($"Duplicate key found for unique constraint '{Name}'.");
-        }
+        // if (existingRid != null)
+        // {
+        //     throw new UniqueConstraintViolationException($"Duplicate key found for unique constraint '{Name}'.");
+        // }
 
-        return true;
+        // return true;
+        throw new NotImplementedException();
     }
 }
 

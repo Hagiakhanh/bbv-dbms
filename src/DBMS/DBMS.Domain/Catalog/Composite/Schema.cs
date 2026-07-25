@@ -43,9 +43,8 @@ public class Schema : ICatalogComposite, IIterableCatalog
 
     public Schema(string name)
     {
-        // if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Schema name cannot be empty", nameof(name));
-        // Name = name;
-        throw new NotImplementedException();
+        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Schema name cannot be empty", nameof(name));
+        Name = name;
     }
 
     public void AddTable(Table table)

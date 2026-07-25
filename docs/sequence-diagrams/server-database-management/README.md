@@ -35,14 +35,6 @@ class ConfigurationManager {
     +UpdateConfiguration(key : string, value : string)
     +GetConfiguration(key : string) string
 }
-class SecurityManager {
-    -userDb : Map~string, HashedCredential~
-    +Authenticate(username : string, password : string) Session
-    +CheckPermission(user : string, obj : int, action : string) bool
-    +GrantRole(user : string, role : string)
-    +RevokeRole(user : string, role : string)
-}
-note for SecurityManager "Authenticate() throws\nPermissionDeniedException if invalid"
 class MonitoringManager {
     -metrics : ServerMetrics
     +CollectMetrics()
@@ -50,7 +42,6 @@ class MonitoringManager {
 }
 DatabaseServer --> DatabaseManager
 DatabaseServer --> ConfigurationManager
-DatabaseServer --> SecurityManager
 DatabaseServer --> MonitoringManager
 ```
 ## 2. Sequence Diagrams

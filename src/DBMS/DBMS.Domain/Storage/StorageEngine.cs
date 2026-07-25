@@ -3,8 +3,23 @@ using System.Collections.Generic;
 
 namespace DBMS.Domain.Storage;
 
-public class StorageEngine
+public class StorageEngine : IStorageEngine
 {
+    public void InitializeStorageEngine(string dbName)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void AllocateDatabase(string name)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void DeallocateDatabase(string name)
+    {
+        throw new NotImplementedException();
+    }
+
     public byte[] ReadPage(int pageId)
     {
         throw new NotImplementedException();

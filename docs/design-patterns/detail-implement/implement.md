@@ -1898,3 +1898,194 @@ ProcedureParameterDefinition --> ParameterDirection
 TableAlterOperation --> TableAlterType
 DdlResult --> ICatalogComponent
 ```
+
+# Template Method pattern
+```mermaid
+classDiagram
+direction LR
+
+%% =====================================================
+%% Template Method Pattern — DDL Script Generation
+%% =====================================================
+
+class DdlScriptGenerator {
+    <<Abstract Template>>
+    +Generate() string
+    #BuildHeader() string*
+    #BuildBody() string*
+    #BuildFooter() string
+}
+
+class CreateTableScriptGenerator {
+    <<Concrete Template>>
+    -table : Table
+    +CreateTableScriptGenerator(table : Table)
+    #BuildHeader() string
+    #BuildBody() string
+}
+
+class AlterTableScriptGenerator {
+    <<Concrete Template>>
+    -table : Table
+    -operation : TableAlterOperation
+    +AlterTableScriptGenerator(table : Table, operation : TableAlterOperation)
+    #BuildHeader() string
+    #BuildBody() string
+}
+
+class DropTableScriptGenerator {
+    <<Concrete Template>>
+    -tableName : string
+    -cascade : bool
+    +DropTableScriptGenerator(tableName : string, cascade : bool)
+    #BuildHeader() string
+    #BuildBody() string
+}
+
+class CreateSchemaScriptGenerator {
+    <<Concrete Template>>
+    -schema : Schema
+    +CreateSchemaScriptGenerator(schema : Schema)
+    #BuildHeader() string
+    #BuildBody() string
+}
+
+%% =====================================================
+%% Domain Objects Read by Generators
+%% =====================================================
+
+class Table {
+    +TableId : int
+    +Name : string
+    +Parent : Schema
+    +Columns : IReadOnlyCollection~Column~
+    +Constraints : IReadOnlyCollection~Constraint~
+    +Indexes : IReadOnlyCollection~Index~
+    +Partitions : IReadOnlyCollection~Partition~
+    +Triggers : IReadOnlyCollection~Trigger~
+}
+
+class Schema {
+    +SchemaId : int
+    +Name : string
+}
+
+class Column {
+    +ColumnId : int
+    +Name : string
+    +DataType : DataType
+    +Nullable : bool
+    +DefaultValue : object
+}
+
+class Constraint {
+    <<abstract>>
+    +ConstraintId : int
+    +Name : string
+}
+
+class Index {
+    <<abstract>>
+    +IndexId : int
+    +Name : string
+    +Unique : bool
+    +Columns : IReadOnlyCollection~Column~
+}
+
+class TableAlterOperation {
+    <<Command Data>>
+    +Type : TableAlterType
+    +Definition : object
+}
+
+%% =====================================================
+%% Supporting Enumerations
+%% =====================================================
+
+class DataType {
+    <<enumeration>>
+    INT
+    BIGINT
+    VARCHAR
+    BOOLEAN
+    DECIMAL
+    DATETIME
+}
+
+class TableAlterType {
+    <<enumeration>>
+    RENAME_TABLE
+    ADD_COLUMN
+    DROP_COLUMN
+    ALTER_COLUMN
+    ADD_CONSTRAINT
+    DROP_CONSTRAINT
+    ADD_INDEX
+    DROP_INDEX
+}
+
+%% =====================================================
+%% Relationships
+%% =====================================================
+
+DdlScriptGenerator <|-- CreateTableScriptGenerator
+DdlScriptGenerator <|-- AlterTableScriptGenerator
+DdlScriptGenerator <|-- DropTableScriptGenerator
+DdlScriptGenerator <|-- CreateSchemaScriptGenerator
+
+CreateTableScriptGenerator --> Table : reads
+AlterTableScriptGenerator --> Table : reads
+AlterTableScriptGenerator --> TableAlterOperation : reads
+DropTableScriptGenerator --> Schema : references
+
+Table --> Schema : parent
+Table "1" *-- "*" Column : contains
+Table "1" *-- "*" Constraint : contains
+Table "1" *-- "*" Index : contains
+
+Column --> DataType
+TableAlterOperation --> TableAlterType
+```
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    actor Client
+    participant Generator as CreateTableScriptGenerator
+    participant Table
+    participant Column
+    participant Constraint
+    participant Index
+
+    Client->>Generator: new CreateTableScriptGenerator(table)
+    Client->>Generator: Generate()
+
+    Note over Generator: Template Method — fixed sequence
+
+    Generator->>Generator: BuildHeader()
+    Generator->>Table: Name, Parent.Name
+    Table-->>Generator: "CREATE TABLE schema.tableName"
+
+    Generator->>Generator: BuildBody()
+
+    loop Each Column
+        Generator->>Column: Name, DataType, Nullable, DefaultValue
+        Column-->>Generator: column definition fragment
+    end
+
+    loop Each Constraint
+        Generator->>Constraint: Name, Type, Columns
+        Constraint-->>Generator: constraint definition fragment
+    end
+
+    loop Each Index
+        Generator->>Index: Name, Columns, Unique
+        Index-->>Generator: index definition fragment
+    end
+
+    Generator->>Generator: BuildFooter()
+    Note over Generator: Shared base returns
+
+    Generator-->>Client: Complete CREATE TABLE DDL script
+```
