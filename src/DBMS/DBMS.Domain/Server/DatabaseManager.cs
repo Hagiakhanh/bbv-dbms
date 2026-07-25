@@ -1,16 +1,19 @@
 using System;
 using System.Collections.Generic;
 using DBMS.Domain.Catalog;
+using DBMS.Domain.Catalog.Composite;
+using DBMS.Domain.Catalog.Factory;
+using DBMS.Domain.Core;
 using DBMS.Domain.Exceptions;
-using DBMS.Domain.Server;
-using DBMS.Domain.Storage;
 using DBMS.Domain.Security;
+using DBMS.Domain.Storage;
 
 namespace DBMS.Domain.Server;
 
 public interface IDatabaseManager
 {
     void CreateDatabase(string name);
+    void CreateDatabase(DatabaseCreationOptions options);
     void DropDatabase(string name, bool cascade = false);
     Database GetDatabase(string name);
     IEnumerable<Database> ListDatabases();
@@ -24,6 +27,7 @@ public interface IDatabaseManager
 
 public class DatabaseManager : IDatabaseManager
 {
+    private readonly IDatabaseFactory _databaseFactory;
     private readonly ICatalogManager _catalog;
     private readonly IConnectionPool _connectionPool;
     private readonly IStorageEngine _storageEngine;
@@ -31,13 +35,27 @@ public class DatabaseManager : IDatabaseManager
     private readonly IFileManager _fileManager;
     private readonly ISecurityManager _securityManager;
 
-    public DatabaseManager(ICatalogManager catalog, 
+    public DatabaseManager(
+        ICatalogManager catalog, 
+        IConnectionPool connectionPool, 
+        IStorageEngine storageEngine, 
+        IBufferPool bufferPool, 
+        IFileManager fileManager, 
+        ISecurityManager securityManager)
+        : this(new DatabaseFactory(catalog, storageEngine, securityManager), catalog, connectionPool, storageEngine, bufferPool, fileManager, securityManager)
+    {
+    }
+
+    public DatabaseManager(
+        IDatabaseFactory databaseFactory,
+        ICatalogManager catalog, 
         IConnectionPool connectionPool, 
         IStorageEngine storageEngine, 
         IBufferPool bufferPool, 
         IFileManager fileManager, 
         ISecurityManager securityManager)
     {
+        _databaseFactory = databaseFactory ?? throw new ArgumentNullException(nameof(databaseFactory));
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _connectionPool = connectionPool ?? throw new ArgumentNullException(nameof(connectionPool));
         _storageEngine = storageEngine ?? throw new ArgumentNullException(nameof(storageEngine));
@@ -48,18 +66,26 @@ public class DatabaseManager : IDatabaseManager
 
     public void CreateDatabase(string name)
     {
-        // if (string.IsNullOrEmpty(name)) throw new InvalidNameException("Invalid name");
-        // if (_catalog.CheckExists(name)) throw new DuplicateNameException("Duplicate name");
-        // if (!_securityManager.CheckPermission(name, 0, "CREATE")) throw new PermissionDeniedException("Permission denied");
-        
-        // _catalog.RegisterDatabase(name);
+        //CreateDatabase(new DatabaseCreationOptions { Name = name });
+        throw new NotImplementedException();
+    }
+
+    public void CreateDatabase(DatabaseCreationOptions options)
+    {
+        // if (options == null) throw new ArgumentNullException(nameof(options));
+        // if (string.IsNullOrEmpty(options.Name)) throw new InvalidNameException("Invalid database name");
+        // if (!_securityManager.CheckPermission(options.Name, 0, "CREATE")) throw new PermissionDeniedException("Permission denied");
+        // if (_catalog.CheckExists(options.Name)) throw new DuplicateNameException("Duplicate database name");
+
+        // // Factory Method delegates database object construction & initialization
+        // _databaseFactory.Create(options);
         throw new NotImplementedException();
     }
 
     public void DropDatabase(string name, bool cascade = false)
     {
         // if (!_catalog.CheckExists(name)) return;
-        
+
         // if (_connectionPool.HasActiveConnections(name))
         // {
         //     if (cascade)
@@ -71,12 +97,12 @@ public class DatabaseManager : IDatabaseManager
         //         throw new DatabaseInUseException("Database in use");
         //     }
         // }
-        
+
         // if (!cascade && _catalog.HasSchemas(name))
         // {
         //     throw new DatabaseContainsSchemasException("Database contains schemas");
         // }
-        
+
         // _catalog.RemoveDatabase(name);
         throw new NotImplementedException();
     }
@@ -99,7 +125,7 @@ public class DatabaseManager : IDatabaseManager
         // {
         //     throw new DatabaseOfflineException("Database offline");
         // }
-        
+
         // _storageEngine.InitializeStorageEngine(name);
         // _catalog.LoadCatalog(name);
         throw new NotImplementedException();
@@ -113,7 +139,7 @@ public class DatabaseManager : IDatabaseManager
 
     public void RenameDatabase(string oldName, string newName)
     {
-        // if (_catalog.CheckExists(newName)) throw new DuplicateNameException("Duplicate name");
+        // if (_catalog.CheckExists(newName)) throw new DuplicateNameException("Duplicate database name");
         // _catalog.UpdateDatabaseName(oldName, newName);
         throw new NotImplementedException();
     }

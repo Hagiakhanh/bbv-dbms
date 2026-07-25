@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace DBMS.Domain.Security;
 
-public class SecurityManager
+public class SecurityManager : ISecurityManager
 {
     private Dictionary<string, object> userDb;
 
@@ -33,6 +33,11 @@ public class SecurityManager
     }
 
     public void RevokeRole(string user, string role)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void GrantOwnership(string dbName, string owner)
     {
         throw new NotImplementedException();
     }

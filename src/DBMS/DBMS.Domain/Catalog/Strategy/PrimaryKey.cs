@@ -22,22 +22,23 @@ public class PrimaryKey : Constraint
 
     public override bool Validate(Row row)
     {
-        if (row == null) throw new ArgumentNullException(nameof(row));
+        // if (row == null) throw new ArgumentNullException(nameof(row));
 
-        if (Extractor.HasNullValue(row, Columns))
-        {
-            throw new UniqueConstraintViolationException($"Primary key column cannot be null in constraint '{Name}'.");
-        }
+        // if (Extractor.HasNullValue(row, Columns))
+        // {
+        //     throw new UniqueConstraintViolationException($"Primary key column cannot be null in constraint '{Name}'.");
+        // }
 
-        var key = Extractor.ExtractKey(row, Columns);
-        var existingRid = Index.Search(key);
+        // var key = Extractor.ExtractKey(row, Columns);
+        // var existingRid = Index.Search(key);
 
-        if (existingRid != null)
-        {
-            throw new UniqueConstraintViolationException($"Duplicate key found for primary key constraint '{Name}'.");
-        }
+        // if (existingRid != null)
+        // {
+        //     throw new UniqueConstraintViolationException($"Duplicate key found for primary key constraint '{Name}'.");
+        // }
 
-        return true;
+        // return true;
+        throw new NotImplementedException();
     }
 }
 
