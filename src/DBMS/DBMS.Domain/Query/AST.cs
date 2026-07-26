@@ -5,7 +5,14 @@ namespace DBMS.Domain.Query;
 
 public class AST
 {
-    public object Root { get; set; }
+    public ASTNode? Root { get; set; }
+
+    public AST() { }
+
+    public AST(ASTNode root)
+    {
+        Root = root;
+    }
 
     public LogicalPlan ToLogicalPlan()
     {

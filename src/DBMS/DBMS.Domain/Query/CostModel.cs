@@ -2,9 +2,9 @@ using System;
 
 namespace DBMS.Domain.Query;
 
-public class Lexer
+public class CostModel
 {
-    public Token[] Tokenize(string sql)
+    public double EstimateCost(LogicalPlan plan, TableStats stats)
     {
         throw new NotImplementedException();
     }

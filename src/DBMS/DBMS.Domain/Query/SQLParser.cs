@@ -1,21 +1,33 @@
 using System;
-using System.Collections.Generic;
+using DBMS.Domain.Exceptions;
 
 namespace DBMS.Domain.Query;
 
 public class SQLParser
 {
-    public object Parse(string sql)
+    private readonly Lexer _lexer = new();
+
+    public AST Parse(string sql)
     {
         throw new NotImplementedException();
     }
 
-    private object[] Tokenize(string sql)
+    private Token[] Tokenize(string sql)
     {
         throw new NotImplementedException();
     }
 
-    private object BuildAST(object[] tokens)
+    private ASTNode BuildAST(Token[] tokens)
+    {
+        throw new NotImplementedException();
+    }
+
+    private SelectNode ParseSelect(Token[] tokens)
+    {
+        throw new NotImplementedException();
+    }
+
+    private ASTNode ParseExpression(Token[] tokens)
     {
         throw new NotImplementedException();
     }

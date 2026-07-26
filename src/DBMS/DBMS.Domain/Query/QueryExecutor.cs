@@ -6,6 +6,11 @@ namespace DBMS.Domain.Query;
 
 public class QueryExecutor
 {
+    public ResultCursor Execute(PhysicalPlan plan, RuntimeContext ctx)
+    {
+        throw new NotImplementedException();
+    }
+
     public object Execute(PhysicalPlan plan, Transaction tx)
     {
         throw new NotImplementedException();

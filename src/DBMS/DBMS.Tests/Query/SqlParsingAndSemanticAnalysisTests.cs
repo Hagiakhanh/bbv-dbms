@@ -1,5 +1,6 @@
 using System;
 using DBMS.Domain.Catalog;
+using DBMS.Domain.Exceptions;
 using DBMS.Domain.Query;
 using FluentAssertions;
 using Moq;
@@ -54,8 +55,9 @@ public class SqlParsingAndSemanticAnalysisTests
     {
         var catalogMock = new Mock<ICatalogManager>();
         var analyzer = new SemanticAnalyzer(catalogMock.Object);
+        var selectNode = new SelectNode();
 
-        Action act = () => analyzer.Bind(new object());
+        Action act = () => analyzer.Bind(selectNode);
 
         act.Should().Throw<NotImplementedException>();
     }
@@ -65,8 +67,9 @@ public class SqlParsingAndSemanticAnalysisTests
     {
         var catalogMock = new Mock<ICatalogManager>();
         var analyzer = new SemanticAnalyzer(catalogMock.Object);
+        var selectNode = new SelectNode();
 
-        Action act = () => analyzer.Bind(new object());
+        Action act = () => analyzer.Bind(selectNode);
 
         act.Should().Throw<Exception>();
     }
@@ -76,8 +79,9 @@ public class SqlParsingAndSemanticAnalysisTests
     {
         var catalogMock = new Mock<ICatalogManager>();
         var analyzer = new SemanticAnalyzer(catalogMock.Object);
+        var selectNode = new SelectNode();
 
-        Action act = () => analyzer.Bind(new object());
+        Action act = () => analyzer.Bind(selectNode);
 
         act.Should().Throw<Exception>();
     }
