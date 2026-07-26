@@ -5,8 +5,20 @@ namespace DBMS.Domain.Query;
 
 public class QueryOptimizer
 {
-    private object costModel;
-    private ICatalogManager catalog;
+    private readonly CostModel _costModel;
+    private readonly ICatalogManager _catalog;
+
+    public QueryOptimizer()
+    {
+        _costModel = new CostModel();
+        _catalog = null!;
+    }
+
+    public QueryOptimizer(CostModel costModel, ICatalogManager catalog)
+    {
+        _costModel = costModel;
+        _catalog = catalog;
+    }
 
     public PhysicalPlan Optimize(LogicalPlan plan)
     {

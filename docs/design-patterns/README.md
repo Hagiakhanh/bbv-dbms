@@ -1063,6 +1063,21 @@ SchemaService --> SequenceDefinition
 | 🟡 Medium | Configuration | Dynamic Configuration | `ConfigurationManager`, configuration observers | Notifies dependent components when configuration values change. | **Observer** | Not Started |
 | 🟢 Low | Monitoring | Metrics Export | `PrometheusMetricsAdapter`, `OpenTelemetryAdapter` | Converts internal server metrics into external monitoring formats. | **Adapter** | Not Started |
 
+## Visual Summary Query Processor
+| Priority | Module | Main Feature | Main Classes | Application | Design Pattern | Progress |
+| :---: | :--- | :--- | :--- | :--- | :--- | :---: |
+| 🔥 Critical | Query Processing | SQL Parsing | `SQLParser`, `Lexer`, `ASTNode` | Parses SQL grammar and represents SQL statements as an abstract syntax tree. | **Interpreter** | Completed |
+| 🔥 Critical | Query Processing | Query Plan Structure | `PlanOperator`, logical and physical operators | Represents AST and query plans as tree structures where leaf and composite operators are treated uniformly. | **Composite** | Not Started |
+| 🔥 Critical | Query Optimization | Optimization Algorithm | `QueryOptimizer`, `IOptimizationStrategy` | Allows rule-based, cost-based, and heuristic optimization algorithms to be selected independently. | **Strategy** | Not Started |
+| 🔥 Critical | Query Execution | Streaming Execution | `IPhysicalOperator`, `ResultCursor` | Produces rows incrementally through `Open`, `Next`, and `Close` operations. | **Iterator** | Not Started |
+| 🔴 High | Query Processing | Unified Query API | `QueryProcessor` | Provides one interface for parsing, binding, optimizing, and executing SQL queries. | **Facade** | Not Started |
+| 🔴 High | Query Processing | Plan Traversal | `IPlanVisitor`, AST and plan operators | Traverses AST and plan trees for binding, validation, cost calculation, and explain-plan generation. | **Visitor** | Not Started |
+| 🔴 High | Query Optimization | Optimization Rules | `IOptimizationRule`, concrete rules | Encapsulates predicate pushdown, projection pruning, constant folding, and join reordering as independent rules. | **Command** | Not Started |
+| 🟠 Medium | Query Planning | Physical Operator Creation | `PhysicalOperatorFactory` | Creates scan, join, filter, sort, and aggregate physical operators based on optimizer decisions. | **Factory Method** | Not Started |
+| 🟠 Medium | Query Processing | Standard Query Workflow | `QueryProcessingTemplate` | Defines the fixed parsing, binding, optimization, execution, and cleanup workflow. | **Template Method** | Not Started |
+| 🟠 Medium | Statistics | Statistics Invalidation | `StatisticsManager`, data-change publishers | Invalidates or refreshes table statistics when underlying data or indexes change. | **Observer** | Not Started |
+
+
 
 ## Sequence Diagrams (Database Manager & Metadata)
 
@@ -4363,7 +4378,7 @@ sequenceDiagram
     Visitor-->>Client: CREATE TABLE DDL
 ```
 
-### 10. System Initialization (Facade Pattern)
+### 11. System Initialization (Facade Pattern)
 
 **Application:** `DbEngineFacade` groups complex startup steps for Disk, Storage, and Catalog.
 
@@ -4483,7 +4498,7 @@ sequenceDiagram
     Server-->>Admin: ServerStatus.Running
 ```
 
-### 11. Server State Management (State Pattern)
+### 12. Server State Management (State Pattern)
 
 **Purpose:**  
 Encapsulate behaviors for Stopped, Running, Recovering, and Failed states of the Database Server to allow it to change its behavior when its internal state changes.
@@ -4789,7 +4804,7 @@ sequenceDiagram
     Server-->>Admin: Error: Server is already running
 ```
 
-### 12. Database Creation (Factory Method Pattern)
+### 13. Database Creation (Factory Method Pattern)
 
 **Purpose:**  
 Define an interface for creating a `Database` object, but let subclasses (or concrete factory implementations) decide which class to instantiate. The Factory Method centralizes the complex initialization logic—allocating storage, registering the catalog entry, creating the default schema, and setting up permissions—so that `DatabaseManager` never has to know the construction details.
@@ -4943,4 +4958,463 @@ sequenceDiagram
     Factory-->>DBManager: Database
 
     DBManager-->>Admin: Database created successfully
+```
+
+---
+
+## Query Processor
+
+### 1. SQL Parsing (Interpreter Pattern)
+
+**Purpose:**  
+Define a grammar for a language and provide an interpreter that uses the grammar to parse sentences in that language. Each grammar rule is mapped to a class, and the interpreter recursively evaluates an Abstract Syntax Tree (AST) built from those rules.
+
+**Example:**  
+A simple arithmetic expression evaluator that parses and evaluates expressions like `3 + 5 * 2` using a grammar of terminal and non-terminal expressions.
+
+#### Class Diagram
+
+```mermaid
+classDiagram
+direction LR
+
+class IExpression {
+    <<AbstractExpression>>
+    +Interpret(context : Context) int
+}
+
+class NumberExpression {
+    <<TerminalExpression>>
+    -value : int
+    +Interpret(context : Context) int
+}
+
+class AddExpression {
+    <<NonTerminalExpression>>
+    -left : IExpression
+    -right : IExpression
+    +Interpret(context : Context) int
+}
+
+class MultiplyExpression {
+    <<NonTerminalExpression>>
+    -left : IExpression
+    -right : IExpression
+    +Interpret(context : Context) int
+}
+
+class Context {
+    <<Context>>
+    +Variables : Dictionary~string, int~
+}
+
+class ExpressionParser {
+    <<Client>>
+    +Parse(expression : string) IExpression
+}
+
+IExpression <|.. NumberExpression
+IExpression <|.. AddExpression
+IExpression <|.. MultiplyExpression
+
+AddExpression --> IExpression : left
+AddExpression --> IExpression : right
+MultiplyExpression --> IExpression : left
+MultiplyExpression --> IExpression : right
+ExpressionParser --> IExpression : builds
+IExpression --> Context : uses
+```
+
+#### Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant Parser as ExpressionParser
+    participant Add as AddExpression
+    participant Mul as MultiplyExpression
+    participant Num as NumberExpression
+    participant Ctx as Context
+
+    Client->>Parser: Parse("3 + 5 * 2")
+    Parser->>Num: new NumberExpression(3)
+    Parser->>Num: new NumberExpression(5)
+    Parser->>Num: new NumberExpression(2)
+    Parser->>Mul: new MultiplyExpression(5, 2)
+    Parser->>Add: new AddExpression(3, Mul)
+    Parser-->>Client: IExpression (AST root)
+
+    Client->>Add: Interpret(context)
+    Add->>Num: Interpret(context) → 3
+    Add->>Mul: Interpret(context)
+    Mul->>Num: Interpret(context) → 5
+    Mul->>Num: Interpret(context) → 2
+    Mul-->>Add: 10
+    Add-->>Client: 13
+```
+
+#### Simplified Code
+
+```csharp
+public interface IExpression
+{
+    // Evaluate this expression node and return its integer result
+    int Interpret(Context context);
+}
+
+public class NumberExpression : IExpression
+{
+    private readonly int _value;
+
+    public NumberExpression(int value) => _value = value;
+
+    public int Interpret(Context context)
+    {
+        // Terminal: return the literal number value
+        return _value;
+    }
+}
+
+public class AddExpression : IExpression
+{
+    private readonly IExpression _left;
+    private readonly IExpression _right;
+
+    public AddExpression(IExpression left, IExpression right)
+    {
+        _left = left;
+        _right = right;
+    }
+
+    public int Interpret(Context context)
+    {
+        // Non-terminal: recursively evaluate both operands and add them
+        return _left.Interpret(context) + _right.Interpret(context);
+    }
+}
+
+public class MultiplyExpression : IExpression
+{
+    private readonly IExpression _left;
+    private readonly IExpression _right;
+
+    public MultiplyExpression(IExpression left, IExpression right)
+    {
+        _left = left;
+        _right = right;
+    }
+
+    public int Interpret(Context context)
+    {
+        // Non-terminal: recursively evaluate both operands and multiply them
+        return _left.Interpret(context) * _right.Interpret(context);
+    }
+}
+
+public class ExpressionParser
+{
+    public IExpression Parse(string expression)
+    {
+        // Tokenize the string and build the AST from grammar rules
+        // Returns the root IExpression node for caller to Interpret()
+        return new NumberExpression(0); // placeholder
+    }
+}
+```
+
+**Benefits**
+
+- Separates grammar rules from evaluation logic — each rule maps to exactly one class.
+- Easy to extend: adding a new operator only requires adding a new `IExpression` class.
+- The AST makes the structure of the parsed input explicit and inspectable.
+- Recursive evaluation naturally mirrors the recursive structure of the grammar.
+
+**Application:** `SQLParser` tokenizes SQL text via `Lexer`, builds an `AST` of `ASTNode` nodes, and hands the tree to `SemanticAnalyzer` for binding into a `LogicalPlan` that `QueryOptimizer` transforms into a `PhysicalPlan` for `QueryExecutor`.
+
+**Why apply?** SQL is a formal language with a well-defined grammar. The Interpreter pattern maps each grammar production rule (SELECT, WHERE clause, expression, literal, identifier …) to a concrete `ASTNode` subclass. `SQLParser` acts as the *Client* that drives `Lexer` to tokenize the input string and then walks the token stream to construct the AST. The AST root can then be traversed — by `SemanticAnalyzer` to resolve names against the catalog, by `QueryOptimizer` to derive logical and physical plans, and by `QueryExecutor` to stream result rows — without any component needing to re-parse raw SQL text. This gives the engine a clean separation between *syntax* (what was written) and *semantics* (what it means).
+
+```mermaid
+classDiagram
+direction LR
+
+%% =====================================================
+%% LEXER — Tokenization
+%% =====================================================
+
+class Lexer {
+    <<Terminal Producer>>
+    +Tokenize(sql : string) Token[]
+}
+
+class Token {
+    <<Terminal Symbol>>
+    +Kind : TokenKind
+    +Value : string
+    +Position : int
+}
+
+class TokenKind {
+    <<enumeration>>
+    Keyword
+    Identifier
+    Literal
+    Operator
+    Punctuation
+    EOF
+}
+
+%% =====================================================
+%% AST — Abstract Syntax Tree
+%% =====================================================
+
+class ASTNode {
+    <<AbstractExpression>>
+    +NodeType : ASTNodeType
+    +Children : IReadOnlyList~ASTNode~
+    +Accept(visitor : IASTVisitor)
+}
+
+class SelectNode {
+    <<NonTerminalExpression>>
+    +Columns : IReadOnlyList~ASTNode~
+    +FromClause : ASTNode
+    +WhereClause : ASTNode
+    +Accept(visitor : IASTVisitor)
+}
+
+class IdentifierNode {
+    <<TerminalExpression>>
+    +Name : string
+    +Accept(visitor : IASTVisitor)
+}
+
+class LiteralNode {
+    <<TerminalExpression>>
+    +Value : object
+    +DataType : DataType
+    +Accept(visitor : IASTVisitor)
+}
+
+class BinaryExpressionNode {
+    <<NonTerminalExpression>>
+    +Operator : string
+    +Left : ASTNode
+    +Right : ASTNode
+    +Accept(visitor : IASTVisitor)
+}
+
+class AST {
+    <<AST Root Wrapper>>
+    +Root : ASTNode
+    +ToLogicalPlan() LogicalPlan
+}
+
+%% =====================================================
+%% SQL PARSER — Client / Grammar Interpreter Driver
+%% =====================================================
+
+class SQLParser {
+    <<Client / Interpreter Driver>>
+    +Parse(sql : string) AST
+    -Tokenize(sql : string) Token[]
+    -BuildAST(tokens : Token[]) ASTNode
+    -ParseSelect(tokens : Token[]) SelectNode
+    -ParseExpression(tokens : Token[]) ASTNode
+}
+
+note for SQLParser "Parse() throws SqlSyntaxException\non invalid input"
+
+%% =====================================================
+%% SEMANTIC ANALYZER — Name Binding
+%% =====================================================
+
+class SemanticAnalyzer {
+    <<Interpreter / Visitor>>
+    -catalog : ICatalogManager
+    +Bind(ast : ASTNode) LogicalPlan
+    -ResolveIdentifier(node : IdentifierNode) Column
+    -BindExpression(node : ASTNode) ASTNode
+}
+
+note for SemanticAnalyzer "Bind() throws\nObjectNotFoundException if table or column is invalid"
+
+%% =====================================================
+%% LOGICAL & PHYSICAL PLANS
+%% =====================================================
+
+class LogicalPlan {
+    <<Interpreted Result>>
+    +Operators : List~Operator~
+    +Root : Operator
+}
+
+class PhysicalPlan {
+    <<Execution Plan>>
+    +Operators : List~Operator~
+    +Root : IPhysicalOperator
+}
+
+class Operator {
+    <<abstract>>
+    +OperatorType : OperatorType
+    +Children : IReadOnlyList~Operator~
+}
+
+%% =====================================================
+%% QUERY OPTIMIZER
+%% =====================================================
+
+class QueryOptimizer {
+    <<Optimizer>>
+    -costModel : CostModel
+    -catalog : ICatalogManager
+    +Optimize(plan : LogicalPlan) PhysicalPlan
+}
+
+class StatisticsManager {
+    <<Statistics Provider>>
+    +Collect(table : Table)
+    +GetStats(tableId : int) TableStats
+}
+
+class TableStats {
+    <<Statistics Data>>
+    +TableId : int
+    +RowCount : long
+    +PageCount : int
+    +ColumnHistograms : IReadOnlyDictionary~int, Histogram~
+}
+
+class CostModel {
+    <<Cost Estimator>>
+    +EstimateCost(plan : LogicalPlan, stats : TableStats) double
+}
+
+%% =====================================================
+%% QUERY EXECUTOR
+%% =====================================================
+
+class QueryExecutor {
+    <<Executor>>
+    +Execute(plan : PhysicalPlan, ctx : RuntimeContext) ResultCursor
+}
+
+class RuntimeContext {
+    <<Execution Context>>
+    +TransactionId : int
+    +SessionId : string
+    +IsolationLevel : IsolationLevel
+}
+
+class ResultCursor {
+    <<Iterator Result>>
+    +MoveNext() bool
+    +Current : Row
+    +Close()
+}
+
+%% =====================================================
+%% RELATIONSHIPS
+%% =====================================================
+
+SQLParser --> Lexer : tokenizes via
+SQLParser --> AST : builds
+
+Lexer --> Token : produces
+Token --> TokenKind
+
+ASTNode <|-- SelectNode
+ASTNode <|-- IdentifierNode
+ASTNode <|-- LiteralNode
+ASTNode <|-- BinaryExpressionNode
+
+SelectNode --> ASTNode : children
+BinaryExpressionNode --> ASTNode : left / right
+
+AST --> ASTNode : root
+AST --> LogicalPlan : converts to
+
+SemanticAnalyzer --> ASTNode : binds
+SemanticAnalyzer --> ICatalogManager : resolves names
+SemanticAnalyzer --> LogicalPlan : produces
+
+QueryOptimizer --> LogicalPlan : reads
+QueryOptimizer --> PhysicalPlan : produces
+QueryOptimizer --> StatisticsManager : fetches stats
+QueryOptimizer --> CostModel : estimates cost
+
+StatisticsManager --> TableStats : returns
+CostModel --> TableStats : reads
+
+LogicalPlan --> Operator : contains
+PhysicalPlan --> Operator : contains
+
+QueryExecutor --> PhysicalPlan : executes
+QueryExecutor --> RuntimeContext : uses
+QueryExecutor --> ResultCursor : returns
+```
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    actor Client
+    participant Parser as SQLParser
+    participant Lexer as Lexer
+    participant AST as AST
+    participant Analyzer as SemanticAnalyzer
+    participant Catalog as ICatalogManager
+    participant Optimizer as QueryOptimizer
+    participant Stats as StatisticsManager
+    participant Executor as QueryExecutor
+    participant Cursor as ResultCursor
+
+    Client->>Parser: Parse("SELECT id, name FROM users WHERE age > 18")
+
+    Parser->>Lexer: Tokenize(sql)
+    Lexer-->>Parser: Token[] (SELECT, id, name, FROM, users, WHERE, age, >, 18)
+
+    Note over Parser: BuildAST(tokens)
+    Parser->>Parser: ParseSelect(tokens) → SelectNode
+    Parser->>Parser: ParseExpression(WHERE tokens) → BinaryExpressionNode(age > 18)
+
+    Parser-->>Client: AST { Root: SelectNode }
+
+    Client->>Analyzer: Bind(ast.Root)
+
+    Analyzer->>Catalog: GetTable("users")
+    Catalog-->>Analyzer: Table (users)
+
+    Analyzer->>Catalog: GetColumn("users", "id")
+    Catalog-->>Analyzer: Column (id)
+
+    Analyzer->>Catalog: GetColumn("users", "name")
+    Catalog-->>Analyzer: Column (name)
+
+    Analyzer->>Catalog: GetColumn("users", "age")
+    Catalog-->>Analyzer: Column (age)
+
+    Analyzer-->>Client: LogicalPlan { Project[id,name] → Filter[age>18] → Scan[users] }
+
+    Client->>Optimizer: Optimize(logicalPlan)
+
+    Optimizer->>Stats: GetStats(tableId: users)
+    Stats-->>Optimizer: TableStats { RowCount: 50000, ... }
+
+    Note over Optimizer: Apply predicate pushdown,\nselect best join order,\nestimate I/O cost
+
+    Optimizer-->>Client: PhysicalPlan { IndexScan[age] → Filter → Project }
+
+    Client->>Executor: Execute(physicalPlan, runtimeContext)
+
+    Executor-->>Client: ResultCursor
+
+    loop Fetch rows
+        Client->>Cursor: MoveNext()
+        Cursor-->>Client: true / false
+        Client->>Cursor: Current
+        Cursor-->>Client: Row { id, name }
+    end
+
+    Client->>Cursor: Close()
 ```

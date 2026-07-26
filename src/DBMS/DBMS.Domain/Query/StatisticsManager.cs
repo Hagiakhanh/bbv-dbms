@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Generic;
+using DBMS.Domain.Catalog.Composite;
 
 namespace DBMS.Domain.Query;
 
@@ -10,7 +10,7 @@ public class StatisticsManager
         throw new NotImplementedException();
     }
 
-    public object GetStats(int tableId)
+    public TableStats GetStats(int tableId)
     {
         throw new NotImplementedException();
     }

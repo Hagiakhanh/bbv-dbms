@@ -5,5 +5,6 @@ namespace DBMS.Domain.Query;
 
 public class LogicalPlan
 {
-    public List<object> Operators { get; set; }
+    public List<Operator> Operators { get; set; } = new();
+    public Operator? Root { get; set; }
 }

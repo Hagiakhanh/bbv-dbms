@@ -81,3 +81,14 @@ public class DuplicateIndexException : Exception
 {
     public DuplicateIndexException(string message) : base(message) { }
 }
+
+public class SqlSyntaxException : Exception
+{
+    public SqlSyntaxException(string message) : base(message) { }
+}
+
+public class ObjectNotFoundException : Exception
+{
+    public ObjectNotFoundException(string message) : base(message) { }
+}
+
