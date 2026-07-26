@@ -1,12 +1,21 @@
 using System;
-using System.Collections.Generic;
 
 namespace DBMS.Domain.Storage;
 
-public class BufferPool
+public class BufferPool : IBufferPool
 {
-    private Page[] frames;
-    private string policy;
+    private Page[] _frames;
+    private string _policy;
+    private readonly IFileManager _fileManager;
+
+    public BufferPool()
+    {
+    }
+
+    public BufferPool(IFileManager fileManager)
+    {
+        _fileManager = fileManager;
+    }
 
     public Page FetchPage(int pageId)
     {
@@ -34,6 +43,16 @@ public class BufferPool
     }
 
     public void FlushAll()
+    {
+        throw new NotImplementedException();
+    }
+
+    public void FlushDirtyBuffers(string dbName)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void FlushDirtyPagesBeforeShutdown()
     {
         throw new NotImplementedException();
     }

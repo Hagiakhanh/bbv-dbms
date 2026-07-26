@@ -1073,10 +1073,22 @@ SchemaService --> SequenceDefinition
 | 🔴 High | Query Processing | Unified Query API | `QueryProcessor` | Provides one interface for parsing, binding, optimizing, and executing SQL queries. | **Facade** | Not Started |
 | 🔴 High | Query Processing | Plan Traversal | `IPlanVisitor`, AST and plan operators | Traverses AST and plan trees for binding, validation, cost calculation, and explain-plan generation. | **Visitor** | Not Started |
 | 🔴 High | Query Optimization | Optimization Rules | `IOptimizationRule`, concrete rules | Encapsulates predicate pushdown, projection pruning, constant folding, and join reordering as independent rules. | **Command** | Not Started |
-| 🟠 Medium | Query Planning | Physical Operator Creation | `PhysicalOperatorFactory` | Creates scan, join, filter, sort, and aggregate physical operators based on optimizer decisions. | **Factory Method** | Not Started |
-| 🟠 Medium | Query Processing | Standard Query Workflow | `QueryProcessingTemplate` | Defines the fixed parsing, binding, optimization, execution, and cleanup workflow. | **Template Method** | Not Started |
-| 🟠 Medium | Statistics | Statistics Invalidation | `StatisticsManager`, data-change publishers | Invalidates or refreshes table statistics when underlying data or indexes change. | **Observer** | Not Started |
+| 🟡 Medium | Query Planning | Physical Operator Creation | `PhysicalOperatorFactory` | Creates scan, join, filter, sort, and aggregate physical operators based on optimizer decisions. | **Factory Method** | Not Started |
+| 🟡 Medium | Query Processing | Standard Query Workflow | `QueryProcessingTemplate` | Defines the fixed parsing, binding, optimization, execution, and cleanup workflow. | **Template Method** | Not Started |
+| 🟡 Medium | Statistics | Statistics Invalidation | `StatisticsManager`, data-change publishers | Invalidates or refreshes table statistics when underlying data or indexes change. | **Observer** | Not Started |
 
+## Visual Summary Storage Engine
+
+| Priority | Module | Main Feature | Main Classes | Application | Design Pattern | Progress |
+| :---: | :--- | :--- | :--- | :--- | :--- | :---: |
+| 🔥 Critical | Buffer Management | Page Caching | `BufferPool`, `FileManager` | Acts as a caching intermediary that returns memory-resident pages and accesses disk only on cache misses. | **Proxy** | Completed |
+| 🔥 Critical | Storage Engine | Unified Storage Access | `StorageEngine`, `BufferPool`, `FileManager`, `WALManager` | Provides a unified interface for page allocation, reading, writing, caching, logging, and recovery. | **Facade** | Not Started |
+| 🔥 Critical | Buffer Management | Page Replacement | `BufferPool`, `IReplacementPolicy`, `LRUReplacementPolicy`, `ClockReplacementPolicy` | Allows the buffer pool to select and replace page eviction algorithms independently. | **Strategy** | Not Started |
+| 🔴 High | Recovery | Recoverable Storage Operations | `LogRecord`, concrete log records, `WALManager`, `RecoveryManager` | Encapsulates storage changes as records that support redo and undo during recovery. | **Command** | Not Started |
+| 🔴 High | Page Management | Page Creation | `PageFactory`, `DataPage`, `IndexPage`, `MetadataPage` | Creates page implementations based on their storage purpose and page type. | **Factory Method** | Not Start |
+| 🔴 High | Page Management | Standard Page Modification Workflow | `Page`, concrete page types | Defines a common process for validating records, checking capacity, modifying slots, updating metadata, and marking pages dirty. | **Template Method** | Not Start |
+| 🟡 Medium | Record Management | Page Record Traversal | `IRecordIterator`, `PageRecordIterator`, `SlottedPage` | Traverses valid records without exposing slot-array and record-offset details. | **Iterator** | Not Start |
+| 🟡 Medium | File Management | Cross-Cutting I/O Features | `IFileManager`, file manager decorators | Adds logging, metrics, checksum, encryption, or tracing without modifying the base file manager. | **Decorator** | Not Start |
 
 
 ## Sequence Diagrams (Database Manager & Metadata)
@@ -5417,4 +5429,359 @@ sequenceDiagram
     end
 
     Client->>Cursor: Close()
+```
+
+---
+
+## Storage Engine
+
+### 1. Buffer Management (Proxy Pattern)
+
+**Purpose:**  
+Provide a surrogate or placeholder for another object to control access to it. The Proxy intercepts requests to the real object and can add behaviors such as lazy initialization, access control, caching, or logging before forwarding the call.
+
+**Example:**  
+A `CachedImage` proxy that holds a reference to an expensive `RealImage`. On the first `Display()` call the proxy loads the image from disk; on subsequent calls it serves the cached copy without touching the file system.
+
+#### Class Diagram
+
+```mermaid
+classDiagram
+direction LR
+
+class IImage {
+    <<Subject>>
+    +Display()
+}
+
+class RealImage {
+    <<RealSubject>>
+    -filename : string
+    +Load()
+    +Display()
+}
+
+class CachedImage {
+    <<Proxy>>
+    -realImage : RealImage
+    -filename : string
+    +Display()
+}
+
+class Client {
+    <<Client>>
+    +ShowImage()
+}
+
+IImage <|.. RealImage
+IImage <|.. CachedImage
+CachedImage --> RealImage : delegates to (lazy)
+Client --> IImage : uses
+```
+
+#### Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant Proxy as CachedImage
+    participant Real as RealImage
+
+    Client->>Proxy: Display()
+    alt image not cached
+        Proxy->>Real: new RealImage(filename)
+        Real->>Real: Load() — read from disk
+        Real-->>Proxy: loaded
+    end
+    Proxy->>Real: Display()
+    Real-->>Proxy: rendered
+    Proxy-->>Client: done
+
+    Client->>Proxy: Display()
+    Note over Proxy: image already cached
+    Proxy->>Real: Display()
+    Real-->>Proxy: rendered
+    Proxy-->>Client: done
+```
+
+#### Simplified Code
+
+```csharp
+public interface IImage
+{
+    // Render the image to the screen
+    void Display();
+}
+
+public class RealImage : IImage
+{
+    private readonly string _filename;
+
+    public RealImage(string filename)
+    {
+        _filename = filename;
+        // Expensive operation: load bytes from disk immediately on creation
+        Load();
+    }
+
+    private void Load()
+    {
+        // Read image file from disk into memory
+        Console.WriteLine($"Loading image from disk: {_filename}");
+    }
+
+    public void Display()
+    {
+        // Render the already-loaded image
+        Console.WriteLine($"Displaying image: {_filename}");
+    }
+}
+
+public class CachedImage : IImage
+{
+    private readonly string _filename;
+    private RealImage? _realImage;   // null until first Display() call
+
+    public CachedImage(string filename)
+    {
+        _filename = filename;
+        // Proxy is cheap to construct — no disk I/O yet
+    }
+
+    public void Display()
+    {
+        // On cache miss: create and load the real object
+        _realImage ??= new RealImage(_filename);
+
+        // Forward the call to the real object
+        _realImage.Display();
+    }
+}
+```
+
+**Benefits**
+
+- Eliminates redundant I/O by serving cached results on subsequent access.
+- Decouples the caller from the real subject; the client only depends on the interface.
+- Lazy initialization defers expensive operations until they are actually needed.
+- Cache invalidation and miss-handling logic are encapsulated inside the proxy, invisible to callers.
+
+**Application:** `BufferPool` acts as a transparent proxy for `FileManager`. When `StorageEngine` calls `FetchPage(pageId)`, `BufferPool` first looks for the page in its in-memory frame pool. If found (cache hit), the pinned `Page` is returned instantly. On a cache miss, `BufferPool` calls `FileManager.Read(pageId)` to load the page from disk, places it in a free or evicted frame, and then returns the page — all transparently behind the same interface that `StorageEngine` uses.
+
+**Why apply?** Disk I/O is several orders of magnitude slower than memory access. Without a caching layer every `ReadPage` call would hit disk, making query execution prohibitively slow. The Proxy pattern lets `BufferPool` intercept every page-access request, serve hot pages from RAM, and only fall through to `FileManager` on a cache miss. The `StorageEngine` never needs to know whether a page came from memory or disk — it always calls the same `FetchPage` interface. Replacement policies (`LRU`, `Clock`) and dirty-page flushing are also hidden inside the proxy, keeping the rest of the engine clean.
+
+```mermaid
+classDiagram
+direction LR
+
+%% =====================================================
+%% STORAGE ENGINE — Client
+%% =====================================================
+
+class StorageEngine {
+    <<Client>>
+    -bufferPool : BufferPool
+    -fileManager : FileManager
+    +ReadPage(id : PageId) Byte[]
+    +WritePage(id : PageId, data : Byte[])
+    +AllocatePage(tableId : int) PageId
+}
+
+%% =====================================================
+%% BUFFER POOL — Proxy
+%% =====================================================
+
+class IPageStore {
+    <<Subject>>
+    +FetchPage(id : PageId) Page
+    +FlushPage(id : PageId)
+}
+
+class BufferPool {
+    <<Proxy>>
+    -frames : Page[]
+    -policy : ReplacementPolicy
+    -fileManager : FileManager
+    +FetchPage(id : PageId) Page
+    +UnpinPage(id : PageId)
+    +FlushPage(id : PageId)
+    +MarkDirty(id : PageId)
+    +EvictPage() Page
+}
+
+note for BufferPool "On FetchPage:\n1. Hit → return pinned frame\n2. Miss → FileManager.Read()\n   place in free/evicted frame"
+
+%% =====================================================
+%% REPLACEMENT POLICY
+%% =====================================================
+
+class ReplacementPolicy {
+    <<Strategy>>
+    +Evict(frames : Page[]) Page
+}
+
+class LruPolicy {
+    <<Concrete Strategy>>
+    -accessOrder : LinkedList~PageId~
+    +Evict(frames : Page[]) Page
+    +OnAccess(id : PageId)
+}
+
+class ClockPolicy {
+    <<Concrete Strategy>>
+    -hand : int
+    -referenceBits : bool[]
+    +Evict(frames : Page[]) Page
+}
+
+ReplacementPolicy <|.. LruPolicy
+ReplacementPolicy <|.. ClockPolicy
+
+%% =====================================================
+%% PAGE — Cache Frame
+%% =====================================================
+
+class Page {
+    <<Cache Frame>>
+    +PageId : PageId
+    +Data : Byte[]
+    +IsDirty : bool
+    +PinCount : int
+    +InsertRecord(record : Byte[])
+    +DeleteRecord(rid : RID)
+    +Compact()
+}
+
+note for Page "InsertRecord() throws\nPageFullException if full"
+
+class PageId {
+    <<Value Object>>
+    +TableId : int
+    +PageNumber : int
+}
+
+class RID {
+    <<Value Object>>
+    +PageId : PageId
+    +SlotNumber : int
+}
+
+%% =====================================================
+%% FILE MANAGER — Real Subject
+%% =====================================================
+
+class FileManager {
+    <<RealSubject>>
+    -dataDir : string
+    +Read(pageId : PageId) Byte[]
+    +Write(pageId : PageId, data : Byte[])
+    +AllocateFile(path : string) int
+}
+
+%% =====================================================
+%% WAL & RECOVERY
+%% =====================================================
+
+class WALManager {
+    <<Write-Ahead Log>>
+    +WriteLog(record : LogRecord) long
+    +Recover()
+}
+
+class RecoveryManager {
+    <<Recovery Coordinator>>
+    +Recover(checkpoint : long)
+}
+
+class LogRecord {
+    <<Value Object>>
+    +LSN : long
+    +TransactionId : int
+    +Type : LogRecordType
+    +PageId : PageId
+    +Data : Byte[]
+}
+
+%% =====================================================
+%% RELATIONSHIPS
+%% =====================================================
+
+IPageStore <|.. BufferPool
+
+StorageEngine --> BufferPool : FetchPage / FlushPage (via IPageStore)
+StorageEngine --> FileManager : AllocatePage
+
+BufferPool --> FileManager : Read/Write on cache miss or flush
+BufferPool --> Page : manages frames
+BufferPool --> ReplacementPolicy : evicts via
+
+Page --> PageId
+Page --> RID : slot reference
+
+RecoveryManager --> WALManager : reads log
+WALManager --> LogRecord : writes
+StorageEngine --> WALManager : logs writes
+```
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    actor TxManager as Transaction Manager
+    participant SE as StorageEngine
+    participant BP as BufferPool
+    participant Policy as ReplacementPolicy
+    participant FM as FileManager
+    participant WAL as WALManager
+    participant Page as Page
+
+    TxManager->>SE: ReadPage(pageId)
+
+    SE->>BP: FetchPage(pageId)
+
+    alt Cache Hit — page already in frame pool
+        BP->>Page: PinCount++
+        BP-->>SE: Page (from memory)
+    else Cache Miss — page not in memory
+        BP->>Policy: Evict(frames)
+        Policy-->>BP: victim Page
+
+        alt Victim page is dirty
+            BP->>WAL: WriteLog(FlushRecord)
+            WAL-->>BP: LSN confirmed
+            BP->>FM: Write(victim.PageId, victim.Data)
+            FM-->>BP: written to disk
+        end
+
+        BP->>FM: Read(pageId)
+        FM-->>BP: Byte[] from disk
+
+        BP->>Page: Load(data), PinCount = 1
+        BP-->>SE: Page (newly loaded)
+    end
+
+    SE-->>TxManager: Page
+
+    Note over TxManager,Page: Transaction modifies the page in memory
+
+    TxManager->>SE: WritePage(pageId, data)
+    SE->>WAL: WriteLog(UpdateRecord)
+    WAL-->>SE: LSN assigned
+    SE->>BP: MarkDirty(pageId)
+    BP->>Page: IsDirty = true
+
+    TxManager->>SE: UnpinPage(pageId)
+    SE->>BP: UnpinPage(pageId)
+    BP->>Page: PinCount--
+    Note over BP: Page remains in frame pool\nuntil evicted by policy
+
+    Note over TxManager: ... later, on checkpoint or eviction ...
+
+    TxManager->>SE: FlushPage(pageId)
+    SE->>BP: FlushPage(pageId)
+    BP->>WAL: WriteLog(FlushRecord)
+    WAL-->>BP: LSN confirmed
+    BP->>FM: Write(pageId, Page.Data)
+    FM-->>BP: flushed to disk
+    BP->>Page: IsDirty = false
 ```
