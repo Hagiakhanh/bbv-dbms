@@ -1,10 +1,22 @@
 using System;
-using System.Collections.Generic;
 
 namespace DBMS.Domain.Storage;
 
 public class StorageEngine : IStorageEngine
 {
+    private readonly IBufferPool _bufferPool;
+    private readonly IFileManager _fileManager;
+
+    public StorageEngine()
+    {
+    }
+
+    public StorageEngine(IBufferPool bufferPool, IFileManager fileManager)
+    {
+        _bufferPool = bufferPool;
+        _fileManager = fileManager;
+    }
+
     public void InitializeStorageEngine(string dbName)
     {
         throw new NotImplementedException();

@@ -149,12 +149,19 @@ flowchart LR
     Vis_MVT --> Vis_MVT_3["DependencyScanVisitor_VisitSchema_ShouldThrowNotImplementedException"]
     Vis_MVT --> Vis_MVT_4["DependencyScanVisitor_GetDependencies_ShouldReturnReadOnlyCollection"]
 
+    %% Proxy
+    P["Proxy"] --> P_BPT["BufferPoolProxyTests.cs"]
+    P_BPT --> P_BPT_1["FetchPage_WhenCacheMiss_ShouldDelegateToFileManagerRead"]
+    P_BPT --> P_BPT_2["FetchPage_WhenCacheHit_ShouldReturnMemoryResidentPage"]
+    P_BPT --> P_BPT_3["FlushPage_WhenPageIsDirty_ShouldWriteToFileManager"]
+    P_BPT --> P_BPT_4["EvictPage_ShouldFlushDirtyPageBeforeEviction"]
+
     classDef patternNode fill:#4b5563,stroke:#9ca3af,color:#ffffff,stroke-width:2px,stroke-dasharray: 5 5
     classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
     classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
 
-    class TM,FM,S,C,Cmd,I,B,State,Facade,Int,Obs,Vis patternNode
-    class TM_TMT,FM_DFT,S_CCT,S_UCT,S_PKT,S_FKT,C_ST,C_DT,C_TT,Cmd_DCT,I_CIT,B_TBT,State_DST,Facade_SST,Int_IPT,Int_SPT,Obs_MOT,Vis_MVT classNode
+    class TM,FM,S,C,Cmd,I,B,State,Facade,Int,Obs,Vis,P patternNode
+    class TM_TMT,FM_DFT,S_CCT,S_UCT,S_PKT,S_FKT,C_ST,C_DT,C_TT,Cmd_DCT,I_CIT,B_TBT,State_DST,Facade_SST,Int_IPT,Int_SPT,Obs_MOT,Vis_MVT,P_BPT classNode
     class TM_TMT_1,TM_TMT_2,TM_TMT_3,TM_TMT_4 completedTest
     class FM_DFT_1,FM_DFT_2,FM_DFT_3 completedTest
     class S_CCT_1,S_CCT_2,S_UCT_1,S_UCT_2,S_UCT_3,S_UCT_4,S_PKT_1,S_PKT_2,S_PKT_3,S_PKT_4,S_FKT_1,S_FKT_2 completedTest
@@ -168,4 +175,5 @@ flowchart LR
     class Int_SPT_1,Int_SPT_2,Int_SPT_3,Int_SPT_4,Int_SPT_5,Int_SPT_6,Int_SPT_7 completedTest
     class Obs_MOT_1,Obs_MOT_2,Obs_MOT_3,Obs_MOT_4,Obs_MOT_5 completedTest
     class Vis_MVT_1,Vis_MVT_2,Vis_MVT_3,Vis_MVT_4 completedTest
+    class P_BPT_1,P_BPT_2,P_BPT_3,P_BPT_4 completedTest
 ```
