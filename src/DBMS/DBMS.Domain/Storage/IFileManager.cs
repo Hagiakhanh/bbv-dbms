@@ -5,6 +5,7 @@ public interface IFileManager
     byte[] Read(int pageId);
     void Write(int pageId, byte[] data);
     int AllocateFile(string path);
+    int AllocatePage(int tableId);
     
     // Additional methods for DB Management
     void CreateDirectory(string path);

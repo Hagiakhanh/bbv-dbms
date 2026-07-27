@@ -2089,3 +2089,169 @@ sequenceDiagram
 
     Generator-->>Client: Complete CREATE TABLE DDL script
 ```
+
+# Buffer Management (Proxy Pattern)
+
+## Sequence diagram detail
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    actor Client as RecordManager / ExecutionEngine
+
+    participant SE as StorageEngine
+    participant Store as IPageStore
+    participant BP as BufferPoolProxy
+    participant Policy as IReplacementPolicy
+    participant Frame as BufferFrame
+    participant Page as Page
+    participant Disk as DiskPageStore
+    participant FM as FileManager
+    participant WAL as WALManager
+
+    %% =====================================================
+    %% READ PAGE
+    %% =====================================================
+
+    Client->>SE: ReadPage(pageId)
+    SE->>Store: FetchPage(pageId)
+    Store->>BP: FetchPage(pageId)
+
+    alt Cache hit
+        BP->>Frame: Find(pageId)
+        Frame-->>BP: matching frame
+
+        BP->>Frame: PinCount++
+        BP->>Policy: OnAccess(pageId)
+        BP-->>Store: Page
+        Store-->>SE: Page
+        SE-->>Client: Page.Data
+
+    else Cache miss
+        BP->>BP: FindFreeFrame()
+
+        alt Free frame available
+            BP->>Frame: Reserve free frame
+
+        else No free frame available
+            BP->>Policy: SelectVictim()
+            Policy-->>BP: victimPageId
+
+            BP->>Frame: GetFrame(victimPageId)
+            Frame-->>BP: victim frame
+
+            alt Victim frame is dirty
+                BP->>Page: GetPageLSN()
+                Page-->>BP: pageLSN
+
+                BP->>WAL: Flush(pageLSN)
+                WAL-->>BP: WAL durable through pageLSN
+
+                BP->>Disk: FlushPage(victimPageId)
+                Disk->>FM: Write(victimPageId, victimPage.Data)
+                FM-->>Disk: write completed
+                Disk-->>BP: flush completed
+
+                BP->>Frame: IsDirty = false
+            end
+
+            BP->>Frame: Remove victim page
+        end
+
+        BP->>Disk: FetchPage(pageId)
+        Disk->>FM: Read(pageId)
+        FM-->>Disk: Byte[]
+        Disk->>Page: Create(pageId, data)
+        Page-->>Disk: Page
+        Disk-->>BP: Page
+
+        BP->>Frame: Load(Page)
+        BP->>Frame: PinCount = 1
+        BP->>Frame: IsDirty = false
+        BP->>Policy: OnAccess(pageId)
+        BP->>Policy: SetEvictable(pageId, false)
+
+        BP-->>Store: Page
+        Store-->>SE: Page
+        SE-->>Client: Page.Data
+    end
+
+    %% =====================================================
+    %% MODIFY PAGE
+    %% =====================================================
+
+    Client->>SE: WritePage(pageId, newData, transactionId)
+
+    SE->>Store: FetchPage(pageId)
+    Store->>BP: FetchPage(pageId)
+    BP-->>Store: pinned Page
+    Store-->>SE: Page
+
+    SE->>Page: Get current data
+    Page-->>SE: beforeImage
+
+    SE->>WAL: WriteLog(UpdateRecord(transactionId,\npageId, beforeImage, newData))
+    WAL-->>SE: LSN
+
+    SE->>Page: ApplyUpdate(newData)
+    SE->>Page: PageLSN = LSN
+
+    SE->>BP: MarkDirty(pageId)
+    BP->>Frame: IsDirty = true
+    BP->>Policy: OnAccess(pageId)
+
+    SE-->>Client: write accepted
+
+    %% =====================================================
+    %% UNPIN PAGE
+    %% =====================================================
+
+    Client->>SE: UnpinPage(pageId)
+    SE->>BP: UnpinPage(pageId)
+
+    BP->>Frame: PinCount--
+
+    alt PinCount == 0
+        BP->>Policy: SetEvictable(pageId, true)
+    else Page still pinned
+        BP->>Policy: SetEvictable(pageId, false)
+    end
+
+    BP-->>SE: unpin completed
+    SE-->>Client: completed
+
+    Note over BP,Page: Dirty page remains in memory\nuntil checkpoint, explicit flush, or eviction
+
+    %% =====================================================
+    %% EXPLICIT FLUSH / CHECKPOINT
+    %% =====================================================
+
+    Client->>SE: FlushPage(pageId)
+    SE->>Store: FlushPage(pageId)
+    Store->>BP: FlushPage(pageId)
+
+    BP->>Frame: GetFrame(pageId)
+    Frame-->>BP: frame
+
+    alt Frame is dirty
+        BP->>Page: GetPageLSN()
+        Page-->>BP: pageLSN
+
+        BP->>WAL: Flush(pageLSN)
+        WAL-->>BP: WAL durable through pageLSN
+
+        BP->>Disk: FlushPage(pageId)
+        Disk->>FM: Write(pageId, Page.Data)
+        FM-->>Disk: write completed
+        Disk-->>BP: flush completed
+
+        BP->>Frame: IsDirty = false
+        BP-->>Store: flush completed
+    else Frame is clean
+        BP-->>Store: no flush required
+    end
+
+    Store-->>SE: completed
+    SE-->>Client: completed
+```

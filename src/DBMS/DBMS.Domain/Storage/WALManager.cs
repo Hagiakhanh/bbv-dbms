@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace DBMS.Domain.Storage;
 
-public class WALManager
+public class WALManager : IWALManager
 {
     private object buffer;
 
@@ -28,6 +28,11 @@ public class WALManager
     }
 
     public void Checkpoint()
+    {
+        throw new NotImplementedException();
+    }
+
+    public void ReplayWAL()
     {
         throw new NotImplementedException();
     }

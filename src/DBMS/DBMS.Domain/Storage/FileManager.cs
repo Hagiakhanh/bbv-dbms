@@ -4,7 +4,7 @@ namespace DBMS.Domain.Storage;
 
 public class FileManager : IFileManager, IPageStore
 {
-    private string _dataDir;
+    private string _dataDir = string.Empty;
 
     public FileManager()
     {
@@ -26,6 +26,11 @@ public class FileManager : IFileManager, IPageStore
     }
 
     public int AllocateFile(string path)
+    {
+        throw new NotImplementedException();
+    }
+
+    public int AllocatePage(int tableId)
     {
         throw new NotImplementedException();
     }

@@ -160,10 +160,11 @@ flowchart LR
 
     %% Proxy
     P["Proxy"] --> P_BPT["BufferPoolProxyTests.cs"]
-    P_BPT --> P_BPT_1["FetchPage_WhenCacheMiss_ShouldDelegateToFileManagerRead"]
+    P_BPT --> P_BPT_1["FetchPage_WhenCacheMiss_ShouldDelegateToDiskPageStore"]
     P_BPT --> P_BPT_2["FetchPage_WhenCacheHit_ShouldReturnMemoryResidentPage"]
-    P_BPT --> P_BPT_3["FlushPage_WhenPageIsDirty_ShouldWriteToFileManager"]
-    P_BPT --> P_BPT_4["EvictPage_ShouldFlushDirtyPageBeforeEviction"]
+    P_BPT --> P_BPT_3["FlushPage_WhenPageIsDirty_ShouldWriteToDiskPageStore"]
+    P_BPT --> P_BPT_4["EvictFrame_ShouldFlushDirtyFrameBeforeEviction"]
+    P_BPT --> P_BPT_5["AllocatePage_ShouldDelegateToDiskPageStore"]
 
     %% Singleton
     Sing --> Sing_DMT["DatabaseManagerTests.cs"]
@@ -189,6 +190,6 @@ flowchart LR
     class Int_SPT_1,Int_SPT_2,Int_SPT_3,Int_SPT_4,Int_SPT_5,Int_SPT_6,Int_SPT_7 completedTest
     class Obs_MOT_1,Obs_MOT_2,Obs_MOT_3,Obs_MOT_4,Obs_MOT_5 completedTest
     class Vis_MVT_1,Vis_MVT_2,Vis_MVT_3,Vis_MVT_4 completedTest
-    class P_BPT_1,P_BPT_2,P_BPT_3,P_BPT_4 completedTest
+    class P_BPT_1,P_BPT_2,P_BPT_3,P_BPT_4,P_BPT_5 completedTest
     class Sing_DMT_1,Sing_DMT_2 completedTest
 ```
