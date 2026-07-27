@@ -16,6 +16,8 @@ public class DatabaseManagerTests
 {
     private (DatabaseManager manager, Mock<ICatalogManager> catalog, Mock<IConnectionPool> connPool, Mock<IStorageEngine> storage, Mock<IBufferPool> bufferPool, Mock<IFileManager> fileManager, Mock<ISecurityManager> securityManager) CreateManager()
     {
+        DatabaseManager.ResetInstanceForTesting();
+
         var catalogMock = new Mock<ICatalogManager>();
         var connPoolMock = new Mock<IConnectionPool>();
         var storageMock = new Mock<IStorageEngine>();
@@ -24,7 +26,7 @@ public class DatabaseManagerTests
         var securityManagerMock = new Mock<ISecurityManager>();
         securityManagerMock.Setup(s => s.CheckPermission(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>())).Returns(true);
         
-        var manager = new DatabaseManager(
+        var manager = DatabaseManager.Initialize(
             catalogMock.Object, 
             connPoolMock.Object, 
             storageMock.Object, 
@@ -33,6 +35,40 @@ public class DatabaseManagerTests
             securityManagerMock.Object);
             
         return (manager, catalogMock, connPoolMock, storageMock, bufferPoolMock, fileManagerMock, securityManagerMock);
+    }
+
+    [Fact]
+    public void Initialize_ShouldReturnSameSingletonInstance()
+    {
+        DatabaseManager.ResetInstanceForTesting();
+
+        var catalogMock = new Mock<ICatalogManager>();
+        var connPoolMock = new Mock<IConnectionPool>();
+        var storageMock = new Mock<IStorageEngine>();
+        var bufferPoolMock = new Mock<IBufferPool>();
+        var fileManagerMock = new Mock<IFileManager>();
+        var securityManagerMock = new Mock<ISecurityManager>();
+
+        var instance1 = DatabaseManager.Initialize(
+            catalogMock.Object, connPoolMock.Object, storageMock.Object,
+            bufferPoolMock.Object, fileManagerMock.Object, securityManagerMock.Object);
+
+        var instance2 = DatabaseManager.Initialize(
+            catalogMock.Object, connPoolMock.Object, storageMock.Object,
+            bufferPoolMock.Object, fileManagerMock.Object, securityManagerMock.Object);
+
+        instance1.Should().BeSameAs(instance2);
+        DatabaseManager.Instance.Should().BeSameAs(instance1);
+    }
+
+    [Fact]
+    public void Instance_ShouldThrowInvalidOperationException_WhenNotInitialized()
+    {
+        DatabaseManager.ResetInstanceForTesting();
+
+        Action act = () => { var _ = DatabaseManager.Instance; };
+
+        act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]

@@ -1055,10 +1055,11 @@ SchemaService --> SequenceDefinition
 | 🔥 Critical | Server Management | Server Lifecycle | `DatabaseServer` | Provides a unified interface for starting, stopping, restarting, and recovering the database server. | **Facade** | Completed |
 | 🔥 Critical | Server Management | Server State Management | `DatabaseServer`, `IServerState` | Encapsulates behaviors for Stopped, Running, Recovering, and Failed states. | **State** | Completed |
 | 🔴 High | Database Management | Database Creation | `IDatabaseFactory`, `DatabaseFactory` | Centralizes the construction and initialization of database objects. | **Factory Method** | Completed |
+| 🔴 High | Database Management | Global Database Management | `DatabaseManager` | Ensures that only one database manager coordinates database lifecycle operations, catalog metadata, and database connections within the server process. | **Singleton** | Completed |
 | 🔴 High | Database Management | Database State | `Database`, `IDatabaseState` | Controls database behavior in Online, Offline, ReadOnly, and Restoring states. | **State** | Not Started |
-| 🔴 High | Configuration | Configuration Loading | `ConfigurationManager`, `IConfigurationLoader` | Supports loading configuration from JSON, XML, environment variables, or command-line sources. | **Strategy** | Not Started |
-| 🔴 High | Monitoring | Metrics Collection | `MonitoringManager`, `IMetricCollector` | Separates CPU, memory, query, transaction, and connection metric collection. | **Strategy** | Not Started |
-| 🔴 High | Monitoring | Runtime Event Monitoring | `MonitoringManager`, event publishers | Receives query, transaction, connection, and error events from server components. | **Observer** | Not Started |
+| 🟡 Medium | Configuration | Configuration Loading | `ConfigurationManager`, `IConfigurationLoader` | Supports loading configuration from JSON, XML, environment variables, or command-line sources. | **Strategy** | Not Started |
+| 🟡 Medium | Monitoring | Metrics Collection | `MonitoringManager`, `IMetricCollector` | Separates CPU, memory, query, transaction, and connection metric collection. | **Strategy** | Not Started |
+| 🟡 Medium | Monitoring | Runtime Event Monitoring | `MonitoringManager`, event publishers | Receives query, transaction, connection, and error events from server components. | **Observer** | Not Started |
 | 🟡 Medium | Server Management | Administrative Operations | `StartServerCommand`, `StopServerCommand`, `RecoverServerCommand` | Encapsulates server operations for auditing, scheduling, and retrying. | **Command** | Not Started |
 | 🟡 Medium | Configuration | Dynamic Configuration | `ConfigurationManager`, configuration observers | Notifies dependent components when configuration values change. | **Observer** | Not Started |
 | 🟢 Low | Monitoring | Metrics Export | `PrometheusMetricsAdapter`, `OpenTelemetryAdapter` | Converts internal server metrics into external monitoring formats. | **Adapter** | Not Started |
@@ -4816,7 +4817,247 @@ sequenceDiagram
     Server-->>Admin: Error: Server is already running
 ```
 
-### 13. Database Creation (Factory Method Pattern)
+### 13. Global Database Management (Singleton Pattern)
+
+**Purpose:**  
+Ensures that only one database manager coordinates database lifecycle operations, catalog metadata, and database connections within the server process.
+
+**Example:**  
+A simple configuration manager that ensures only one instance loads and holds global application settings throughout the process lifetime — any component that requests it gets the exact same object.
+
+#### Class Diagram
+
+```mermaid
+classDiagram
+direction LR
+
+class Singleton {
+    <<Singleton>>
+    -_instance : Singleton$
+    -_lock : object$
+    -Singleton()
+    +GetInstance()$ Singleton
+    +Operation()
+}
+
+class Client {
+    +DoWork()
+}
+
+Client ..> Singleton : GetInstance()
+```
+
+#### Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    actor Client1 as Client 1
+    actor Client2 as Client 2
+    participant S as Singleton
+
+    Note over S: _instance = null
+
+    Client1->>S: GetInstance()
+    S->>S: _instance == null? → true
+    S->>S: lock acquired
+    S->>S: new Singleton()
+    S->>S: _instance = instance
+    S->>S: lock released
+    S-->>Client1: Singleton instance
+
+    Client2->>S: GetInstance()
+    S->>S: _instance == null? → false (fast path)
+    S-->>Client2: same Singleton instance
+
+    Note over Client1,Client2: Both share the identical instance
+```
+
+#### Simplified Code
+
+```csharp
+public sealed class Singleton
+{
+    private static volatile Singleton? _instance;
+    private static readonly object _lock = new();
+
+    // Private constructor prevents external instantiation
+    private Singleton() { }
+
+    // Double-checked locking — thread-safe lazy initialization
+    public static Singleton GetInstance()
+    {
+        if (_instance is null)
+        {
+            lock (_lock)
+            {
+                if (_instance is null)
+                    _instance = new Singleton();
+            }
+        }
+        return _instance;
+    }
+
+    public void Operation() { /* ... */ }
+}
+```
+
+**Benefits**
+
+- Prevents concurrent database access issues by serializing operations through a single point of control.
+- Simplifies configuration management by providing a global access point for database settings.
+- Enables thread-safe access to shared resources like the catalog and connection pool.
+
+**Application:** `DatabaseManager` is implemented as a Singleton so the `DatabaseServer` and all subsystems (StorageEngine, QueryProcessor, TransactionManager) always resolve to the same coordinating instance.
+
+**Why apply?** In a DBMS, every component that needs to open, close, create, or drop a database must go through exactly the same coordinator. If multiple `DatabaseManager` instances could exist, two concurrent `CreateDatabase("orders")` calls issued through different instances would bypass each other's duplicate-name check, and two simultaneous `DropDatabase` calls could race to delete the same catalog entry. Implementing `DatabaseManager` as a Singleton guarantees a single authoritative source of truth for database lifecycle state, eliminates split-brain catalog views, and lets the `IConnectionPool` it holds be shared safely across every session handler in the server process.
+
+```mermaid
+classDiagram
+direction LR
+
+class DatabaseManager {
+    <<Singleton>>
+    -_instance : DatabaseManager$
+    -_lock : object$
+    -_catalog : ICatalogManager
+    -_connectionPool : IConnectionPool
+    -_databaseFactory : IDatabaseFactory
+    -DatabaseManager(catalog, connectionPool, factory)
+    +Initialize(catalog, connectionPool, factory)$ DatabaseManager
+    +Instance : DatabaseManager$
+    +CreateDatabase(name : string) Database
+    +DropDatabase(name : string, cascade : bool)
+    +GetDatabase(name : string) Database
+    +ListDatabases() IEnumerable~Database~
+    +OpenDatabase(name : string)
+    +CloseDatabase(name : string)
+    +RenameDatabase(oldName : string, newName : string)
+    +SetDatabaseState(name : string, state : DatabaseState)
+    +AttachDatabase(name : string, filePath : string)
+    +DetachDatabase(name : string)
+}
+
+class DatabaseServer {
+    <<Context>>
+    +ServerId : int
+    +Version : string
+    +Status : ServerStatus
+    +Start(safeMode : bool)
+    +Stop(force : bool)
+    +Restart()
+    +Recover()
+    +HandleSignal(signal : string)
+    +GetStatus() ServerStatus
+}
+
+class ConfigurationManager {
+    -configData : Map~string, string~
+    +LoadConfiguration(filePath : string)
+    +UpdateConfiguration(key : string, value : string)
+    +GetConfiguration(key : string) string
+}
+
+class MonitoringManager {
+    -metrics : ServerMetrics
+    +CollectMetrics()
+    +GetMetrics() ServerMetrics
+}
+
+class ICatalogManager {
+    <<Catalog Port>>
+    +RegisterDatabase(database : Database)
+    +RemoveDatabase(name : string)
+    +GetDatabase(name : string) Database
+    +ListDatabases() IEnumerable~Database~
+    +CheckExists(name : string) bool
+}
+
+class IConnectionPool {
+    <<Connection Port>>
+    +AcquireConnection(dbName : string) IDbConnection
+    +ReleaseConnection(connection : IDbConnection)
+    +CloseAll(dbName : string)
+}
+
+class IDatabaseFactory {
+    <<Creator>>
+    +Create(name : string) Database
+    +Attach(name : string, filePath : string) Database
+}
+
+class Database {
+    +DatabaseId : int
+    +Name : string
+    +State : DatabaseState
+    +Open()
+    +Close()
+    +Rename(newName : string)
+    +ChangeState(state : DatabaseState)
+}
+
+DatabaseServer --> DatabaseManager : Initialize() / Instance
+DatabaseServer --> ConfigurationManager
+DatabaseServer --> MonitoringManager
+
+DatabaseManager --> ICatalogManager : manages metadata
+DatabaseManager --> IConnectionPool : manages sessions
+DatabaseManager --> IDatabaseFactory : creates databases
+DatabaseManager --> Database : lifecycle
+```
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    actor Admin
+    participant Server as DatabaseServer
+    participant DBM as DatabaseManager
+    participant Lock as _lock (Monitor)
+    participant Factory as IDatabaseFactory
+    participant Catalog as ICatalogManager
+
+    Note over DBM: _instance = null (process start)
+
+    Admin->>Server: Start(safeMode)
+    Server->>DBM: Initialize(catalog, pool, factory)
+
+    DBM->>Lock: Acquire lock
+    Lock-->>DBM: acquired
+    DBM->>DBM: _instance == null? → true
+    DBM->>DBM: new DatabaseManager(catalog, pool, factory)
+    DBM->>DBM: _instance = new instance
+    DBM->>Lock: Release lock
+    DBM-->>Server: DatabaseManager singleton
+
+    Note over Server,DBM: Server is Running — singleton in use
+
+    Admin->>DBM: CreateDatabase("shop_db")
+    DBM->>Catalog: CheckExists("shop_db")
+    Catalog-->>DBM: false
+
+    DBM->>Factory: Create("shop_db")
+    Factory-->>DBM: Database
+
+    DBM->>Catalog: RegisterDatabase(database)
+    Catalog-->>DBM: registered
+    DBM-->>Admin: Database created
+
+    Note over DBM: Later — QueryProcessor also requests the manager
+
+    participant QP as QueryProcessor
+    QP->>DBM: Instance
+    DBM->>DBM: _instance == null? → false (fast path — no lock)
+    DBM-->>QP: same DatabaseManager instance
+
+    QP->>DBM: GetDatabase("shop_db")
+    DBM->>Catalog: GetDatabase("shop_db")
+    Catalog-->>DBM: Database
+    DBM-->>QP: Database
+```
+
+### 14. Database Creation (Factory Method Pattern)
 
 **Purpose:**  
 Define an interface for creating a `Database` object, but let subclasses (or concrete factory implementations) decide which class to instantiate. The Factory Method centralizes the complex initialization logic—allocating storage, registering the catalog entry, creating the default schema, and setting up permissions—so that `DatabaseManager` never has to know the construction details.
