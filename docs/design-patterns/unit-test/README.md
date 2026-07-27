@@ -19,6 +19,7 @@ flowchart LR
     Vis["Visitor"]
     P["Proxy"]
     Sing["Singleton"]
+    CoR["Chain of Responsibility"]
 
     %% Template Method
     TM --> TM_TMT["TemplateMethodTests.cs"]
@@ -129,7 +130,7 @@ flowchart LR
     Int_IPT --> Int_IPT_5["ASTNode_LiteralNode_ShouldInitializeCorrectValue"]
     Int_IPT --> Int_IPT_6["ASTNode_BinaryExpressionNode_ShouldInitializeOperands"]
     Int_IPT --> Int_IPT_7["ASTNode_Interpret_ShouldThrowNotImplementedException"]
-    Int_IPT --> Int_IPT_8["AST_ToLogicalPlan_ShouldThrowNotImplementedException"]
+    Int_IPT --> Int_IPT_8["AST_ShouldInitializeWithRootNode"]
     Int_IPT --> Int_IPT_9["SemanticAnalyzer_BindWithNullAST_ShouldThrowArgumentNullException"]
     Int_IPT --> Int_IPT_10["QueryExecutor_ExecuteWithRuntimeContext_ShouldThrowNotImplementedException"]
     Int_IPT --> Int_IPT_11["ResultCursor_MoveNext_ShouldThrowNotImplementedException"]
@@ -142,6 +143,19 @@ flowchart LR
     Int_SPT --> Int_SPT_5["Bind_ShouldResolveTableNames"]
     Int_SPT --> Int_SPT_6["Bind_ShouldThrow_WhenTableDoesNotExist"]
     Int_SPT --> Int_SPT_7["Bind_ShouldThrow_WhenColumnDoesNotExist"]
+
+    %% Chain of Responsibility
+    CoR --> CoR_ORT["OptimizationRuleChainTests.cs"]
+    CoR_ORT --> CoR_ORT_1["LogicalOperator_Scan_ShouldInitializeWithCorrectType"]
+    CoR_ORT --> CoR_ORT_2["LogicalOperator_Filter_ShouldInitializeWithCorrectType"]
+    CoR_ORT --> CoR_ORT_3["LogicalOperator_Project_ShouldInitializeWithCorrectType"]
+    CoR_ORT --> CoR_ORT_4["LogicalOperator_Join_ShouldInitializeWithCorrectType"]
+    CoR_ORT --> CoR_ORT_5["OptimizationRuleBase_SetNext_ShouldChainRulesFluently"]
+    CoR_ORT --> CoR_ORT_6["OptimizationRulePipeline_AddRuleAndBuildChain_ShouldBuildChainWithoutError"]
+    CoR_ORT --> CoR_ORT_7["OptimizationRulePipeline_OptimizeUntilStable_ShouldThrowNotImplementedException"]
+    CoR_ORT --> CoR_ORT_8["ConstantFoldingRule_Handle_ShouldThrowNotImplementedException"]
+    CoR_ORT --> CoR_ORT_9["PhysicalPlanGenerator_Generate_ShouldThrowNotImplementedException"]
+    CoR_ORT --> CoR_ORT_10["LogicalPlan_Clone_ShouldThrowNotImplementedException"]
 
     %% Observer
     Obs --> Obs_MOT["MetadataObserverTests.cs"]
@@ -175,8 +189,8 @@ flowchart LR
     classDef classNode fill:#1f2937,stroke:#60a5fa,color:#ffffff,stroke-width:2px
     classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
 
-    class TM,FM,S,C,Cmd,I,B,State,Facade,Int,Obs,Vis,P,Sing patternNode
-    class TM_TMT,FM_DFT,S_CCT,S_UCT,S_PKT,S_FKT,C_ST,C_DT,C_TT,Cmd_DCT,Cmd_DBT,I_CIT,B_TBT,State_DST,Facade_SST,Int_IPT,Int_SPT,Obs_MOT,Vis_MVT,P_BPT,Sing_DMT classNode
+    class TM,FM,S,C,Cmd,I,B,State,Facade,Int,Obs,Vis,P,Sing,CoR patternNode
+    class TM_TMT,FM_DFT,S_CCT,S_UCT,S_PKT,S_FKT,C_ST,C_DT,C_TT,Cmd_DCT,Cmd_DBT,I_CIT,B_TBT,State_DST,Facade_SST,Int_IPT,Int_SPT,Obs_MOT,Vis_MVT,P_BPT,Sing_DMT,CoR_ORT classNode
     class TM_TMT_1,TM_TMT_2,TM_TMT_3,TM_TMT_4 completedTest
     class FM_DFT_1,FM_DFT_2,FM_DFT_3 completedTest
     class S_CCT_1,S_CCT_2,S_UCT_1,S_UCT_2,S_UCT_3,S_UCT_4,S_PKT_1,S_PKT_2,S_PKT_3,S_PKT_4,S_FKT_1,S_FKT_2 completedTest
@@ -188,6 +202,7 @@ flowchart LR
     class Facade_SST_1,Facade_SST_2,Facade_SST_3,Facade_SST_4,Facade_SST_5,Facade_SST_6 completedTest
     class Int_IPT_1,Int_IPT_2,Int_IPT_3,Int_IPT_4,Int_IPT_5,Int_IPT_6,Int_IPT_7,Int_IPT_8,Int_IPT_9,Int_IPT_10,Int_IPT_11 completedTest
     class Int_SPT_1,Int_SPT_2,Int_SPT_3,Int_SPT_4,Int_SPT_5,Int_SPT_6,Int_SPT_7 completedTest
+    class CoR_ORT_1,CoR_ORT_2,CoR_ORT_3,CoR_ORT_4,CoR_ORT_5,CoR_ORT_6,CoR_ORT_7,CoR_ORT_8,CoR_ORT_9,CoR_ORT_10 completedTest
     class Obs_MOT_1,Obs_MOT_2,Obs_MOT_3,Obs_MOT_4,Obs_MOT_5 completedTest
     class Vis_MVT_1,Vis_MVT_2,Vis_MVT_3,Vis_MVT_4 completedTest
     class P_BPT_1,P_BPT_2,P_BPT_3,P_BPT_4,P_BPT_5 completedTest

@@ -89,13 +89,12 @@ public class InterpreterPatternTests
     }
 
     [Fact]
-    public void AST_ToLogicalPlan_ShouldThrowNotImplementedException()
+    public void AST_ShouldInitializeWithRootNode()
     {
-        var ast = new AST(new SelectNode());
+        var rootNode = new SelectNode();
+        var ast = new AST(rootNode);
 
-        Action act = () => ast.ToLogicalPlan();
-
-        act.Should().Throw<NotImplementedException>();
+        ast.Root.Should().Be(rootNode);
     }
 
     [Fact]

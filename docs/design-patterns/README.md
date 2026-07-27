@@ -1068,10 +1068,10 @@ SchemaService --> SequenceDefinition
 | Priority | Module | Main Feature | Main Classes | Application | Design Pattern | Progress |
 | :---: | :--- | :--- | :--- | :--- | :--- | :---: |
 | 🔥 Critical | Query Processing | SQL Parsing | `SQLParser`, `Lexer`, `ASTNode` | Parses SQL grammar and represents SQL statements as an abstract syntax tree. | **Interpreter** | Completed |
-| 🔥 Critical | Query Processing | Query Plan Structure | `PlanOperator`, logical and physical operators | Represents AST and query plans as tree structures where leaf and composite operators are treated uniformly. | **Composite** | Not Started |
 | 🔥 Critical | Query Optimization | Optimization Algorithm | `QueryOptimizer`, `IOptimizationStrategy` | Allows rule-based, cost-based, and heuristic optimization algorithms to be selected independently. | **Strategy** | Not Started |
-| 🔥 Critical | Query Execution | Streaming Execution | `IPhysicalOperator`, `ResultCursor` | Produces rows incrementally through `Open`, `Next`, and `Close` operations. | **Iterator** | Not Started |
-| 🔴 High | Query Optimization | Optimization Rules | `IOptimizationRule`, `OptimizationRulePipeline`, concrete rules | Applies predicate pushdown, projection pruning, constant folding, and other transformations sequentially until the logical plan reaches a stable form. | **Chain of Responsibility** | Not Started |
+| 🔴 High | Query Optimization | Optimization Rules | `IOptimizationRule`, `OptimizationRulePipeline`, concrete rules | Applies predicate pushdown, projection pruning, constant folding, and other transformations sequentially until the logical plan reaches a stable form. | **Chain of Responsibility** | Completed |
+| 🔴 High | Query Processing | Query Plan Structure | `PlanOperator`, logical and physical operators | Represents AST and query plans as tree structures where leaf and composite operators are treated uniformly. | **Composite** | Not Started |
+| 🔴 High | Query Execution | Streaming Execution | `IPhysicalOperator`, `ResultCursor` | Produces rows incrementally through `Open`, `Next`, and `Close` operations. | **Iterator** | Not Started |
 | 🔴 High | Query Processing | Unified Query API | `QueryProcessor` | Provides one interface for parsing, binding, optimizing, and executing SQL queries. | **Facade** | Not Started |
 | 🔴 High | Query Processing | Plan Traversal | `IPlanVisitor`, AST and plan operators | Traverses AST and plan trees for binding, validation, cost calculation, and explain-plan generation. | **Visitor** | Not Started |
 | 🟡 Medium | Query Planning | Physical Operator Creation | `PhysicalOperatorFactory` | Creates scan, join, filter, sort, and aggregate physical operators based on optimizer decisions. | **Factory Method** | Not Started |
@@ -5809,7 +5809,6 @@ class BinaryExpressionNode {
 class AST {
     <<AST Root Wrapper>>
     +Root : ASTNode
-    +ToLogicalPlan() LogicalPlan
 }
 
 %% =====================================================
@@ -5834,7 +5833,7 @@ note for SQLParser "Parse() throws SqlSyntaxException\non invalid input"
 class SemanticAnalyzer {
     <<Interpreter / Visitor>>
     -catalog : ICatalogManager
-    +Bind(ast : ASTNode) LogicalPlan
+    +Bind(ast : AST) LogicalPlan
     -ResolveIdentifier(node : IdentifierNode) Column
     -BindExpression(node : ASTNode) ASTNode
 }
@@ -6020,6 +6019,371 @@ sequenceDiagram
     end
 
     Client->>Cursor: Close()
+```
+
+### 2. Optimization Rules (Chain of Responsibility Pattern)
+
+**Purpose:**  
+Avoid coupling the sender of a request to its receiver by giving more than one object a chance to handle the request. Chain the receiving objects and pass the request along the chain until an object handles it. Each handler decides either to process the request or to forward it to the next handler in the chain.
+
+**Example:**  
+A customer support ticket routing system where tickets are passed through a chain of handlers — `L1SupportHandler` → `L2SupportHandler` → `ManagerHandler` — and each handler either resolves the ticket or escalates it to the next level.
+
+#### Class Diagram
+
+```mermaid
+classDiagram
+direction LR
+
+class ITicketHandler {
+    <<Handler>>
+    +SetNext(next : ITicketHandler) ITicketHandler
+    +Handle(ticket : SupportTicket) string
+}
+
+class BaseTicketHandler {
+    <<AbstractHandler>>
+    -next : ITicketHandler
+    +SetNext(next : ITicketHandler) ITicketHandler
+    +Handle(ticket : SupportTicket) string
+}
+
+class L1SupportHandler {
+    <<ConcreteHandler>>
+    +Handle(ticket : SupportTicket) string
+}
+
+class L2SupportHandler {
+    <<ConcreteHandler>>
+    +Handle(ticket : SupportTicket) string
+}
+
+class ManagerHandler {
+    <<ConcreteHandler>>
+    +Handle(ticket : SupportTicket) string
+}
+
+class SupportTicket {
+    <<Request>>
+    +Priority : int
+    +Description : string
+}
+
+ITicketHandler <|.. BaseTicketHandler
+BaseTicketHandler <|-- L1SupportHandler
+BaseTicketHandler <|-- L2SupportHandler
+BaseTicketHandler <|-- ManagerHandler
+
+ITicketHandler --> ITicketHandler : next
+```
+
+#### Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant L1 as L1SupportHandler
+    participant L2 as L2SupportHandler
+    participant Mgr as ManagerHandler
+
+    Client->>L1: Handle(ticket priority=3)
+    Note over L1: priority > 1 — cannot handle
+    L1->>L2: Handle(ticket priority=3)
+    Note over L2: priority > 2 — cannot handle
+    L2->>Mgr: Handle(ticket priority=3)
+    Note over Mgr: handles all remaining tickets
+    Mgr-->>L2: "Escalated to Manager"
+    L2-->>L1: "Escalated to Manager"
+    L1-->>Client: "Escalated to Manager"
+```
+
+#### Simplified Code
+
+```csharp
+public interface ITicketHandler
+{
+    // Link this handler to the next one in the chain
+    ITicketHandler SetNext(ITicketHandler next);
+    // Process the ticket or forward it to the next handler
+    string Handle(SupportTicket ticket);
+}
+
+public abstract class BaseTicketHandler : ITicketHandler
+{
+    private ITicketHandler? _next;
+
+    public ITicketHandler SetNext(ITicketHandler next)
+    {
+        _next = next;
+        return next; // allows fluent chaining: h1.SetNext(h2).SetNext(h3)
+    }
+
+    public virtual string Handle(SupportTicket ticket)
+    {
+        // Default: forward to next handler if one exists
+        return _next?.Handle(ticket) ?? "No handler could process the ticket";
+    }
+}
+
+public class L1SupportHandler : BaseTicketHandler
+{
+    public override string Handle(SupportTicket ticket)
+    {
+        if (ticket.Priority == 1)
+            return $"L1 resolved: {ticket.Description}";
+
+        // Priority too high — pass to next handler
+        return base.Handle(ticket);
+    }
+}
+
+public class L2SupportHandler : BaseTicketHandler
+{
+    public override string Handle(SupportTicket ticket)
+    {
+        if (ticket.Priority <= 2)
+            return $"L2 resolved: {ticket.Description}";
+
+        return base.Handle(ticket);
+    }
+}
+
+public class ManagerHandler : BaseTicketHandler
+{
+    public override string Handle(SupportTicket ticket)
+    {
+        // Manager handles all tickets regardless of priority
+        return $"Manager resolved: {ticket.Description}";
+    }
+}
+
+// Usage: build chain and send a ticket
+var l1 = new L1SupportHandler();
+var l2 = new L2SupportHandler();
+var mgr = new ManagerHandler();
+l1.SetNext(l2).SetNext(mgr);
+
+var ticket = new SupportTicket { Priority = 3, Description = "System outage" };
+string result = l1.Handle(ticket); // → "Manager resolved: System outage"
+```
+
+**Benefits**
+
+- Decouples the sender from receiver — the client does not know which handler will ultimately process the request.
+- Responsibilities can be assigned dynamically at runtime by assembling different handler chains.
+- New handlers can be added or removed without modifying existing handlers (Open/Closed Principle).
+- Each handler is focused on a single concern, keeping individual classes small and testable.
+- The chain can terminate early when any handler fully handles the request, avoiding unnecessary processing.
+
+**Application:** `OptimizationRulePipeline` assembles a chain of `IOptimizationRule` handlers — `ConstantFoldingRule` → `PredicatePushdownRule` → `ProjectionPruningRule` → `JoinReorderingRule`. Each rule either transforms the `LogicalPlan` or passes it to the next. The pipeline repeats the full chain until no rule reports a change (`OptimizeUntilStable`), guaranteeing a fixed point.
+
+**Why apply?** A SQL query optimizer must apply many independent, composable transformations — constant folding, predicate pushdown, projection pruning, join reordering, subquery unnesting — in a well-defined sequence. Hardcoding all these transformations into a single `Optimize()` method creates a monolithic, brittle class. The Chain of Responsibility pattern allows each transformation to be encapsulated in its own handler class, enables new rules to be registered without touching existing logic, and makes the ordering and enablement of rules fully configurable at startup. The `OptimizationRulePipeline` acts as the chain coordinator, iterating passes until the plan is stable, which naturally models fixed-point optimization used by production DBMS engines such as PostgreSQL and SQL Server.
+
+```mermaid
+classDiagram
+direction LR
+
+%% =====================================================
+%% LOGICAL PLAN — REQUEST
+%% =====================================================
+
+class LogicalPlan {
+    <<Request>>
+    +Root : LogicalOperator
+    +Clone() LogicalPlan
+}
+
+class LogicalOperator {
+    <<abstract>>
+    +OperatorType : LogicalOperatorType
+    +Children : IReadOnlyList~LogicalOperator~
+    +ReplaceChild(oldChild : LogicalOperator, newChild : LogicalOperator)
+}
+
+class LogicalScan {
+    +TableId : int
+    +Alias : string
+}
+
+class LogicalFilter {
+    +Predicate : Expression
+    +Child : LogicalOperator
+}
+
+class LogicalProject {
+    +Expressions : IReadOnlyList~Expression~
+    +Child : LogicalOperator
+}
+
+class LogicalJoin {
+    +JoinType : JoinType
+    +Condition : Expression
+    +Left : LogicalOperator
+    +Right : LogicalOperator
+}
+
+LogicalOperator <|-- LogicalScan
+LogicalOperator <|-- LogicalFilter
+LogicalOperator <|-- LogicalProject
+LogicalOperator <|-- LogicalJoin
+
+LogicalPlan *-- LogicalOperator : root
+LogicalOperator --> LogicalOperator : children
+
+%% =====================================================
+%% OPTIMIZATION CONTEXT
+%% =====================================================
+
+class OptimizationContext {
+    <<Context>>
+    +Catalog : ICatalogManager
+    +Statistics : StatisticsManager
+    +CostModel : CostModel
+    +MaxPasses : int
+}
+
+class OptimizationResult {
+    <<Result>>
+    +Plan : LogicalPlan
+    +Changed : bool
+    +AppliedRules : IReadOnlyList~string~
+}
+
+%% =====================================================
+%% CHAIN OF RESPONSIBILITY — HANDLER
+%% =====================================================
+
+class IOptimizationRule {
+    <<Handler>>
+    +SetNext(next : IOptimizationRule) IOptimizationRule
+    +Handle(plan : LogicalPlan, ctx : OptimizationContext) OptimizationResult
+}
+
+class OptimizationRuleBase {
+    <<AbstractHandler>>
+    -next : IOptimizationRule
+    +SetNext(next : IOptimizationRule) IOptimizationRule
+    +Handle(plan : LogicalPlan, ctx : OptimizationContext) OptimizationResult
+    #CanApply(plan : LogicalPlan, ctx : OptimizationContext) bool
+    #Apply(plan : LogicalPlan, ctx : OptimizationContext) OptimizationResult
+    #PassToNext(result : OptimizationResult, ctx : OptimizationContext) OptimizationResult
+}
+
+IOptimizationRule <|.. OptimizationRuleBase
+
+%% =====================================================
+%% CONCRETE HANDLERS
+%% =====================================================
+
+class ConstantFoldingRule {
+    <<ConcreteHandler>>
+    #CanApply(plan : LogicalPlan, ctx : OptimizationContext) bool
+    #Apply(plan : LogicalPlan, ctx : OptimizationContext) OptimizationResult
+}
+
+class PredicatePushdownRule {
+    <<ConcreteHandler>>
+    #CanApply(plan : LogicalPlan, ctx : OptimizationContext) bool
+    #Apply(plan : LogicalPlan, ctx : OptimizationContext) OptimizationResult
+}
+
+class ProjectionPruningRule {
+    <<ConcreteHandler>>
+    #CanApply(plan : LogicalPlan, ctx : OptimizationContext) bool
+    #Apply(plan : LogicalPlan, ctx : OptimizationContext) OptimizationResult
+}
+
+class JoinReorderingRule {
+    <<ConcreteHandler>>
+    #CanApply(plan : LogicalPlan, ctx : OptimizationContext) bool
+    #Apply(plan : LogicalPlan, ctx : OptimizationContext) OptimizationResult
+}
+
+OptimizationRuleBase <|-- ConstantFoldingRule
+OptimizationRuleBase <|-- PredicatePushdownRule
+OptimizationRuleBase <|-- ProjectionPruningRule
+OptimizationRuleBase <|-- JoinReorderingRule
+
+%% =====================================================
+%% RULE PIPELINE
+%% =====================================================
+
+class OptimizationRulePipeline {
+    <<Chain Coordinator>>
+    -firstRule : IOptimizationRule
+    -rules : List~IOptimizationRule~
+    -maxPasses : int
+
+    +AddRule(rule : IOptimizationRule) OptimizationRulePipeline
+    +BuildChain()
+    +OptimizeUntilStable(plan : LogicalPlan, ctx : OptimizationContext) LogicalPlan
+}
+
+OptimizationRulePipeline o-- IOptimizationRule : contains
+IOptimizationRule --> IOptimizationRule : next handler
+
+%% =====================================================
+%% QUERY OPTIMIZER
+%% =====================================================
+
+class QueryOptimizer {
+    <<Client>>
+    -rulePipeline : OptimizationRulePipeline
+    -physicalPlanGenerator : PhysicalPlanGenerator
+    -statisticsManager : StatisticsManager
+    -costModel : CostModel
+
+    +Optimize(plan : LogicalPlan) PhysicalPlan
+}
+
+class PhysicalPlanGenerator {
+    +Generate(plan : LogicalPlan, ctx : OptimizationContext) PhysicalPlan
+}
+
+class PhysicalPlan {
+    +Root : IPhysicalOperator
+}
+
+QueryOptimizer --> OptimizationRulePipeline : optimizes logical plan
+QueryOptimizer --> PhysicalPlanGenerator : generates physical plan
+QueryOptimizer --> StatisticsManager : obtains statistics
+QueryOptimizer --> CostModel : estimates alternatives
+
+OptimizationRulePipeline --> LogicalPlan : transforms
+OptimizationRulePipeline --> OptimizationContext : uses
+
+JoinReorderingRule --> StatisticsManager : estimates cardinality
+JoinReorderingRule --> CostModel : compares join orders
+
+PhysicalPlanGenerator --> LogicalPlan : reads
+PhysicalPlanGenerator --> PhysicalPlan : creates
+```
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    participant QP as QueryProcessor
+    participant Parser as SQLParser
+    participant Analyzer as SemanticAnalyzer
+    participant Optimizer as QueryOptimizer
+    participant Pipeline as OptimizationRulePipeline
+    participant Generator as PhysicalPlanGenerator
+
+    QP->>Parser: Parse(sql)
+    Parser-->>QP: AST
+
+    QP->>Analyzer: Bind(AST)
+    Analyzer-->>QP: LogicalPlan
+
+    QP->>Optimizer: Optimize(LogicalPlan)
+    Optimizer->>Pipeline: OptimizeUntilStable(LogicalPlan, context)
+    Pipeline-->>Optimizer: Optimized LogicalPlan
+
+    Optimizer->>Generator: Generate(Optimized LogicalPlan)
+    Generator-->>Optimizer: PhysicalPlan
+
+    Optimizer-->>QP: PhysicalPlan
 ```
 
 ---
