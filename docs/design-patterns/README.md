@@ -1056,11 +1056,11 @@ SchemaService --> SequenceDefinition
 | 🔥 Critical | Server Management | Server State Management | `DatabaseServer`, `IServerState` | Encapsulates behaviors for Stopped, Running, Recovering, and Failed states. | **State** | Completed |
 | 🔴 High | Database Management | Database Creation | `IDatabaseFactory`, `DatabaseFactory` | Centralizes the construction and initialization of database objects. | **Factory Method** | Completed |
 | 🔴 High | Database Management | Global Database Management | `DatabaseManager` | Ensures that only one database manager coordinates database lifecycle operations, catalog metadata, and database connections within the server process. | **Singleton** | Completed |
-| 🔴 High | Database Management | Database State | `Database`, `IDatabaseState` | Controls database behavior in Online, Offline, ReadOnly, and Restoring states. | **State** | Not Started |
+| 🔴 High | Database Management | Database Operations | `IDatabaseCommand`, `CreateDatabaseCommand`, `DropDatabaseCommand`, `RenameDatabaseCommand` | Encapsulates database creation, deletion, and renaming requests as command objects, enabling centralized execution, auditing, logging, retrying, scheduling, and operation history. | **Command** | Completed |
+| 🟡 Medium | Database Management | Database State | `Database`, `IDatabaseState` | Controls database behavior in Online, Offline, ReadOnly, and Restoring states. | **State** | Not Started |
 | 🟡 Medium | Configuration | Configuration Loading | `ConfigurationManager`, `IConfigurationLoader` | Supports loading configuration from JSON, XML, environment variables, or command-line sources. | **Strategy** | Not Started |
 | 🟡 Medium | Monitoring | Metrics Collection | `MonitoringManager`, `IMetricCollector` | Separates CPU, memory, query, transaction, and connection metric collection. | **Strategy** | Not Started |
 | 🟡 Medium | Monitoring | Runtime Event Monitoring | `MonitoringManager`, event publishers | Receives query, transaction, connection, and error events from server components. | **Observer** | Not Started |
-| 🟡 Medium | Server Management | Administrative Operations | `StartServerCommand`, `StopServerCommand`, `RecoverServerCommand` | Encapsulates server operations for auditing, scheduling, and retrying. | **Command** | Not Started |
 | 🟡 Medium | Configuration | Dynamic Configuration | `ConfigurationManager`, configuration observers | Notifies dependent components when configuration values change. | **Observer** | Not Started |
 | 🟢 Low | Monitoring | Metrics Export | `PrometheusMetricsAdapter`, `OpenTelemetryAdapter` | Converts internal server metrics into external monitoring formats. | **Adapter** | Not Started |
 
@@ -5057,7 +5057,357 @@ sequenceDiagram
     DBM-->>QP: Database
 ```
 
-### 14. Database Creation (Factory Method Pattern)
+### 14. Database Operations (Command Pattern)
+
+**Purpose:**  
+Encapsulate a request as an object, thereby allowing you to parameterize clients with different requests, queue or log requests, and support undoable operations.
+
+**Example:**  
+A simple text editor where user actions (type, delete, bold) are wrapped as command objects so the editor can undo/redo each step without knowing the implementation details of each action.
+
+#### Class Diagram
+
+```mermaid
+classDiagram
+direction LR
+
+class ICommand {
+    <<Command>>
+    +Execute()
+    +Undo()
+}
+
+class TypeTextCommand {
+    <<ConcreteCommand>>
+    -_editor : TextEditor
+    -_text : string
+    +Execute()
+    +Undo()
+}
+
+class DeleteTextCommand {
+    <<ConcreteCommand>>
+    -_editor : TextEditor
+    -_count : int
+    +Execute()
+    +Undo()
+}
+
+class TextEditor {
+    <<Receiver>>
+    +Type(text : string)
+    +Delete(count : int)
+}
+
+class CommandInvoker {
+    <<Invoker>>
+    -_history : Stack~ICommand~
+    +Execute(command : ICommand)
+    +Undo()
+}
+
+ICommand <|.. TypeTextCommand
+ICommand <|.. DeleteTextCommand
+
+TypeTextCommand --> TextEditor : receiver
+DeleteTextCommand --> TextEditor : receiver
+
+CommandInvoker --> ICommand : executes
+```
+
+#### Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    actor User
+    participant Invoker as CommandInvoker
+    participant Cmd as TypeTextCommand
+    participant Editor as TextEditor
+
+    User->>Invoker: Execute(new TypeTextCommand("Hello"))
+    Invoker->>Cmd: Execute()
+    Cmd->>Editor: Type("Hello")
+    Editor-->>Cmd: done
+    Invoker->>Invoker: Push command to history stack
+    Invoker-->>User: Success
+
+    User->>Invoker: Undo()
+    Invoker->>Invoker: Pop command from history stack
+    Invoker->>Cmd: Undo()
+    Cmd->>Editor: Delete(5)
+    Editor-->>Cmd: done
+    Invoker-->>User: Undone
+```
+
+#### Simplified Code
+
+```csharp
+public interface ICommand
+{
+    void Execute();
+    void Undo();
+}
+
+public class TypeTextCommand : ICommand
+{
+    private readonly TextEditor _editor;
+    private readonly string _text;
+
+    public TypeTextCommand(TextEditor editor, string text)
+    {
+        _editor = editor;
+        _text = text;
+    }
+
+    public void Execute() => _editor.Type(_text);
+    public void Undo() => _editor.Delete(_text.Length);
+}
+
+public class CommandInvoker
+{
+    private readonly Stack<ICommand> _history = new();
+
+    public void Execute(ICommand command)
+    {
+        command.Execute();
+        _history.Push(command);
+    }
+
+    public void Undo()
+    {
+        if (_history.TryPop(out var command))
+            command.Undo();
+    }
+}
+```
+
+**Benefits**
+
+- Decouples the object that issues a request from the object that knows how to handle it.
+- Supports undoable operations by storing command objects in a history stack.
+- Enables logging, auditing, retrying, and scheduling of requests without modifying callers.
+- Supports building macro-commands (composites of multiple commands).
+- Follows Open/Closed Principle — new operations are added as new command classes.
+
+**Application:** `IDatabaseCommand`, `CreateDatabaseCommand`, `DropDatabaseCommand`, `RenameDatabaseCommand`, and `DatabaseCommandExecutor` encapsulate database lifecycle operations as first-class objects within `DatabaseServer`.
+
+**Why apply?** In a DBMS, admin operations such as `CREATE DATABASE`, `DROP DATABASE`, and `RENAME DATABASE` share a common lifecycle: permission check → validation → execution → audit log. Without the Command Pattern, this cross-cutting logic gets duplicated inside `DatabaseManager` or scattered across the API layer. Wrapping each operation as an `IDatabaseCommand` lets `DatabaseCommandExecutor` enforce uniform pre/post-processing, record a command history for auditing, and retry failed commands — all without changing `DatabaseManager`. It also separates *what* to do (the command) from *when* and *how often* to do it (the invoker or a scheduler), enabling features like deferred execution and operation replay.
+
+```mermaid
+classDiagram
+direction LR
+
+class IDatabaseCommand {
+    <<Command>>
+    +Execute() DatabaseCommandResult
+}
+
+class CreateDatabaseCommand {
+    <<ConcreteCommand>>
+    -_manager : DatabaseManager
+    -_databaseName : string
+    +CreateDatabaseCommand(manager : DatabaseManager, databaseName : string)
+    +Execute() DatabaseCommandResult
+}
+
+class DropDatabaseCommand {
+    <<ConcreteCommand>>
+    -_manager : DatabaseManager
+    -_databaseName : string
+    -_cascade : bool
+    +DropDatabaseCommand(manager : DatabaseManager, databaseName : string, cascade : bool)
+    +Execute() DatabaseCommandResult
+}
+
+class RenameDatabaseCommand {
+    <<ConcreteCommand>>
+    -_manager : DatabaseManager
+    -_oldName : string
+    -_newName : string
+    +RenameDatabaseCommand(manager : DatabaseManager, oldName : string, newName : string)
+    +Execute() DatabaseCommandResult
+}
+
+class DatabaseCommandExecutor {
+    <<Invoker>>
+    -_history : List~IDatabaseCommand~
+    +Execute(command : IDatabaseCommand) DatabaseCommandResult
+    +GetHistory() IReadOnlyList~IDatabaseCommand~
+}
+
+class DatabaseCommandResult {
+    <<Value Object>>
+    +IsSuccess : bool
+    +Message : string
+    +Database : Database
+    +ExecutedAt : DateTime
+}
+
+class DatabaseManager {
+    <<Receiver / Singleton>>
+    -_instance : DatabaseManager$
+    -_catalog : ICatalogManager
+    -_connectionPool : IConnectionPool
+    -_databaseFactory : IDatabaseFactory
+    +Instance : DatabaseManager$
+    +Initialize(catalog, connectionPool, factory)$ DatabaseManager
+    +CreateDatabase(name : string) Database
+    +DropDatabase(name : string, cascade : bool)
+    +GetDatabase(name : string) Database
+    +ListDatabases() IEnumerable~Database~
+    +OpenDatabase(name : string)
+    +CloseDatabase(name : string)
+    +RenameDatabase(oldName : string, newName : string)
+    +SetDatabaseState(name : string, state : DatabaseState)
+    +AttachDatabase(name : string, filePath : string)
+    +DetachDatabase(name : string)
+}
+
+class DatabaseServer {
+    <<Context>>
+    +ServerId : int
+    +Version : string
+    +Status : ServerStatus
+    +Start(safeMode : bool)
+    +Stop(force : bool)
+    +Restart()
+    +Recover()
+    +HandleSignal(signal : string)
+    +GetStatus() ServerStatus
+}
+
+class ICatalogManager {
+    <<Catalog Port>>
+    +RegisterDatabase(database : Database)
+    +RemoveDatabase(name : string)
+    +GetDatabase(name : string) Database
+    +CheckExists(name : string) bool
+}
+
+class IConnectionPool {
+    <<Connection Port>>
+    +CloseAll(dbName : string)
+}
+
+class IDatabaseFactory {
+    <<Creator>>
+    +Create(name : string) Database
+}
+
+class ConfigurationManager {
+    -configData : Map~string, string~
+    +LoadConfiguration(filePath : string)
+    +GetConfiguration(key : string) string
+}
+
+class MonitoringManager {
+    -metrics : ServerMetrics
+    +CollectMetrics()
+    +GetMetrics() ServerMetrics
+}
+
+IDatabaseCommand <|.. CreateDatabaseCommand
+IDatabaseCommand <|.. DropDatabaseCommand
+IDatabaseCommand <|.. RenameDatabaseCommand
+
+CreateDatabaseCommand --> DatabaseManager : receiver
+DropDatabaseCommand --> DatabaseManager : receiver
+RenameDatabaseCommand --> DatabaseManager : receiver
+
+DatabaseCommandExecutor --> IDatabaseCommand : executes
+DatabaseCommandExecutor --> DatabaseCommandResult : returns
+
+DatabaseServer --> DatabaseCommandExecutor : invokes via
+DatabaseServer --> DatabaseManager : Initialize() / Instance
+DatabaseServer --> ConfigurationManager
+DatabaseServer --> MonitoringManager
+
+DatabaseManager --> ICatalogManager : queries & updates
+DatabaseManager --> IConnectionPool : manages sessions
+DatabaseManager --> IDatabaseFactory : delegates construction
+```
+
+#### CreateDatabaseCommand
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    actor Admin
+    participant Server as DatabaseServer
+    participant Executor as DatabaseCommandExecutor
+    participant Cmd as CreateDatabaseCommand
+    participant Manager as DatabaseManager
+    participant Catalog as ICatalogManager
+    participant Factory as IDatabaseFactory
+
+    Admin->>Server: CreateDatabase("SalesDB")
+
+    Server->>Cmd: new CreateDatabaseCommand(DatabaseManager.Instance, "SalesDB")
+    Server->>Executor: Execute(command)
+
+    Executor->>Cmd: Execute()
+
+    Cmd->>Manager: CreateDatabase("SalesDB")
+    Manager->>Catalog: CheckExists("SalesDB")
+    Catalog-->>Manager: false
+
+    Manager->>Factory: Create("SalesDB")
+    Factory-->>Manager: Database
+
+    Manager->>Catalog: RegisterDatabase(database)
+    Catalog-->>Manager: registered
+
+    Manager-->>Cmd: Database
+    Cmd-->>Executor: DatabaseCommandResult(IsSuccess=true)
+
+    Executor->>Executor: Add command to history
+    Executor-->>Server: DatabaseCommandResult
+    Server-->>Admin: Database created successfully
+```
+
+#### DropDatabaseCommand
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    actor Admin
+    participant Server as DatabaseServer
+    participant Executor as DatabaseCommandExecutor
+    participant Cmd as DropDatabaseCommand
+    participant Manager as DatabaseManager
+    participant Catalog as ICatalogManager
+    participant Pool as IConnectionPool
+
+    Admin->>Server: DropDatabase("SalesDB", cascade: true)
+
+    Server->>Cmd: new DropDatabaseCommand(DatabaseManager.Instance, "SalesDB", cascade: true)
+    Server->>Executor: Execute(command)
+
+    Executor->>Cmd: Execute()
+    Cmd->>Manager: DropDatabase("SalesDB", cascade: true)
+
+    Manager->>Catalog: CheckExists("SalesDB")
+    Catalog-->>Manager: true
+
+    Manager->>Pool: CloseAll("SalesDB")
+    Pool-->>Manager: connections closed
+
+    Manager->>Catalog: RemoveDatabase("SalesDB")
+    Catalog-->>Manager: removed
+
+    Manager-->>Cmd: completed
+    Cmd-->>Executor: DatabaseCommandResult(IsSuccess=true)
+
+    Executor->>Executor: Add command to history
+    Executor-->>Server: DatabaseCommandResult
+    Server-->>Admin: Database dropped successfully
+```
+
+### 15. Database Creation (Factory Method Pattern)
 
 **Purpose:**  
 Define an interface for creating a `Database` object, but let subclasses (or concrete factory implementations) decide which class to instantiate. The Factory Method centralizes the complex initialization logic—allocating storage, registering the catalog entry, creating the default schema, and setting up permissions—so that `DatabaseManager` never has to know the construction details.

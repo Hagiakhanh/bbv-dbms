@@ -84,6 +84,13 @@ flowchart LR
     Cmd_DCT --> Cmd_DCT_2["DropTableCommand_Execute_ShouldThrowNotImplementedException"]
     Cmd_DCT --> Cmd_DCT_3["DdlCommandExecutor_Execute_ShouldThrowNotImplementedException"]
 
+    Cmd --> Cmd_DBT["DatabaseCommandTests.cs"]
+    Cmd_DBT --> Cmd_DBT_1["CreateDatabaseCommand_Execute_ShouldThrowNotImplementedException"]
+    Cmd_DBT --> Cmd_DBT_2["DropDatabaseCommand_Execute_ShouldThrowNotImplementedException"]
+    Cmd_DBT --> Cmd_DBT_3["RenameDatabaseCommand_Execute_ShouldThrowNotImplementedException"]
+    Cmd_DBT --> Cmd_DBT_4["DatabaseCommandExecutor_Execute_ShouldThrowNotImplementedException"]
+    Cmd_DBT --> Cmd_DBT_5["DatabaseCommandExecutor_GetHistory_ShouldThrowNotImplementedException"]
+
     %% Iterator
     I --> I_CIT["CatalogIteratorTests.cs"]
     I_CIT --> I_CIT_1["CatalogIterator_HasMore_ShouldThrowNotImplementedException"]
@@ -168,12 +175,12 @@ flowchart LR
     classDef completedTest fill:#dcfce7,stroke:#22c55e,color:#111827,stroke-width:2px
 
     class TM,FM,S,C,Cmd,I,B,State,Facade,Int,Obs,Vis,P,Sing patternNode
-    class TM_TMT,FM_DFT,S_CCT,S_UCT,S_PKT,S_FKT,C_ST,C_DT,C_TT,Cmd_DCT,I_CIT,B_TBT,State_DST,Facade_SST,Int_IPT,Int_SPT,Obs_MOT,Vis_MVT,P_BPT,Sing_DMT classNode
+    class TM_TMT,FM_DFT,S_CCT,S_UCT,S_PKT,S_FKT,C_ST,C_DT,C_TT,Cmd_DCT,Cmd_DBT,I_CIT,B_TBT,State_DST,Facade_SST,Int_IPT,Int_SPT,Obs_MOT,Vis_MVT,P_BPT,Sing_DMT classNode
     class TM_TMT_1,TM_TMT_2,TM_TMT_3,TM_TMT_4 completedTest
     class FM_DFT_1,FM_DFT_2,FM_DFT_3 completedTest
     class S_CCT_1,S_CCT_2,S_UCT_1,S_UCT_2,S_UCT_3,S_UCT_4,S_PKT_1,S_PKT_2,S_PKT_3,S_PKT_4,S_FKT_1,S_FKT_2 completedTest
     class C_ST_1,C_ST_2,C_ST_3,C_ST_4,C_ST_5,C_ST_6,C_ST_7,C_DT_1,C_DT_2,C_DT_3,C_DT_4,C_DT_5,C_TT_1,C_TT_2,C_TT_3,C_TT_4,C_TT_5 completedTest
-    class Cmd_DCT_1,Cmd_DCT_2,Cmd_DCT_3 completedTest
+    class Cmd_DCT_1,Cmd_DCT_2,Cmd_DCT_3,Cmd_DBT_1,Cmd_DBT_2,Cmd_DBT_3,Cmd_DBT_4,Cmd_DBT_5 completedTest
     class I_CIT_1,I_CIT_2 completedTest
     class B_TBT_1,B_TBT_2,B_TBT_3 completedTest
     class State_DST_1,State_DST_2,State_DST_3,State_DST_4,State_DST_5,State_DST_6 completedTest
