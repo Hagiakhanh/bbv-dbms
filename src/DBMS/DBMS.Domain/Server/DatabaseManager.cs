@@ -27,6 +27,9 @@ public interface IDatabaseManager
 
 public class DatabaseManager : IDatabaseManager
 {
+    private static volatile DatabaseManager? _instance;
+    private static readonly object _lock = new();
+
     private readonly IDatabaseFactory _databaseFactory;
     private readonly ICatalogManager _catalog;
     private readonly IConnectionPool _connectionPool;
@@ -35,7 +38,7 @@ public class DatabaseManager : IDatabaseManager
     private readonly IFileManager _fileManager;
     private readonly ISecurityManager _securityManager;
 
-    public DatabaseManager(
+    private DatabaseManager(
         ICatalogManager catalog, 
         IConnectionPool connectionPool, 
         IStorageEngine storageEngine, 
@@ -46,7 +49,7 @@ public class DatabaseManager : IDatabaseManager
     {
     }
 
-    public DatabaseManager(
+    private DatabaseManager(
         IDatabaseFactory databaseFactory,
         ICatalogManager catalog, 
         IConnectionPool connectionPool, 
@@ -62,6 +65,69 @@ public class DatabaseManager : IDatabaseManager
         _bufferPool = bufferPool ?? throw new ArgumentNullException(nameof(bufferPool));
         _fileManager = fileManager ?? throw new ArgumentNullException(nameof(fileManager));
         _securityManager = securityManager ?? throw new ArgumentNullException(nameof(securityManager));
+    }
+
+    public static DatabaseManager Instance
+    {
+        get
+        {
+            if (_instance is null)
+            {
+                throw new InvalidOperationException("DatabaseManager has not been initialized. Call Initialize first.");
+            }
+            return _instance;
+        }
+    }
+
+    public static DatabaseManager Initialize(
+        ICatalogManager catalog, 
+        IConnectionPool connectionPool, 
+        IStorageEngine storageEngine, 
+        IBufferPool bufferPool, 
+        IFileManager fileManager, 
+        ISecurityManager securityManager)
+    {
+        if (_instance is null)
+        {
+            lock (_lock)
+            {
+                if (_instance is null)
+                {
+                    _instance = new DatabaseManager(catalog, connectionPool, storageEngine, bufferPool, fileManager, securityManager);
+                }
+            }
+        }
+        return _instance;
+    }
+
+    public static DatabaseManager Initialize(
+        IDatabaseFactory databaseFactory,
+        ICatalogManager catalog, 
+        IConnectionPool connectionPool, 
+        IStorageEngine storageEngine, 
+        IBufferPool bufferPool, 
+        IFileManager fileManager, 
+        ISecurityManager securityManager)
+    {
+        if (_instance is null)
+        {
+            lock (_lock)
+            {
+                if (_instance is null)
+                {
+                    _instance = new DatabaseManager(databaseFactory, catalog, connectionPool, storageEngine, bufferPool, fileManager, securityManager);
+                }
+            }
+        }
+        return _instance;
+    }
+
+    public static void ResetInstanceForTesting()
+    {
+        lock (_lock)
+        {
+            _instance = null;
+        }
     }
 
     public void CreateDatabase(string name)
