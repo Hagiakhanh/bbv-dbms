@@ -1,5 +1,5 @@
 using System;
-using DBMS.Domain.Server.States;
+using DBMS.Domain.Server.State;
 using DBMS.Domain.Security;
 
 namespace DBMS.Domain.Server;

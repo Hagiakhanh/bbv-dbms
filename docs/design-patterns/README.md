@@ -1071,9 +1071,9 @@ SchemaService --> SequenceDefinition
 | 🔥 Critical | Query Processing | Query Plan Structure | `PlanOperator`, logical and physical operators | Represents AST and query plans as tree structures where leaf and composite operators are treated uniformly. | **Composite** | Not Started |
 | 🔥 Critical | Query Optimization | Optimization Algorithm | `QueryOptimizer`, `IOptimizationStrategy` | Allows rule-based, cost-based, and heuristic optimization algorithms to be selected independently. | **Strategy** | Not Started |
 | 🔥 Critical | Query Execution | Streaming Execution | `IPhysicalOperator`, `ResultCursor` | Produces rows incrementally through `Open`, `Next`, and `Close` operations. | **Iterator** | Not Started |
+| 🔴 High | Query Optimization | Optimization Rules | `IOptimizationRule`, `OptimizationRulePipeline`, concrete rules | Applies predicate pushdown, projection pruning, constant folding, and other transformations sequentially until the logical plan reaches a stable form. | **Chain of Responsibility** | Not Started |
 | 🔴 High | Query Processing | Unified Query API | `QueryProcessor` | Provides one interface for parsing, binding, optimizing, and executing SQL queries. | **Facade** | Not Started |
 | 🔴 High | Query Processing | Plan Traversal | `IPlanVisitor`, AST and plan operators | Traverses AST and plan trees for binding, validation, cost calculation, and explain-plan generation. | **Visitor** | Not Started |
-| 🔴 High | Query Optimization | Optimization Rules | `IOptimizationRule`, concrete rules | Encapsulates predicate pushdown, projection pruning, constant folding, and join reordering as independent rules. | **Command** | Not Started |
 | 🟡 Medium | Query Planning | Physical Operator Creation | `PhysicalOperatorFactory` | Creates scan, join, filter, sort, and aggregate physical operators based on optimizer decisions. | **Factory Method** | Not Started |
 | 🟡 Medium | Query Processing | Standard Query Workflow | `QueryProcessingTemplate` | Defines the fixed parsing, binding, optimization, execution, and cleanup workflow. | **Template Method** | Not Started |
 | 🟡 Medium | Statistics | Statistics Invalidation | `StatisticsManager`, data-change publishers | Invalidates or refreshes table statistics when underlying data or indexes change. | **Observer** | Not Started |
@@ -1082,7 +1082,7 @@ SchemaService --> SequenceDefinition
 
 | Priority | Module | Main Feature | Main Classes | Application | Design Pattern | Progress |
 | :---: | :--- | :--- | :--- | :--- | :--- | :---: |
-| 🔥 Critical | Buffer Management | Page Caching | `BufferPool`, `FileManager` | Acts as a caching intermediary that returns memory-resident pages and accesses disk only on cache misses. | **Proxy** | Completed |
+| 🔥 Critical | Buffer Management | Cached Page Access | `IPageStore`, `BufferPoolProxy`, `DiskPageStore`, `BufferFrame` | Provides the same page-access interface as disk storage, serves memory-resident pages on cache hits, and delegates cache misses or flushes to the underlying disk page store. | **Proxy** | Completed |
 | 🔥 Critical | Storage Engine | Unified Storage Access | `StorageEngine`, `BufferPool`, `FileManager`, `WALManager` | Provides a unified interface for page allocation, reading, writing, caching, logging, and recovery. | **Facade** | Not Started |
 | 🔥 Critical | Buffer Management | Page Replacement | `BufferPool`, `IReplacementPolicy`, `LRUReplacementPolicy`, `ClockReplacementPolicy` | Allows the buffer pool to select and replace page eviction algorithms independently. | **Strategy** | Not Started |
 | 🔴 High | Recovery | Recoverable Storage Operations | `LogRecord`, concrete log records, `WALManager`, `RecoveryManager` | Encapsulates storage changes as records that support redo and undo during recovery. | **Command** | Not Started |
@@ -6166,78 +6166,96 @@ classDiagram
 direction LR
 
 %% =====================================================
-%% STORAGE ENGINE — Client
+%% CLIENT / FACADE
 %% =====================================================
 
 class StorageEngine {
-    <<Client>>
-    -bufferPool : BufferPool
-    -fileManager : FileManager
+    <<Client / Facade>>
+    -pageStore : IPageStore
+    -walManager : WALManager
+
     +ReadPage(id : PageId) Byte[]
     +WritePage(id : PageId, data : Byte[])
     +AllocatePage(tableId : int) PageId
+    +FlushPage(id : PageId)
 }
 
 %% =====================================================
-%% BUFFER POOL — Proxy
+%% PROXY SUBJECT
 %% =====================================================
 
 class IPageStore {
     <<Subject>>
     +FetchPage(id : PageId) Page
     +FlushPage(id : PageId)
+    +AllocatePage(tableId : int) PageId
 }
 
-class BufferPool {
+%% =====================================================
+%% BUFFER POOL — CACHING PROXY
+%% =====================================================
+
+class BufferPoolProxy {
     <<Proxy>>
-    -frames : Page[]
-    -policy : ReplacementPolicy
-    -fileManager : FileManager
+    -frames : Dictionary~PageId, BufferFrame~
+    -realStore : IPageStore
+    -replacementPolicy : IReplacementPolicy
+
     +FetchPage(id : PageId) Page
-    +UnpinPage(id : PageId)
     +FlushPage(id : PageId)
+    +AllocatePage(tableId : int) PageId
+
+    +UnpinPage(id : PageId)
     +MarkDirty(id : PageId)
-    +EvictPage() Page
+    -EvictFrame() BufferFrame
 }
 
-note for BufferPool "On FetchPage:\n1. Hit → return pinned frame\n2. Miss → FileManager.Read()\n   place in free/evicted frame"
+note for BufferPoolProxy "FetchPage:\n1. Cache hit → pin and return page\n2. Cache miss → delegate to realStore\n3. Cache loaded page in a frame"
 
 %% =====================================================
-%% REPLACEMENT POLICY
+%% REAL SUBJECT
 %% =====================================================
 
-class ReplacementPolicy {
-    <<Strategy>>
-    +Evict(frames : Page[]) Page
+class DiskPageStore {
+    <<RealSubject>>
+    -fileManager : IFileManager
+
+    +FetchPage(id : PageId) Page
+    +FlushPage(id : PageId)
+    +AllocatePage(tableId : int) PageId
 }
 
-class LruPolicy {
-    <<Concrete Strategy>>
-    -accessOrder : LinkedList~PageId~
-    +Evict(frames : Page[]) Page
-    +OnAccess(id : PageId)
+class IFileManager {
+    <<interface>>
+    +Read(pageId : PageId) Byte[]
+    +Write(pageId : PageId, data : Byte[])
+    +AllocatePage(tableId : int) PageId
 }
 
-class ClockPolicy {
-    <<Concrete Strategy>>
-    -hand : int
-    -referenceBits : bool[]
-    +Evict(frames : Page[]) Page
+class FileManager {
+    -dataDir : string
+
+    +Read(pageId : PageId) Byte[]
+    +Write(pageId : PageId, data : Byte[])
+    +AllocatePage(tableId : int) PageId
+    +CreateFile(path : string) int
 }
 
-ReplacementPolicy <|.. LruPolicy
-ReplacementPolicy <|.. ClockPolicy
+%% =====================================================
+%% BUFFER FRAME AND PAGE
+%% =====================================================
 
-%% =====================================================
-%% PAGE — Cache Frame
-%% =====================================================
+class BufferFrame {
+    +FrameId : int
+    +Page : Page
+    +PinCount : int
+    +IsDirty : bool
+}
 
 class Page {
-    <<Cache Frame>>
     +PageId : PageId
     +Data : Byte[]
-    +IsDirty : bool
-    +PinCount : int
+
     +InsertRecord(record : Byte[])
     +DeleteRecord(rid : RID)
     +Compact()
@@ -6258,30 +6276,50 @@ class RID {
 }
 
 %% =====================================================
-%% FILE MANAGER — Real Subject
+%% REPLACEMENT STRATEGY
 %% =====================================================
 
-class FileManager {
-    <<RealSubject>>
-    -dataDir : string
-    +Read(pageId : PageId) Byte[]
-    +Write(pageId : PageId, data : Byte[])
-    +AllocateFile(path : string) int
+class IReplacementPolicy {
+    <<interface>>
+    +SelectVictim() PageId
+    +OnAccess(id : PageId)
+    +SetEvictable(id : PageId, evictable : bool)
+}
+
+class LruPolicy {
+    -accessOrder : LinkedList~PageId~
+
+    +SelectVictim() PageId
+    +OnAccess(id : PageId)
+    +SetEvictable(id : PageId, evictable : bool)
+}
+
+class ClockPolicy {
+    -hand : int
+    -referenceBits : Dictionary~PageId, bool~
+
+    +SelectVictim() PageId
+    +OnAccess(id : PageId)
+    +SetEvictable(id : PageId, evictable : bool)
 }
 
 %% =====================================================
-%% WAL & RECOVERY
+%% WAL AND RECOVERY
 %% =====================================================
 
 class WALManager {
-    <<Write-Ahead Log>>
     +WriteLog(record : LogRecord) long
-    +Recover()
+    +Flush(lsn : long)
+    +ReadFrom(lsn : long) IEnumerable~LogRecord~
 }
 
 class RecoveryManager {
-    <<Recovery Coordinator>>
+    -walManager : WALManager
+    -pageStore : IPageStore
+
     +Recover(checkpoint : long)
+    +Redo(record : LogRecord)
+    +Undo(record : LogRecord)
 }
 
 class LogRecord {
@@ -6290,89 +6328,115 @@ class LogRecord {
     +TransactionId : int
     +Type : LogRecordType
     +PageId : PageId
-    +Data : Byte[]
+    +BeforeImage : Byte[]
+    +AfterImage : Byte[]
 }
 
 %% =====================================================
 %% RELATIONSHIPS
 %% =====================================================
 
-IPageStore <|.. BufferPool
+IPageStore <|.. BufferPoolProxy
+IPageStore <|.. DiskPageStore
 
-StorageEngine --> BufferPool : FetchPage / FlushPage (via IPageStore)
-StorageEngine --> FileManager : AllocatePage
+IFileManager <|.. FileManager
 
-BufferPool --> FileManager : Read/Write on cache miss or flush
-BufferPool --> Page : manages frames
-BufferPool --> ReplacementPolicy : evicts via
+StorageEngine --> IPageStore : uses
+StorageEngine --> WALManager : logs writes
 
+BufferPoolProxy --> IPageStore : delegates cache misses
+BufferPoolProxy --> BufferFrame : manages
+BufferPoolProxy --> IReplacementPolicy : eviction strategy
+
+DiskPageStore --> IFileManager : performs disk I/O
+
+BufferFrame *-- Page
 Page --> PageId
-Page --> RID : slot reference
+Page --> RID
+
+IReplacementPolicy <|.. LruPolicy
+IReplacementPolicy <|.. ClockPolicy
 
 RecoveryManager --> WALManager : reads log
-WALManager --> LogRecord : writes
-StorageEngine --> WALManager : logs writes
+RecoveryManager --> IPageStore : applies redo/undo
+WALManager --> LogRecord : stores
 ```
 
 ```mermaid
 sequenceDiagram
     autonumber
 
-    actor TxManager as Transaction Manager
+    actor Client as RecordManager
     participant SE as StorageEngine
-    participant BP as BufferPool
-    participant Policy as ReplacementPolicy
+    participant BP as BufferPoolProxy
+    participant Policy as IReplacementPolicy
+    participant Disk as DiskPageStore
     participant FM as FileManager
     participant WAL as WALManager
     participant Page as Page
 
-    TxManager->>SE: ReadPage(pageId)
-
+    Client->>SE: ReadPage(pageId)
     SE->>BP: FetchPage(pageId)
 
-    alt Cache Hit — page already in frame pool
+    alt Cache hit
         BP->>Page: PinCount++
-        BP-->>SE: Page (from memory)
-    else Cache Miss — page not in memory
-        BP->>Policy: Evict(frames)
-        Policy-->>BP: victim Page
+        BP->>Policy: OnAccess(pageId)
+        BP-->>SE: Page
+    else Cache miss
+        BP->>BP: FindFreeFrame()
 
-        alt Victim page is dirty
-            BP->>WAL: WriteLog(FlushRecord)
-            WAL-->>BP: LSN confirmed
-            BP->>FM: Write(victim.PageId, victim.Data)
-            FM-->>BP: written to disk
+        alt No free frame
+            BP->>Policy: SelectVictim()
+            Policy-->>BP: victimPageId
+
+            alt Victim is dirty
+                BP->>WAL: Flush(victim.PageLSN)
+                WAL-->>BP: WAL durable
+                BP->>Disk: FlushPage(victimPageId)
+                Disk->>FM: Write(victimPageId, data)
+                FM-->>Disk: completed
+                Disk-->>BP: completed
+            end
         end
 
-        BP->>FM: Read(pageId)
-        FM-->>BP: Byte[] from disk
+        BP->>Disk: FetchPage(pageId)
+        Disk->>FM: Read(pageId)
+        FM-->>Disk: Byte[]
+        Disk-->>BP: Page
 
-        BP->>Page: Load(data), PinCount = 1
-        BP-->>SE: Page (newly loaded)
+        BP->>Page: PinCount = 1
+        BP->>Policy: SetEvictable(pageId, false)
+        BP-->>SE: Page
     end
 
-    SE-->>TxManager: Page
+    SE-->>Client: Page.Data
 
-    Note over TxManager,Page: Transaction modifies the page in memory
-
-    TxManager->>SE: WritePage(pageId, data)
+    Client->>SE: WritePage(pageId, newData, txId)
     SE->>WAL: WriteLog(UpdateRecord)
-    WAL-->>SE: LSN assigned
-    SE->>BP: MarkDirty(pageId)
-    BP->>Page: IsDirty = true
+    WAL-->>SE: LSN
 
-    TxManager->>SE: UnpinPage(pageId)
+    SE->>Page: ApplyUpdate(newData)
+    SE->>Page: PageLSN = LSN
+    SE->>BP: MarkDirty(pageId)
+
+    Client->>SE: UnpinPage(pageId)
     SE->>BP: UnpinPage(pageId)
     BP->>Page: PinCount--
-    Note over BP: Page remains in frame pool\nuntil evicted by policy
 
-    Note over TxManager: ... later, on checkpoint or eviction ...
+    alt PinCount == 0
+        BP->>Policy: SetEvictable(pageId, true)
+    end
 
-    TxManager->>SE: FlushPage(pageId)
+    Client->>SE: FlushPage(pageId)
     SE->>BP: FlushPage(pageId)
-    BP->>WAL: WriteLog(FlushRecord)
-    WAL-->>BP: LSN confirmed
-    BP->>FM: Write(pageId, Page.Data)
-    FM-->>BP: flushed to disk
-    BP->>Page: IsDirty = false
+
+    alt Page is dirty
+        BP->>WAL: Flush(Page.PageLSN)
+        WAL-->>BP: WAL durable
+        BP->>Disk: FlushPage(pageId)
+        Disk->>FM: Write(pageId, Page.Data)
+        FM-->>Disk: completed
+        Disk-->>BP: completed
+        BP->>Page: IsDirty = false
+    end
 ```

@@ -8,12 +8,12 @@ namespace DBMS.Tests.Storage;
 public class BufferPoolProxyTests
 {
     [Fact]
-    public void FetchPage_WhenCacheMiss_ShouldDelegateToFileManagerRead()
+    public void FetchPage_WhenCacheMiss_ShouldDelegateToDiskPageStore()
     {
-        var fileManager = new FileManager();
-        var bufferPool = new BufferPool(fileManager);
+        var realStore = new DiskPageStore();
+        var proxy = new BufferPoolProxy(realStore);
 
-        Action act = () => bufferPool.FetchPage(1);
+        Action act = () => proxy.FetchPage(1);
 
         act.Should().Throw<NotImplementedException>();
     }
@@ -21,32 +21,43 @@ public class BufferPoolProxyTests
     [Fact]
     public void FetchPage_WhenCacheHit_ShouldReturnMemoryResidentPage()
     {
-        var fileManager = new FileManager();
-        var bufferPool = new BufferPool(fileManager);
+        var realStore = new DiskPageStore();
+        var proxy = new BufferPoolProxy(realStore);
 
-        Action act = () => bufferPool.FetchPage(1);
-
-        act.Should().Throw<NotImplementedException>();
-    }
-
-    [Fact]
-    public void FlushPage_WhenPageIsDirty_ShouldWriteToFileManager()
-    {
-        var fileManager = new FileManager();
-        var bufferPool = new BufferPool(fileManager);
-
-        Action act = () => bufferPool.FlushPage(1);
+        Action act = () => proxy.FetchPage(1);
 
         act.Should().Throw<NotImplementedException>();
     }
 
     [Fact]
-    public void EvictPage_ShouldFlushDirtyPageBeforeEviction()
+    public void FlushPage_WhenPageIsDirty_ShouldWriteToDiskPageStore()
     {
-        var fileManager = new FileManager();
-        var bufferPool = new BufferPool(fileManager);
+        var realStore = new DiskPageStore();
+        var proxy = new BufferPoolProxy(realStore);
 
-        Action act = () => bufferPool.EvictPage();
+        Action act = () => proxy.FlushPage(1);
+
+        act.Should().Throw<NotImplementedException>();
+    }
+
+    [Fact]
+    public void EvictFrame_ShouldFlushDirtyFrameBeforeEviction()
+    {
+        var realStore = new DiskPageStore();
+        var proxy = new BufferPoolProxy(realStore);
+
+        Action act = () => proxy.EvictFrame();
+
+        act.Should().Throw<NotImplementedException>();
+    }
+
+    [Fact]
+    public void AllocatePage_ShouldDelegateToDiskPageStore()
+    {
+        var realStore = new DiskPageStore();
+        var proxy = new BufferPoolProxy(realStore);
+
+        Action act = () => proxy.AllocatePage(101);
 
         act.Should().Throw<NotImplementedException>();
     }
