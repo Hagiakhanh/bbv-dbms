@@ -27,4 +27,5 @@ global using DBMS.Domain.Storage.Facade;
 global using DBMS.Domain.Transactions;
 global using DBMS.Domain.Query;
 global using DBMS.Domain.Query.Interpreter;
+global using DBMS.Domain.Query.ChainOfResponsibility;
 global using Index = DBMS.Domain.Catalog.Strategy.Index;

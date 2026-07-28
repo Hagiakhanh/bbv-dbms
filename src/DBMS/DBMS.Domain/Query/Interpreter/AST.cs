@@ -13,9 +13,4 @@ public class AST
     {
         Root = root;
     }
-
-    public LogicalPlan ToLogicalPlan()
-    {
-        throw new NotImplementedException();
-    }
 }
