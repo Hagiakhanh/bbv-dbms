@@ -1102,50 +1102,46 @@ Represent metadata as a tree so parent and child objects are managed uniformly.
 **Application:**  
 `Database → Schema → Table → Column`
 
+**Recognition Signs:**
+- Tree-structured hierarchy (Whole-Part hierarchy) containing nested nodes.
+- Requires uniform treatment between individual leaf objects (Leaf) and composite containers (Composite) via a shared interface.
+- Composite class holds a collection of child components implementing the same interface and recursively delegates operations down to child objects.
+
 #### Class Diagram
 
 ```mermaid
 classDiagram
 direction TB
 
-class ICatalogComponent{
-    <<Component>>
-    +Name : string
+class Client {
 }
 
-class Database{
-    <<Composite>>
-    +AddSchema(schema)
-    +RemoveSchema(name)
-    +GetSchemas()
+class Component {
+    <<Interface / Abstract>>
+    +Operation()
+    +Add(component : Component)
+    +Remove(component : Component)
+    +GetChild(index : int) Component
 }
 
-class Schema{
-    <<Composite>>
-    +AddTable(table)
-    +RemoveTable(name)
-    +GetTables()
-}
-
-class Table{
-    <<Composite>>
-    +AddColumn(column)
-    +RemoveColumn(name)
-    +GetColumns()
-}
-
-class Column{
+class Leaf {
     <<Leaf>>
+    +Operation()
 }
 
-ICatalogComponent <|.. Database
-ICatalogComponent <|.. Schema
-ICatalogComponent <|.. Table
-ICatalogComponent <|.. Column
+class Composite {
+    <<Composite>>
+    -children : List~Component~
+    +Operation()
+    +Add(component : Component)
+    +Remove(component : Component)
+    +GetChild(index : int) Component
+}
 
-Database *-- Schema
-Schema *-- Table
-Table *-- Column
+Client --> Component
+Component <|.. Leaf
+Component <|.. Composite
+Composite "1" *-- "*" Component : children
 ```
 
 #### Sequence Diagram
@@ -1153,14 +1149,25 @@ Table *-- Column
 ```mermaid
 sequenceDiagram
     actor Client
-    participant DB as Database
-    participant Schema
-    participant Table
+    participant Composite as Composite
+    participant Leaf1 as Leaf
+    participant Leaf2 as Leaf
 
-    Client->>DB: AddSchema(schema)
-    Client->>Schema: AddTable(table)
-    Client->>DB: GetSchemas()
-    DB-->>Client: List<Schema>
+    Client->>Composite: Operation()
+    activate Composite
+    
+    Composite->>Leaf1: Operation()
+    activate Leaf1
+    Leaf1-->>Composite: result
+    deactivate Leaf1
+
+    Composite->>Leaf2: Operation()
+    activate Leaf2
+    Leaf2-->>Composite: result
+    deactivate Leaf2
+
+    Composite-->>Client: aggregated result
+    deactivate Composite
 ```
 
 #### Simplified Code
@@ -1169,48 +1176,101 @@ sequenceDiagram
 public interface ICatalogComponent
 {
     string Name { get; }
+    void Display(int indent = 0);
 }
 
 public class Database : ICatalogComponent
 {
-    public string Name { get; init; }
+    private readonly List<ICatalogComponent> _schemas = new();
+    public string Name { get; init; } = string.Empty;
 
-    // Add a child Schema
-    public void AddSchema(Schema schema) { }
+    public void Add(ICatalogComponent component) => _schemas.Add(component);
+    public void Remove(ICatalogComponent component) => _schemas.Remove(component);
 
-    // Remove a child Schema
-    public void RemoveSchema(string name) { }
-
-    // Return all child Schemas
-    public IReadOnlyCollection<Schema> GetSchemas() => [];
+    public void Display(int indent = 0)
+    {
+        Console.WriteLine($"{new string(' ', indent)}+ Database: {Name}");
+        foreach (var schema in _schemas)
+        {
+            schema.Display(indent + 2);
+        }
+    }
 }
 
 public class Schema : ICatalogComponent
 {
-    public string Name { get; init; }
+    private readonly List<ICatalogComponent> _tables = new();
+    public string Name { get; init; } = string.Empty;
 
-    // Add a child Table
-    public void AddTable(Table table) { }
+    public void Add(ICatalogComponent component) => _tables.Add(component);
+    public void Remove(ICatalogComponent component) => _tables.Remove(component);
 
-    // Return all child Tables
-    public IReadOnlyCollection<Table> GetTables() => [];
+    public void Display(int indent = 0)
+    {
+        Console.WriteLine($"{new string(' ', indent)}+ Schema: {Name}");
+        foreach (var table in _tables)
+        {
+            table.Display(indent + 2);
+        }
+    }
 }
 
 public class Table : ICatalogComponent
 {
-    public string Name { get; init; }
+    private readonly List<ICatalogComponent> _columns = new();
+    public string Name { get; init; } = string.Empty;
 
-    // Add a child Column
-    public void AddColumn(Column column) { }
+    public void Add(ICatalogComponent component) => _columns.Add(component);
+    public void Remove(ICatalogComponent component) => _columns.Remove(component);
 
-    // Return all child Columns
-    public IReadOnlyCollection<Column> GetColumns() => [];
+    public void Display(int indent = 0)
+    {
+        Console.WriteLine($"{new string(' ', indent)}+ Table: {Name}");
+        foreach (var column in _columns)
+        {
+            column.Display(indent + 2);
+        }
+    }
 }
 
 public class Column : ICatalogComponent
 {
-    public string Name { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public string DataType { get; init; } = "INT";
+
+    public void Display(int indent = 0)
+    {
+        Console.WriteLine($"{new string(' ', indent)}- Column: {Name} ({DataType})");
+    }
 }
+```
+
+#### Usage Code Example
+
+```csharp
+// 1. Create leaf objects (Leaf)
+var colId = new Column { Name = "Id", DataType = "INT" };
+var colName = new Column { Name = "Username", DataType = "VARCHAR" };
+
+// 2. Create table (Composite) and add child columns
+var userTable = new Table { Name = "Users" };
+userTable.Add(colId);
+userTable.Add(colName);
+
+// 3. Create Schema (Composite) and add table to Schema
+var publicSchema = new Schema { Name = "public" };
+publicSchema.Add(userTable);
+
+// 4. Create Database (Root Composite) and add Schema to Database
+var db = new Database { Name = "bbv_db" };
+db.Add(publicSchema);
+
+// 5. Perform uniform operations via Component Interface (Catalog Root)
+ICatalogComponent catalogRoot = db;
+
+// Calling Display() on root node automatically traverses the entire metadata tree recursively:
+// Database -> Schema -> Table -> Column
+catalogRoot.Display();
 ```
 
 **Benefits**
@@ -1603,8 +1663,13 @@ sequenceDiagram
 **Purpose:**
 Construct a complex object step by step instead of using a long constructor.
 
-**Example:**
-Build a `Computer` with optional CPU, RAM, storage, and graphics card.
+**Application:**
+`TableBuilder → Table`
+
+**Recognition Signs:**
+- Object construction requires multi-step configuration, optional parts, or complex initialization parameters.
+- Avoids telescoping constructors (constructors with numerous parameter combinations).
+- Allows creating different representations of a product using the same construction sequence.
 
 #### Class Diagram
 
@@ -1612,36 +1677,36 @@ Build a `Computer` with optional CPU, RAM, storage, and graphics card.
 classDiagram
 direction LR
 
-class IComputerBuilder {
-    <<Builder>>
-    +SetCpu(cpu : string)
-    +SetRam(ram : int)
-    +SetStorage(storage : int)
-    +SetGraphicsCard(card : string)
-    +Build() Computer
+class Client {
 }
 
-class ComputerBuilder {
-    <<Concrete Builder>>
-    -computer : Computer
+class Director {
+    -builder : Builder
+    +Construct()
 }
 
-class Computer {
-    <<Product>>
-    +Cpu : string
-    +Ram : int
-    +Storage : int
-    +GraphicsCard : string
+class Builder {
+    <<Interface / Abstract>>
+    +BuildPartA()
+    +BuildPartB()
+    +GetResult() Product
 }
 
-class ComputerDirector {
-    <<Director>>
-    +BuildGamingComputer() Computer
+class ConcreteBuilder {
+    -product : Product
+    +BuildPartA()
+    +BuildPartB()
+    +GetResult() Product
 }
 
-IComputerBuilder <|.. ComputerBuilder
-ComputerBuilder --> Computer : builds
-ComputerDirector --> IComputerBuilder : directs
+class Product {
+}
+
+Client --> Director
+Director --> Builder
+Builder <|.. ConcreteBuilder
+ConcreteBuilder --> Product : builds
+Client ..> Product : uses
 ```
 
 #### Sequence Diagram
@@ -1649,99 +1714,98 @@ ComputerDirector --> IComputerBuilder : directs
 ```mermaid
 sequenceDiagram
     actor Client
-    participant Director as ComputerDirector
-    participant Builder as IComputerBuilder
+    participant Director as Director
+    participant Builder as ConcreteBuilder
 
-    Client->>Director: BuildGamingComputer()
-    Director->>Builder: SetCpu("Intel Core i7")
-    Director->>Builder: SetRam(32)
-    Director->>Builder: SetStorage(1000)
-    Director->>Builder: SetGraphicsCard("RTX 4070")
-    Director->>Builder: Build()
-    Builder-->>Director: Computer
-    Director-->>Client: Computer
+    Client->>Director: Construct()
+    activate Director
+    Director->>Builder: BuildPartA()
+    Director->>Builder: BuildPartB()
+    Director->>Builder: GetResult()
+    activate Builder
+    Builder-->>Director: product
+    deactivate Builder
+    Director-->>Client: product
+    deactivate Director
 ```
 
 #### Simplified Code
 
 ```csharp
-public class Computer
+public class Table
 {
-    public string Cpu { get; set; } = string.Empty;
-    public int Ram { get; set; }
-    public int Storage { get; set; }
-    public string GraphicsCard { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public List<string> Columns { get; } = new();
+    public List<string> PrimaryKeys { get; } = new();
 }
 
-public interface IComputerBuilder
+public interface ITableBuilder
 {
-    // Configure the computer processor
-    void SetCpu(string cpu);
-
-    // Configure RAM capacity in GB
-    void SetRam(int ram);
-
-    // Configure storage capacity in GB
-    void SetStorage(int storage);
-
-    // Configure an optional graphics card
-    void SetGraphicsCard(string graphicsCard);
-
-    // Return the completed Computer object
-    Computer Build();
+    ITableBuilder SetName(string name);
+    ITableBuilder AddColumn(string columnName, string dataType);
+    ITableBuilder AddPrimaryKey(string columnName);
+    Table Build();
 }
 
-public class ComputerBuilder : IComputerBuilder
+public class TableBuilder : ITableBuilder
 {
-    private Computer _computer = new();
+    private Table _table = new();
 
-    public void SetCpu(string cpu)
+    public ITableBuilder SetName(string name)
     {
-        // Assign the selected CPU
+        _table.Name = name;
+        return this;
     }
 
-    public void SetRam(int ram)
+    public ITableBuilder AddColumn(string columnName, string dataType)
     {
-        // Assign RAM capacity
+        _table.Columns.Add($"{columnName} {dataType}");
+        return this;
     }
 
-    public void SetStorage(int storage)
+    public ITableBuilder AddPrimaryKey(string columnName)
     {
-        // Assign storage capacity
+        _table.PrimaryKeys.Add(columnName);
+        return this;
     }
 
-    public void SetGraphicsCard(string graphicsCard)
+    public Table Build()
     {
-        // Assign an optional graphics card
-    }
-
-    public Computer Build()
-    {
-        // Validate and return the completed computer
-        return _computer;
+        Table result = _table;
+        _table = new Table(); // Reset for subsequent builds
+        return result;
     }
 }
 
-public class ComputerDirector
+public class TableDirector
 {
-    private readonly IComputerBuilder _builder;
-
-    public ComputerDirector(IComputerBuilder builder)
+    public Table BuildUserTable(ITableBuilder builder)
     {
-        _builder = builder;
-    }
-
-    public Computer BuildGamingComputer()
-    {
-        // Define the standard steps for building a gaming computer
-        _builder.SetCpu("Intel Core i7");
-        _builder.SetRam(32);
-        _builder.SetStorage(1000);
-        _builder.SetGraphicsCard("RTX 4070");
-
-        return _builder.Build();
+        return builder
+            .SetName("Users")
+            .AddColumn("Id", "INT")
+            .AddColumn("Username", "VARCHAR(50)")
+            .AddPrimaryKey("Id")
+            .Build();
     }
 }
+```
+
+#### Usage Code Example
+
+```csharp
+// Option 1: Direct usage via Fluent Builder interface
+ITableBuilder builder = new TableBuilder();
+Table productTable = builder
+    .SetName("Products")
+    .AddColumn("ProductId", "INT")
+    .AddColumn("Price", "DECIMAL")
+    .AddPrimaryKey("ProductId")
+    .Build();
+
+// Option 2: Using Director for predefined table construction workflow
+var director = new TableDirector();
+Table userTable = director.BuildUserTable(new TableBuilder());
 ```
 
 **Benefits**
@@ -1937,8 +2001,13 @@ sequenceDiagram
 **Purpose:**
 Encapsulate interchangeable algorithms behind a common interface.
 
-**Example:**
-A payment system supports multiple payment methods such as Credit Card, PayPal, and Bank Transfer.
+**Application:**
+`ConstraintValidationContext → IConstraintStrategy`
+
+**Recognition Signs:**
+- Multiple algorithms or rules exist for a specific task and need to be selected or interchanged at runtime.
+- Replaces conditional logic (`if-else` or `switch` statements) that selects algorithm variations based on object types or flags.
+- Isolates algorithm implementation details, internal data, and dependencies from the client code.
 
 #### Class Diagram
 
@@ -1946,100 +2015,151 @@ A payment system supports multiple payment methods such as Credit Card, PayPal, 
 classDiagram
 direction LR
 
-class IPaymentStrategy {
-    <<Strategy>>
-    +Pay(amount : decimal)
+class Client {
 }
 
-class CreditCardPayment {
+class Context {
+    -strategy : Strategy
+    +SetStrategy(strategy : Strategy)
+    +ExecuteStrategy()
+}
+
+class Strategy {
+    <<Interface / Abstract>>
+    +AlgorithmInterface()
+}
+
+class ConcreteStrategyA {
     <<Concrete Strategy>>
+    +AlgorithmInterface()
 }
 
-class PayPalPayment {
+class ConcreteStrategyB {
     <<Concrete Strategy>>
+    +AlgorithmInterface()
 }
 
-class BankTransferPayment {
-    <<Concrete Strategy>>
-}
-
-class PaymentService {
-    <<Context>>
-    -strategy : IPaymentStrategy
-    +SetStrategy(strategy)
-    +Checkout(amount)
-}
-
-IPaymentStrategy <|.. CreditCardPayment
-IPaymentStrategy <|.. PayPalPayment
-IPaymentStrategy <|.. BankTransferPayment
-
-PaymentService --> IPaymentStrategy : uses
+Client --> Context
+Context --> Strategy : uses
+Strategy <|.. ConcreteStrategyA
+Strategy <|.. ConcreteStrategyB
 ```
 
 #### Sequence Diagram
 
 ```mermaid
 sequenceDiagram
-    actor Customer
-    participant Service as PaymentService
-    participant Strategy as PayPalPayment
+    actor Client
+    participant Context as Context
+    participant Strategy as ConcreteStrategyA
 
-    Customer->>Service: SetStrategy(PayPal)
-    Customer->>Service: Checkout(100)
-    Service->>Strategy: Pay(100)
-    Strategy-->>Service: Success
-    Service-->>Customer: Payment Completed
+    Client->>Context: SetStrategy(StrategyA)
+    Client->>Context: ExecuteStrategy()
+    activate Context
+    Context->>Strategy: AlgorithmInterface()
+    activate Strategy
+    Strategy-->>Context: result
+    deactivate Strategy
+    Context-->>Client: result
+    deactivate Context
 ```
 
 #### Simplified Code
 
 ```csharp
-public interface IPaymentStrategy
+public class ConstraintValidationContext
 {
-    // Execute the payment using a specific payment method
-    void Pay(decimal amount);
+    public string TableName { get; set; } = string.Empty;
+    public Dictionary<string, object?> ColumnValues { get; set; } = new();
 }
 
-public class CreditCardPayment : IPaymentStrategy
+public interface IConstraintStrategy
 {
-    public void Pay(decimal amount)
+    bool Validate(ConstraintValidationContext context, out string errorMessage);
+}
+
+public class NotNullConstraint : IConstraintStrategy
+{
+    private readonly string _columnName;
+    public NotNullConstraint(string columnName) => _columnName = columnName;
+
+    public bool Validate(ConstraintValidationContext context, out string errorMessage)
     {
-        // Process payment using a credit card
+        if (context.ColumnValues.TryGetValue(_columnName, out var val) && val != null)
+        {
+            errorMessage = string.Empty;
+            return true;
+        }
+        errorMessage = $"Column '{_columnName}' cannot be null.";
+        return false;
     }
 }
 
-public class PayPalPayment : IPaymentStrategy
+public class PrimaryKeyConstraint : IConstraintStrategy
 {
-    public void Pay(decimal amount)
+    private readonly string _columnName;
+    public PrimaryKeyConstraint(string columnName) => _columnName = columnName;
+
+    public bool Validate(ConstraintValidationContext context, out string errorMessage)
     {
-        // Process payment using PayPal
+        if (context.ColumnValues.TryGetValue(_columnName, out var val) && val != null)
+        {
+            errorMessage = string.Empty;
+            return true;
+        }
+        errorMessage = $"Primary key column '{_columnName}' must have a valid value.";
+        return false;
     }
 }
 
-public class BankTransferPayment : IPaymentStrategy
+public class TableValidator
 {
-    public void Pay(decimal amount)
+    private readonly List<IConstraintStrategy> _strategies = new();
+
+    public void AddConstraint(IConstraintStrategy strategy) => _strategies.Add(strategy);
+
+    public bool ValidateRow(ConstraintValidationContext context, out List<string> errors)
     {
-        // Process payment using a bank transfer
+        errors = new List<string>();
+        foreach (var strategy in _strategies)
+        {
+            if (!strategy.Validate(context, out var err))
+            {
+                errors.Add(err);
+            }
+        }
+        return errors.Count == 0;
     }
 }
+```
 
-public class PaymentService
+#### Usage Code Example
+
+```csharp
+// 1. Configure constraint strategies for a table
+var validator = new TableValidator();
+validator.AddConstraint(new NotNullConstraint("Username"));
+validator.AddConstraint(new PrimaryKeyConstraint("Id"));
+
+// 2. Prepare row validation context
+var context = new ConstraintValidationContext
 {
-    private IPaymentStrategy _strategy;
-
-    // Change the payment algorithm at runtime
-    public void SetStrategy(IPaymentStrategy strategy)
+    TableName = "Users",
+    ColumnValues = new Dictionary<string, object?>
     {
-        _strategy = strategy;
+        { "Id", 1 },
+        { "Username", "john_doe" }
     }
+};
 
-    // Delegate payment processing to the selected strategy
-    public void Checkout(decimal amount)
-    {
-        _strategy.Pay(amount);
-    }
+// 3. Execute validation dynamically using registered strategies
+if (validator.ValidateRow(context, out var errors))
+{
+    Console.WriteLine("Row validation succeeded.");
+}
+else
+{
+    Console.WriteLine($"Validation failed: {string.Join(", ", errors)}");
 }
 ```
 
@@ -2366,8 +2486,13 @@ sequenceDiagram
 **Purpose:**
 Define a common method for creating objects while allowing subclasses to decide which concrete object is created.
 
-**Example:**
-A notification system creates different notification types such as Email, SMS, and Push Notification.
+**Application:**
+`IndexFactory → Index (BTreeIndex, HashIndex)`
+
+**Recognition Signs:**
+- Creator class cannot anticipate the exact class of objects it needs to instantiate beforehand.
+- Delegates object instantiation responsibilities to specialized factory subclasses or methods.
+- Eliminates direct coupling between client code and concrete product classes.
 
 #### Class Diagram
 
@@ -2375,42 +2500,46 @@ A notification system creates different notification types such as Email, SMS, a
 classDiagram
 direction LR
 
-class Notification {
-    <<Product Interface>>
-    +Send(message : string)
+class Client {
 }
 
-class EmailNotification
-class SmsNotification
-class PushNotification
-
-class NotificationCreator {
-    <<Creator>>
-    +CreateNotification() Notification
-    +Notify(message : string)
+class Product {
+    <<Interface / Abstract>>
+    +Operation()
 }
 
-class EmailNotificationCreator {
+class ConcreteProductA {
+    <<Concrete Product>>
+    +Operation()
+}
+
+class ConcreteProductB {
+    <<Concrete Product>>
+    +Operation()
+}
+
+class Creator {
+    <<Abstract Creator>>
+    +CreateProduct() Product*
+    +AnOperation()
+}
+
+class ConcreteCreatorA {
     <<Concrete Creator>>
+    +CreateProduct() Product
 }
 
-class SmsNotificationCreator {
+class ConcreteCreatorB {
     <<Concrete Creator>>
+    +CreateProduct() Product
 }
 
-class PushNotificationCreator {
-    <<Concrete Creator>>
-}
-
-Notification <|.. EmailNotification
-Notification <|.. SmsNotification
-Notification <|.. PushNotification
-
-NotificationCreator <|-- EmailNotificationCreator
-NotificationCreator <|-- SmsNotificationCreator
-NotificationCreator <|-- PushNotificationCreator
-
-NotificationCreator --> Notification : creates
+Client --> Creator
+Creator --> Product : creates
+Product <|.. ConcreteProductA
+Product <|.. ConcreteProductB
+Creator <|-- ConcreteCreatorA
+Creator <|-- ConcreteCreatorB
 ```
 
 #### Sequence Diagram
@@ -2418,91 +2547,84 @@ NotificationCreator --> Notification : creates
 ```mermaid
 sequenceDiagram
     actor Client
-    participant Creator as EmailNotificationCreator
-    participant Product as EmailNotification
+    participant Creator as ConcreteCreatorA
+    participant Product as ConcreteProductA
 
-    Client->>Creator: Notify("Order completed")
-    Creator->>Creator: CreateNotification()
-    Creator-->>Creator: EmailNotification
-    Creator->>Product: Send("Order completed")
-    Product-->>Creator: Success
-    Creator-->>Client: Completed
+    Client->>Creator: AnOperation()
+    activate Creator
+    Creator->>Creator: CreateProduct()
+    Creator-->>Creator: ConcreteProductA
+    Creator->>Product: Operation()
+    activate Product
+    Product-->>Creator: result
+    deactivate Product
+    Creator-->>Client: result
+    deactivate Creator
 ```
 
 #### Simplified Code
 
 ```csharp
-public interface INotification
+public interface IIndex
 {
-    // Send a notification message
-    void Send(string message);
+    string Name { get; }
+    string Type { get; }
+    void Build();
 }
 
-public class EmailNotification : INotification
+public class BTreeIndex : IIndex
 {
-    public void Send(string message)
+    public string Name { get; }
+    public string Type => "B-Tree";
+    public BTreeIndex(string name) => Name = name;
+    public void Build() => Console.WriteLine($"Building B-Tree index: {Name}");
+}
+
+public class HashIndex : IIndex
+{
+    public string Name { get; }
+    public string Type => "Hash";
+    public HashIndex(string name) => Name = name;
+    public void Build() => Console.WriteLine($"Building Hash index: {Name}");
+}
+
+public abstract class IndexFactory
+{
+    // Factory Method: Subclasses decide which concrete Index product to instantiate
+    public abstract IIndex CreateIndex(string indexName);
+
+    public IIndex InitializeIndex(string indexName)
     {
-        // Send the message by email
+        IIndex index = CreateIndex(indexName);
+        index.Build();
+        return index;
     }
 }
 
-public class SmsNotification : INotification
+public class BTreeIndexFactory : IndexFactory
 {
-    public void Send(string message)
-    {
-        // Send the message by SMS
-    }
+    public override IIndex CreateIndex(string indexName) => new BTreeIndex(indexName);
 }
 
-public class PushNotification : INotification
+public class HashIndexFactory : IndexFactory
 {
-    public void Send(string message)
-    {
-        // Send the message as a push notification
-    }
+    public override IIndex CreateIndex(string indexName) => new HashIndex(indexName);
 }
+```
 
-public abstract class NotificationCreator
-{
-    // Factory Method: subclasses decide which notification is created
-    protected abstract INotification CreateNotification();
+#### Usage Code Example
 
-    public void Notify(string message)
-    {
-        // Create the product without depending on a concrete class
-        INotification notification = CreateNotification();
+```csharp
+// 1. Instantiate specific Factory creators
+IndexFactory btreeFactory = new BTreeIndexFactory();
+IndexFactory hashFactory = new HashIndexFactory();
 
-        // Use the created product
-        notification.Send(message);
-    }
-}
+// 2. Client initializes indices dynamically without coupling to concrete index classes
+IIndex idxUsers = btreeFactory.InitializeIndex("idx_users_id");
+IIndex idxSession = hashFactory.InitializeIndex("idx_session_token");
 
-public class EmailNotificationCreator : NotificationCreator
-{
-    protected override INotification CreateNotification()
-    {
-        // Create an email notification
-        return new EmailNotification();
-    }
-}
-
-public class SmsNotificationCreator : NotificationCreator
-{
-    protected override INotification CreateNotification()
-    {
-        // Create an SMS notification
-        return new SmsNotification();
-    }
-}
-
-public class PushNotificationCreator : NotificationCreator
-{
-    protected override INotification CreateNotification()
-    {
-        // Create a push notification
-        return new PushNotification();
-    }
-}
+Console.WriteLine($"Created {idxUsers.Name} ({idxUsers.Type})");
+Console.WriteLine($"Created {idxSession.Name} ({idxSession.Type})");
 ```
 
 **Benefits**
@@ -2731,8 +2853,13 @@ sequenceDiagram
 **Purpose:**
 Traverse elements in a collection without exposing its internal structure.
 
-**Example:**
-A playlist allows the client to browse songs one by one without directly accessing the underlying list.
+**Application:**
+`CatalogIterator<T> → ICatalogIterator<T>`
+
+**Recognition Signs:**
+- Need to access elements of a complex aggregate collection sequentially without exposing its underlying internal representation (list, tree, graph).
+- Requires supporting multiple concurrent or different traversal variations over the same aggregate structure.
+- Provides a uniform, standardized traversal interface across diverse collection implementations.
 
 #### Class Diagram
 
@@ -2740,39 +2867,37 @@ A playlist allows the client to browse songs one by one without directly accessi
 classDiagram
 direction LR
 
-class IIterator~T~ {
-    <<Iterator>>
+class Client {
+}
+
+class Aggregate {
+    <<Interface / Abstract>>
+    +CreateIterator() Iterator
+}
+
+class ConcreteAggregate {
+    +CreateIterator() Iterator
+}
+
+class Iterator {
+    <<Interface / Abstract>>
     +HasNext() bool
-    +Next() T
+    +Next() Element
 }
 
-class PlaylistIterator {
-    <<Concrete Iterator>>
-    -songs : IReadOnlyList~Song~
-    -position : int
+class ConcreteIterator {
+    -aggregate : ConcreteAggregate
+    -currentPosition : int
+    +HasNext() bool
+    +Next() Element
 }
 
-class IPlaylist {
-    <<Aggregate>>
-    +CreateIterator() IIterator~Song~
-}
-
-class Playlist {
-    <<Concrete Aggregate>>
-    -songs : List~Song~
-    +AddSong(song : Song)
-}
-
-class Song {
-    +Title : string
-}
-
-IIterator~T~ <|.. PlaylistIterator
-IPlaylist <|.. Playlist
-
-Playlist --> Song : contains
-Playlist --> PlaylistIterator : creates
-PlaylistIterator --> Song : traverses
+Client --> Aggregate
+Client --> Iterator
+Aggregate <|.. ConcreteAggregate
+Iterator <|.. ConcreteIterator
+ConcreteAggregate --> ConcreteIterator : creates
+ConcreteIterator --> ConcreteAggregate : traverses
 ```
 
 #### Sequence Diagram
@@ -2780,80 +2905,95 @@ PlaylistIterator --> Song : traverses
 ```mermaid
 sequenceDiagram
     actor Client
-    participant Playlist
-    participant Iterator as PlaylistIterator
+    participant Aggregate as ConcreteAggregate
+    participant Iterator as ConcreteIterator
 
-    Client->>Playlist: CreateIterator()
-    Playlist-->>Client: Iterator
+    Client->>Aggregate: CreateIterator()
+    activate Aggregate
+    Aggregate->>Iterator: new ConcreteIterator(this)
+    Aggregate-->>Client: iterator
+    deactivate Aggregate
 
     loop While HasNext()
         Client->>Iterator: HasNext()
+        activate Iterator
         Iterator-->>Client: true
+        deactivate Iterator
         Client->>Iterator: Next()
-        Iterator-->>Client: Song
+        activate Iterator
+        Iterator-->>Client: element
+        deactivate Iterator
     end
 ```
 
 #### Simplified Code
 
 ```csharp
-public class Song
+public class Table
 {
-    public string Title { get; init; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
 }
 
-public interface IIterator<T>
+public interface ICatalogIterator<T>
 {
-    // Check whether another item is available
     bool HasNext();
-
-    // Return the next item in the collection
     T Next();
 }
 
-public interface IPlaylist
+public interface IIterableCatalog<T>
 {
-    // Create an iterator for traversing songs
-    IIterator<Song> CreateIterator();
+    ICatalogIterator<T> CreateIterator();
 }
 
-public class Playlist : IPlaylist
+public class CatalogTableIterator : ICatalogIterator<Table>
 {
-    private readonly List<Song> _songs = [];
+    private readonly IReadOnlyList<Table> _tables;
+    private int _position = 0;
 
-    public void AddSong(Song song)
+    public CatalogTableIterator(IReadOnlyList<Table> tables)
     {
-        // Add a song to the playlist
+        _tables = tables;
     }
 
-    public IIterator<Song> CreateIterator()
+    public bool HasNext() => _position < _tables.Count;
+
+    public Table Next()
     {
-        // Create an iterator without exposing the internal list
-        return new PlaylistIterator(_songs);
+        if (!HasNext()) throw new InvalidOperationException("End of iterator reached.");
+        return _tables[_position++];
     }
 }
 
-public class PlaylistIterator : IIterator<Song>
+public class SchemaCatalog : IIterableCatalog<Table>
 {
-    private readonly IReadOnlyList<Song> _songs;
-    private int _position;
+    private readonly List<Table> _tables = new();
 
-    public PlaylistIterator(IReadOnlyList<Song> songs)
-    {
-        _songs = songs;
-    }
+    public void AddTable(Table table) => _tables.Add(table);
 
-    public bool HasNext()
+    public ICatalogIterator<Table> CreateIterator()
     {
-        // Check whether the current position is valid
-        return false;
+        return new CatalogTableIterator(_tables);
     }
+}
+```
 
-    public Song Next()
-    {
-        // Return the current song and move to the next position
-        return default!;
-    }
+#### Usage Code Example
+
+```csharp
+// 1. Populate the aggregate collection (SchemaCatalog)
+var schemaCatalog = new SchemaCatalog();
+schemaCatalog.AddTable(new Table { Name = "Users" });
+schemaCatalog.AddTable(new Table { Name = "Orders" });
+schemaCatalog.AddTable(new Table { Name = "Products" });
+
+// 2. Obtain the Iterator from the Aggregate interface
+ICatalogIterator<Table> iterator = schemaCatalog.CreateIterator();
+
+// 3. Traverse elements sequentially without exposing the underlying List
+while (iterator.HasNext())
+{
+    Table table = iterator.Next();
+    Console.WriteLine($"Found catalog table: {table.Name}");
 }
 ```
 
@@ -2998,8 +3138,13 @@ sequenceDiagram
 **Purpose:**
 Encapsulate a request as an object, allowing it to be executed, queued, or logged independently.
 
-**Example:**
-A remote control can execute different commands such as turning a light on or off without knowing how the light works.
+**Application:**
+`IDdlCommand → CreateTableCommand, CreateSchemaCommand`
+
+**Recognition Signs:**
+- Need to parameterize objects with operations/actions to execute.
+- Requires queuing requests, logging operations, or executing tasks asynchronously or remotely.
+- Requires support for undoable/redoable operations, transaction history, or command rollback.
 
 #### Class Diagram
 
@@ -3007,126 +3152,141 @@ A remote control can execute different commands such as turning a light on or of
 classDiagram
 direction LR
 
-class ICommand {
-    <<Command>>
+class Client {
+}
+
+class Invoker {
+    -command : Command
+    +SetCommand(command : Command)
+    +ExecuteCommand()
+}
+
+class Command {
+    <<Interface / Abstract>>
     +Execute()
 }
 
-class TurnOnLightCommand {
-    <<Concrete Command>>
+class ConcreteCommand {
+    -receiver : Receiver
+    +Execute()
 }
 
-class TurnOffLightCommand {
-    <<Concrete Command>>
+class Receiver {
+    +Action()
 }
 
-class Light {
-    <<Receiver>>
-    +TurnOn()
-    +TurnOff()
-}
-
-class RemoteControl {
-    <<Invoker>>
-    +SetCommand(command)
-    +PressButton()
-}
-
-ICommand <|.. TurnOnLightCommand
-ICommand <|.. TurnOffLightCommand
-
-TurnOnLightCommand --> Light
-TurnOffLightCommand --> Light
-
-RemoteControl --> ICommand : executes
+Client --> Receiver
+Client ..> ConcreteCommand : creates
+Invoker --> Command : executes
+Command <|.. ConcreteCommand
+ConcreteCommand --> Receiver : delegates
 ```
 
 #### Sequence Diagram
 
 ```mermaid
 sequenceDiagram
-    actor User
-    participant Remote as RemoteControl
-    participant Command as TurnOnLightCommand
-    participant Light
+    actor Client
+    participant Invoker as Invoker
+    participant Command as ConcreteCommand
+    participant Receiver as Receiver
 
-    User->>Remote: PressButton()
-    Remote->>Command: Execute()
-    Command->>Light: TurnOn()
-    Light-->>Command: Done
-    Command-->>Remote: Success
+    Client->>Command: new ConcreteCommand(Receiver)
+    Client->>Invoker: SetCommand(Command)
+    Client->>Invoker: ExecuteCommand()
+    activate Invoker
+    Invoker->>Command: Execute()
+    activate Command
+    Command->>Receiver: Action()
+    activate Receiver
+    Receiver-->>Command: result
+    deactivate Receiver
+    Command-->>Invoker: result
+    deactivate Command
+    Invoker-->>Client: completed
+    deactivate Invoker
 ```
 
 #### Simplified Code
 
 ```csharp
-public interface ICommand
+public interface IDdlCommand
 {
-    // Execute the request
-    void Execute();
+    bool Execute();
 }
 
-public class Light
+public class SchemaService // Receiver
 {
-    public void TurnOn()
+    public bool CreateTable(string schemaName, string tableName)
     {
-        // Turn the light on
+        Console.WriteLine($"Executing DDL: Created table '{tableName}' in schema '{schemaName}'.");
+        return true;
     }
 
-    public void TurnOff()
+    public bool CreateSchema(string schemaName)
     {
-        // Turn the light off
-    }
-}
-
-public class TurnOnLightCommand : ICommand
-{
-    private readonly Light _light;
-
-    public TurnOnLightCommand(Light light)
-    {
-        _light = light;
-    }
-
-    public void Execute()
-    {
-        // Delegate the request to the receiver
-        _light.TurnOn();
+        Console.WriteLine($"Executing DDL: Created schema '{schemaName}'.");
+        return true;
     }
 }
 
-public class TurnOffLightCommand : ICommand
+public class CreateTableCommand : IDdlCommand // Concrete Command
 {
-    private readonly Light _light;
+    private readonly SchemaService _receiver;
+    private readonly string _schemaName;
+    private readonly string _tableName;
 
-    public TurnOffLightCommand(Light light)
+    public CreateTableCommand(SchemaService receiver, string schemaName, string tableName)
     {
-        _light = light;
+        _receiver = receiver;
+        _schemaName = schemaName;
+        _tableName = tableName;
     }
 
-    public void Execute()
-    {
-        // Delegate the request to the receiver
-        _light.TurnOff();
-    }
+    public bool Execute() => _receiver.CreateTable(_schemaName, _tableName);
 }
 
-public class RemoteControl
+public class CreateSchemaCommand : IDdlCommand // Concrete Command
 {
-    private ICommand _command;
+    private readonly SchemaService _receiver;
+    private readonly string _schemaName;
 
-    // Configure the command to execute
-    public void SetCommand(ICommand command)
+    public CreateSchemaCommand(SchemaService receiver, string schemaName)
     {
-        _command = command;
+        _receiver = receiver;
+        _schemaName = schemaName;
     }
 
-    // Execute the configured command
-    public void PressButton()
+    public bool Execute() => _receiver.CreateSchema(_schemaName);
+}
+
+public class DdlCommandExecutor // Invoker
+{
+    private readonly List<IDdlCommand> _history = new();
+
+    public bool ExecuteCommand(IDdlCommand command)
     {
-        _command.Execute();
+        bool success = command.Execute();
+        if (success) _history.Add(command);
+        return success;
     }
 }
+```
+
+#### Usage Code Example
+
+```csharp
+// 1. Initialize receiver service and invoker executor
+var schemaService = new SchemaService();
+var executor = new DdlCommandExecutor();
+
+// 2. Encapsulate DDL requests into command objects
+IDdlCommand cmdSchema = new CreateSchemaCommand(schemaService, "public");
+IDdlCommand cmdTable = new CreateTableCommand(schemaService, "public", "Users");
+
+// 3. Invoker executes commands independently without knowing receiver internals
+executor.ExecuteCommand(cmdSchema);
+executor.ExecuteCommand(cmdTable);
 ```
 
 **Benefits**
@@ -3321,8 +3481,13 @@ sequenceDiagram
 **Purpose:**
 Provide a simple interface to a complex subsystem.
 
-**Example:**
-A home theater can be started with a single method instead of operating each device individually.
+**Application:**
+`SchemaService, DatabaseService → Subsystems (CatalogManager, TableDirector, StorageEngine)`
+
+**Recognition Signs:**
+- Complex subsystem consists of numerous interdependent classes and interfaces that clients find difficult to configure or invoke directly.
+- Need to provide a simplified, higher-level interface for standard, common use cases without locking out advanced subsystem access.
+- Want to decouple client code from the internal implementation details and component dependencies of a subsystem.
 
 #### Class Diagram
 
@@ -3330,94 +3495,106 @@ A home theater can be started with a single method instead of operating each dev
 classDiagram
 direction LR
 
-class TV {
-    +TurnOn()
+class Client {
 }
 
-class SoundSystem {
-    +TurnOn()
+class Facade {
+    -subsystemA : SubsystemA
+    -subsystemB : SubsystemB
+    -subsystemC : SubsystemC
+    +Operation()
 }
 
-class DVDPlayer {
-    +TurnOn()
-    +Play(movie)
+class SubsystemA {
+    +OperationA()
 }
 
-class HomeTheaterFacade {
-    <<Facade>>
-    +WatchMovie(movie : string)
+class SubsystemB {
+    +OperationB()
 }
 
-HomeTheaterFacade --> TV
-HomeTheaterFacade --> SoundSystem
-HomeTheaterFacade --> DVDPlayer
+class SubsystemC {
+    +OperationC()
+}
+
+Client --> Facade
+Facade --> SubsystemA
+Facade --> SubsystemB
+Facade --> SubsystemC
 ```
 
 #### Sequence Diagram
 
 ```mermaid
 sequenceDiagram
-    actor User
-    participant Facade as HomeTheaterFacade
-    participant TV
-    participant Sound as SoundSystem
-    participant DVD as DVDPlayer
+    actor Client
+    participant Facade as Facade
+    participant SubA as SubsystemA
+    participant SubB as SubsystemB
+    participant SubC as SubsystemC
 
-    User->>Facade: WatchMovie("Avatar")
-    Facade->>TV: TurnOn()
-    Facade->>Sound: TurnOn()
-    Facade->>DVD: TurnOn()
-    Facade->>DVD: Play("Avatar")
-    Facade-->>User: Ready
+    Client->>Facade: Operation()
+    activate Facade
+    Facade->>SubA: OperationA()
+    activate SubA
+    SubA-->>Facade: resultA
+    deactivate SubA
+    Facade->>SubB: OperationB()
+    activate SubB
+    SubB-->>Facade: resultB
+    deactivate SubB
+    Facade->>SubC: OperationC()
+    activate SubC
+    SubC-->>Facade: resultC
+    deactivate SubC
+    Facade-->>Client: completed
+    deactivate Facade
 ```
 
 #### Simplified Code
 
 ```csharp
-public class TV
+public class CatalogManager
 {
-    public void TurnOn()
-    {
-        // Turn on the TV
-    }
+    public void RegisterTable(string tableName) => Console.WriteLine($"Catalog: Registered table '{tableName}'.");
 }
 
-public class SoundSystem
+public class TableDirector
 {
-    public void TurnOn()
-    {
-        // Turn on the sound system
-    }
+    public void BuildTable(string tableName) => Console.WriteLine($"Director: Built table metadata for '{tableName}'.");
 }
 
-public class DVDPlayer
+public class StorageEngine
 {
-    public void TurnOn()
-    {
-        // Turn on the DVD player
-    }
-
-    public void Play(string movie)
-    {
-        // Play the selected movie
-    }
+    public void AllocateTableStorage(string tableName) => Console.WriteLine($"Storage: Allocated storage pages for '{tableName}'.");
 }
 
-public class HomeTheaterFacade
+public class SchemaService // Facade
 {
-    private readonly TV _tv = new();
-    private readonly SoundSystem _sound = new();
-    private readonly DVDPlayer _dvd = new();
+    private readonly CatalogManager _catalog = new();
+    private readonly TableDirector _director = new();
+    private readonly StorageEngine _storage = new();
 
-    // Provide one simple operation to coordinate the subsystem
-    public void WatchMovie(string movie)
+    // High-level unified operation coordinating the underlying subsystems
+    public void CreateTable(string tableName)
     {
-        _tv.TurnOn();
-        _sound.TurnOn();
-        _dvd.TurnOn();
-        _dvd.Play(movie);
+        _director.BuildTable(tableName);
+        _storage.AllocateTableStorage(tableName);
+        _catalog.RegisterTable(tableName);
+        Console.WriteLine($"SchemaService: Successfully created table '{tableName}'.");
     }
 }
+```
+
+#### Usage Code Example
+
+```csharp
+// 1. Client instantiates the Facade service
+var schemaService = new SchemaService();
+
+// 2. Client executes complex DDL workflow with a single simple call,
+// avoiding direct interaction with CatalogManager, TableDirector, and StorageEngine
+schemaService.CreateTable("Users");
 ```
 
 **Benefits**
@@ -3637,8 +3814,13 @@ sequenceDiagram
 **Purpose:**
 Define a one-to-many dependency so that when an object's state changes, all registered observers are notified automatically.
 
-**Example:**
-A weather station notifies multiple displays whenever the temperature changes.
+**Application:**
+`MetadataEventPublisher → CatalogCacheObserver, MetadataAuditObserver`
+
+**Recognition Signs:**
+- Changes to one object's state require updating other dependent objects, but the exact set of dependent objects is dynamic or unknown beforehand.
+- An object should be able to notify other interested objects without making assumptions about their concrete classes (loose coupling).
+- Establishes a one-to-many publish-subscribe dependency relationship between objects.
 
 #### Class Diagram
 
@@ -3646,106 +3828,133 @@ A weather station notifies multiple displays whenever the temperature changes.
 classDiagram
 direction LR
 
-class IObserver {
-    <<Observer>>
-    +Update(temperature : double)
+class Client {
 }
 
-class CurrentDisplay {
-    <<Concrete Observer>>
-}
-
-class StatisticsDisplay {
-    <<Concrete Observer>>
-}
-
-class WeatherStation {
-    <<Subject>>
-    +Attach(observer)
-    +Detach(observer)
+class Subject {
+    <<Interface / Abstract>>
+    +Attach(observer : Observer)
+    +Detach(observer : Observer)
     +Notify()
-    +SetTemperature(value : double)
 }
 
-IObserver <|.. CurrentDisplay
-IObserver <|.. StatisticsDisplay
+class ConcreteSubject {
+    -observers : List~Observer~
+    -state : State
+    +GetState() State
+    +SetState(state : State)
+}
 
-WeatherStation --> IObserver : notifies
+class Observer {
+    <<Interface / Abstract>>
+    +Update()
+}
+
+class ConcreteObserverA {
+    <<Concrete Observer>>
+    -subject : ConcreteSubject
+    +Update()
+}
+
+class ConcreteObserverB {
+    <<Concrete Observer>>
+    -subject : ConcreteSubject
+    +Update()
+}
+
+Client --> ConcreteSubject
+Client --> ConcreteObserverA
+Subject <|.. ConcreteSubject
+Observer <|.. ConcreteObserverA
+Observer <|.. ConcreteObserverB
+Subject "1" o-- "*" Observer : observers
+ConcreteObserverA --> ConcreteSubject : observes
 ```
 
 #### Sequence Diagram
 
 ```mermaid
 sequenceDiagram
-    actor Sensor
-    participant Station as WeatherStation
-    participant Display1 as CurrentDisplay
-    participant Display2 as StatisticsDisplay
+    actor Client
+    participant Subject as ConcreteSubject
+    participant ObsA as ConcreteObserverA
+    participant ObsB as ConcreteObserverB
 
-    Sensor->>Station: SetTemperature(28)
-    Station->>Display1: Update(28)
-    Display1-->>Station: Updated
-
-    Station->>Display2: Update(28)
-    Display2-->>Station: Updated
+    Client->>Subject: SetState(newState)
+    activate Subject
+    Subject->>Subject: Notify()
+    Subject->>ObsA: Update()
+    activate ObsA
+    ObsA-->>Subject: done
+    deactivate ObsA
+    Subject->>ObsB: Update()
+    activate ObsB
+    ObsB-->>Subject: done
+    deactivate ObsB
+    Subject-->>Client: state updated
+    deactivate Subject
 ```
 
 #### Simplified Code
 
 ```csharp
-public interface IObserver
+public class MetadataEvent
 {
-    // Receive notification when the subject changes
-    void Update(double temperature);
+    public string EventType { get; set; } = string.Empty;
+    public string ObjectName { get; set; } = string.Empty;
 }
 
-public class CurrentDisplay : IObserver
+public interface IMetadataObserver
 {
-    public void Update(double temperature)
-    {
-        // Display the current temperature
-    }
+    void OnMetadataChanged(MetadataEvent evt);
 }
 
-public class StatisticsDisplay : IObserver
+public class CatalogCacheObserver : IMetadataObserver
 {
-    public void Update(double temperature)
+    public void OnMetadataChanged(MetadataEvent evt)
     {
-        // Update statistical information
+        Console.WriteLine($"CacheObserver: Invalidating cache for '{evt.ObjectName}' due to {evt.EventType}.");
     }
 }
 
-public class WeatherStation
+public class MetadataAuditObserver : IMetadataObserver
 {
-    private readonly List<IObserver> _observers = [];
-
-    // Register an observer
-    public void Attach(IObserver observer)
+    public void OnMetadataChanged(MetadataEvent evt)
     {
-        _observers.Add(observer);
-    }
-
-    // Unregister an observer
-    public void Detach(IObserver observer)
-    {
-        _observers.Remove(observer);
-    }
-
-    // Notify all registered observers
-    public void Notify()
-    {
-        // Invoke Update() on each observer
-    }
-
-    // Update the temperature and notify observers
-    public void SetTemperature(double value)
-    {
-        // Store the new temperature
-
-        // Notify all observers about the change
-        Notify();
+        Console.WriteLine($"AuditObserver: Logged event {evt.EventType} on object '{evt.ObjectName}'.");
     }
 }
+
+public class MetadataEventPublisher
+{
+    private readonly List<IMetadataObserver> _observers = new();
+
+    public void Subscribe(IMetadataObserver observer) => _observers.Add(observer);
+    public void Unsubscribe(IMetadataObserver observer) => _observers.Remove(observer);
+
+    public void Publish(MetadataEvent evt)
+    {
+        foreach (var observer in _observers)
+        {
+            observer.OnMetadataChanged(evt);
+        }
+    }
+}
+```
+
+#### Usage Code Example
+
+```csharp
+// 1. Initialize event publisher (Subject)
+var publisher = new MetadataEventPublisher();
+
+// 2. Subscribe concrete observers (Cache, Audit)
+publisher.Subscribe(new CatalogCacheObserver());
+publisher.Subscribe(new MetadataAuditObserver());
+
+// 3. Publish a metadata event when DDL occurs
+var evt = new MetadataEvent { EventType = "TABLE_CREATED", ObjectName = "Users" };
+publisher.Publish(evt);
 ```
 
 **Benefits**
@@ -4025,8 +4234,13 @@ sequenceDiagram
 **Purpose:**
 Define the skeleton of an algorithm in a base class while allowing subclasses to customize specific steps without changing the overall process.
 
-**Example:**
-A document generator follows the same process for creating reports, but PDF and HTML reports implement formatting differently.
+**Application:**
+`DdlScriptGenerator → CreateTableScriptGenerator, DropTableScriptGenerator`
+
+**Recognition Signs:**
+- Multiple classes share an identical invariant sequence or workflow of steps, but differ in specific step implementations.
+- Avoids code duplication across similar algorithms by consolidating shared steps in a common abstract superclass.
+- Enforces the "Hollywood Principle" ("Don't call us, we'll call you"), allowing the base class to control when subclass steps execute.
 
 #### Class Diagram
 
@@ -4034,28 +4248,33 @@ A document generator follows the same process for creating reports, but PDF and 
 classDiagram
 direction LR
 
-class ReportGenerator {
+class Client {
+}
+
+class AbstractClass {
     <<Abstract Class>>
-    +GenerateReport()
-    #LoadData()
-    #FormatData()*
-    #ExportReport()*
+    +TemplateMethod()
+    #PrimitiveOperation1()*
+    #PrimitiveOperation2()*
+    #Hook()
 }
 
-class PdfReportGenerator {
+class ConcreteClassA {
     <<Concrete Class>>
-    #FormatData()
-    #ExportReport()
+    #PrimitiveOperation1()
+    #PrimitiveOperation2()
 }
 
-class HtmlReportGenerator {
+class ConcreteClassB {
     <<Concrete Class>>
-    #FormatData()
-    #ExportReport()
+    #PrimitiveOperation1()
+    #PrimitiveOperation2()
+    #Hook()
 }
 
-ReportGenerator <|-- PdfReportGenerator
-ReportGenerator <|-- HtmlReportGenerator
+Client --> AbstractClass
+AbstractClass <|-- ConcreteClassA
+AbstractClass <|-- ConcreteClassB
 ```
 
 #### Sequence Diagram
@@ -4063,66 +4282,90 @@ ReportGenerator <|-- HtmlReportGenerator
 ```mermaid
 sequenceDiagram
     actor Client
-    participant Generator as PdfReportGenerator
+    participant Generator as ConcreteClassA
+    participant Base as AbstractClass
 
-    Client->>Generator: GenerateReport()
-    Generator->>Generator: LoadData()
-    Generator->>Generator: FormatData()
-    Generator->>Generator: ExportReport()
-    Generator-->>Client: Report completed
+    Client->>Generator: TemplateMethod()
+    activate Generator
+    Generator->>Base: PrimitiveOperation1()
+    activate Base
+    Base-->>Generator: done
+    deactivate Base
+    Generator->>Generator: PrimitiveOperation2()
+    Generator->>Base: Hook()
+    activate Base
+    Base-->>Generator: done
+    deactivate Base
+    Generator-->>Client: result
+    deactivate Generator
 ```
 
 #### Simplified Code
 
 ```csharp
-public abstract class ReportGenerator
+public abstract class DdlScriptGenerator
 {
-    // Template Method: define the fixed algorithm sequence
-    public void GenerateReport()
+    // Template Method: defines the fixed DDL generation workflow
+    public string GenerateDdl()
     {
-        LoadData();
-        FormatData();
-        ExportReport();
+        var sb = new StringBuilder();
+        sb.AppendLine(BuildHeader());
+        sb.AppendLine(BuildBody());
+        sb.AppendLine(BuildFooter());
+        return sb.ToString();
     }
 
-    // Common step shared by all report types
-    protected void LoadData()
-    {
-        // Load report data from the data source
-    }
-
-    // Allow subclasses to define how data is formatted
-    protected abstract void FormatData();
-
-    // Allow subclasses to define how the report is exported
-    protected abstract void ExportReport();
+    protected virtual string BuildHeader() => "-- Auto-generated DDL Script";
+    protected abstract string BuildBody();
+    protected virtual string BuildFooter() => ";";
 }
 
-public class PdfReportGenerator : ReportGenerator
+public class CreateTableScriptGenerator : DdlScriptGenerator
 {
-    protected override void FormatData()
+    private readonly string _tableName;
+    private readonly List<string> _columns;
+
+    public CreateTableScriptGenerator(string tableName, List<string> columns)
     {
-        // Format data for a PDF document
+        _tableName = tableName;
+        _columns = columns;
     }
 
-    protected override void ExportReport()
+    protected override string BuildBody()
     {
-        // Export the report as a PDF file
+        return $"CREATE TABLE {_tableName} (\n  {string.Join(",\n  ", _columns)}\n)";
     }
 }
 
-public class HtmlReportGenerator : ReportGenerator
+public class DropTableScriptGenerator : DdlScriptGenerator
 {
-    protected override void FormatData()
+    private readonly string _tableName;
+
+    public DropTableScriptGenerator(string tableName)
     {
-        // Format data as HTML content
+        _tableName = tableName;
     }
 
-    protected override void ExportReport()
+    protected override string BuildBody()
     {
-        // Export the report as an HTML file
+        return $"DROP TABLE {_tableName}";
     }
 }
+```
+
+#### Usage Code Example
+
+```csharp
+// 1. Instantiate concrete DDL generators
+DdlScriptGenerator createGen = new CreateTableScriptGenerator("Users", new List<string> { "Id INT", "Username VARCHAR(50)" });
+DdlScriptGenerator dropGen = new DropTableScriptGenerator("Users");
+
+// 2. Execute Template Method to produce complete SQL DDL scripts
+string createSql = createGen.GenerateDdl();
+string dropSql = dropGen.GenerateDdl();
+
+Console.WriteLine(createSql);
+Console.WriteLine(dropSql);
 ```
 
 **Benefits**
@@ -4252,6 +4495,164 @@ sequenceDiagram
 ```
 
 ### 10. Metadata Utility (Visitor Pattern)
+
+**Purpose:**
+Separate an algorithm from the object structure on which it operates, allowing new operations to be added without modifying existing classes.
+
+**Application:**
+`DDLExportVisitor, DependencyScanVisitor → IMetadataElement (Database, Schema, Table, Column)`
+
+**Recognition Signs:**
+- Need to perform operations across a complex object structure (e.g., Composite tree), but don't want to clutter element classes with unrelated operations.
+- The object structure classes rarely change, but new operations on the elements are frequently added over time.
+- Implements Double Dispatch (`element.Accept(visitor)` calls `visitor.VisitElement(this)`).
+
+#### Class Diagram
+
+```mermaid
+classDiagram
+direction LR
+
+class Client {
+}
+
+class Visitor {
+    <<Interface / Abstract>>
+    +VisitConcreteElementA(element : ConcreteElementA)
+    +VisitConcreteElementB(element : ConcreteElementB)
+}
+
+class ConcreteVisitor1 {
+    <<Concrete Visitor>>
+    +VisitConcreteElementA(element : ConcreteElementA)
+    +VisitConcreteElementB(element : ConcreteElementB)
+}
+
+class Element {
+    <<Interface / Abstract>>
+    +Accept(visitor : Visitor)
+}
+
+class ConcreteElementA {
+    <<Concrete Element>>
+    +Accept(visitor : Visitor)
+}
+
+class ConcreteElementB {
+    <<Concrete Element>>
+    +Accept(visitor : Visitor)
+}
+
+Client --> Visitor
+Client --> Element
+Visitor <|.. ConcreteVisitor1
+Element <|.. ConcreteElementA
+Element <|.. ConcreteElementB
+ConcreteElementA ..> Visitor : accepts
+ConcreteElementB ..> Visitor : accepts
+```
+
+#### Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant Element as ConcreteElementA
+    participant Visitor as ConcreteVisitor1
+
+    Client->>Element: Accept(visitor)
+    activate Element
+    Element->>Visitor: VisitConcreteElementA(this)
+    activate Visitor
+    Visitor-->>Element: result
+    deactivate Visitor
+    Element-->>Client: completed
+    deactivate Element
+```
+
+#### Simplified Code
+
+```csharp
+public interface IMetadataVisitor
+{
+    void VisitTable(TableElement table);
+    void VisitColumn(ColumnElement column);
+}
+
+public interface IMetadataElement
+{
+    void Accept(IMetadataVisitor visitor);
+}
+
+public class TableElement : IMetadataElement
+{
+    public string Name { get; set; } = string.Empty;
+    public List<ColumnElement> Columns { get; } = new();
+
+    public void Accept(IMetadataVisitor visitor)
+    {
+        visitor.VisitTable(this);
+        foreach (var col in Columns)
+        {
+            col.Accept(visitor);
+        }
+    }
+}
+
+public class ColumnElement : IMetadataElement
+{
+    public string Name { get; set; } = string.Empty;
+    public string DataType { get; set; } = "INT";
+
+    public void Accept(IMetadataVisitor visitor)
+    {
+        visitor.VisitColumn(this);
+    }
+}
+
+public class DDLExportVisitor : IMetadataVisitor
+{
+    public StringBuilder Ddl { get; } = new();
+
+    public void VisitTable(TableElement table)
+    {
+        Ddl.AppendLine($"CREATE TABLE {table.Name} (");
+    }
+
+    public void VisitColumn(ColumnElement column)
+    {
+        Ddl.AppendLine($"  {column.Name} {column.DataType},");
+    }
+}
+```
+
+#### Usage Code Example
+
+```csharp
+// 1. Build element structure
+var table = new TableElement { Name = "Users" };
+table.Columns.Add(new ColumnElement { Name = "Id", DataType = "INT" });
+table.Columns.Add(new ColumnElement { Name = "Email", DataType = "VARCHAR(100)" });
+
+// 2. Instantiate visitor
+var visitor = new DDLExportVisitor();
+
+// 3. Traversal via Double Dispatch
+table.Accept(visitor);
+
+// 4. Retrieve output
+Console.WriteLine(visitor.Ddl.ToString());
+```
+
+**Benefits**
+
+* Follows Open/Closed Principle: easily add new operations without altering element classes.
+* Follows Single Responsibility Principle: consolidates related operations in visitor classes.
+* Accumulates state while traversing an object structure.
+
+**Application:** Exporting DDL scripts (`DDLExportVisitor`) and scanning object dependencies (`DependencyScanVisitor`) without modifying catalog components.
+
+**Why apply?** The Visitor Pattern enables adding new operations like exporting DDL syntax or scanning dependencies without modifying the core metadata classes (`Database`, `Schema`, `Table`, `Column`). `ICatalogComponent` instances simply accept an `IMetadataVisitor`, which encapsulates the specific utility operation.
 
 ```mermaid
 classDiagram
@@ -4393,6 +4794,129 @@ sequenceDiagram
 
 ### 11. System Initialization (Facade Pattern)
 
+**Purpose:**
+Provide a simple, unified interface to coordinate the complex startup and lifecycle subsystems of the database engine.
+
+**Application:**
+`DbEngineFacade → Subsystems (IDiskManager, IStorageEngine, ICatalogManager, ITransactionManager, IRecoveryManager)`
+
+**Recognition Signs:**
+- Server initialization involves orchestrating multiple complex subsystems in a strict, specific order.
+- Higher-level clients (`DatabaseServer`, administration scripts) require a simple lifecycle interface (`Start()`, `Stop()`, `Recover()`) without managing internal component dependencies.
+- Decouples server management logic from low-level subsystem startup details.
+
+#### Class Diagram
+
+```mermaid
+classDiagram
+direction LR
+
+class Client {
+}
+
+class Facade {
+    -subsystemA : SubsystemA
+    -subsystemB : SubsystemB
+    -subsystemC : SubsystemC
+    +Operation()
+}
+
+class SubsystemA {
+    +OperationA()
+}
+
+class SubsystemB {
+    +OperationB()
+}
+
+class SubsystemC {
+    +OperationC()
+}
+
+Client --> Facade
+Facade --> SubsystemA
+Facade --> SubsystemB
+Facade --> SubsystemC
+```
+
+#### Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant Facade as Facade
+    participant SubA as SubsystemA
+    participant SubB as SubsystemB
+    participant SubC as SubsystemC
+
+    Client->>Facade: Operation()
+    activate Facade
+    Facade->>SubA: OperationA()
+    activate SubA
+    SubA-->>Facade: resultA
+    deactivate SubA
+    Facade->>SubB: OperationB()
+    activate SubB
+    SubB-->>Facade: resultB
+    deactivate SubB
+    Facade->>SubC: OperationC()
+    activate SubC
+    SubC-->>Facade: resultC
+    deactivate SubC
+    Facade-->>Client: completed
+    deactivate Facade
+```
+
+#### Simplified Code
+
+```csharp
+public class DiskManager
+{
+    public void Initialize() => Console.WriteLine("DiskManager initialized.");
+}
+
+public class StorageEngine
+{
+    public void Initialize() => Console.WriteLine("StorageEngine initialized.");
+}
+
+public class CatalogManager
+{
+    public void LoadCatalog() => Console.WriteLine("CatalogManager loaded.");
+}
+
+public class DbEngineFacade
+{
+    private readonly DiskManager _disk = new();
+    private readonly StorageEngine _storage = new();
+    private readonly CatalogManager _catalog = new();
+
+    public void Start()
+    {
+        _disk.Initialize();
+        _storage.Initialize();
+        _catalog.LoadCatalog();
+        Console.WriteLine("DbEngineFacade: Server subsystems started successfully.");
+    }
+}
+```
+
+#### Usage Code Example
+
+```csharp
+// 1. Client instantiates engine facade
+var engineFacade = new DbEngineFacade();
+
+// 2. Start all complex subsystems via unified facade method
+engineFacade.Start();
+```
+
+**Benefits**
+
+- Simplifies interaction for `DatabaseServer` during startup and recovery.
+- Encapsulates subsystem initialization sequence and dependencies.
+- Facilitates safe mode or recovery startup without leaking details to callers.
+
 **Application:** `DbEngineFacade` groups complex startup steps for Disk, Storage, and Catalog.
 
 **Why apply?** The Facade Pattern provides a unified, high-level interface to the complex subsystems of the database engine (Disk, Storage, Catalog, Transaction, Recovery). This simplifies the interaction for the `DatabaseServer`, which only needs to call `Start()`, `Stop()`, or `Recover()` without managing the intricate initialization order and dependencies of each internal manager.
@@ -4517,83 +5041,67 @@ sequenceDiagram
 Encapsulate behaviors for Stopped, Running, Recovering, and Failed states of the Database Server to allow it to change its behavior when its internal state changes.
 
 **Application:**  
-`DatabaseServer`, `IServerState`
+`DatabaseServer → IServerState (StoppedState, RunningState, RecoveringState, FailedState)`
+
+**Recognition Signs:**
+- An object's behavior depends heavily on its internal state, and its behavior must change dynamically at runtime as its state changes.
+- Operations contain large, multi-branch conditional statements (`if-else` or `switch`) based on object state constants or flags.
+- State-specific logic and state transitions need to be encapsulated into separate classes for maintainability and extensibility.
 
 #### Class Diagram
 
 ```mermaid
 classDiagram
-direction TB
+direction LR
 
-class DatabaseServer{
-    <<Context>>
-    -currentState : IServerState
-    +SetState(state: IServerState)
-    +Start()
-    +Stop()
-    +Restart()
-    +Recover()
+class Client {
 }
 
-class IServerState{
-    <<State>>
-    +Start(server: DatabaseServer)
-    +Stop(server: DatabaseServer)
-    +Restart(server: DatabaseServer)
-    +Recover(server: DatabaseServer)
+class Context {
+    -state : State
+    +SetState(state : State)
+    +Request()
 }
 
-class StoppedState{
-    <<ConcreteState>>
-    +Start(server: DatabaseServer)
-    +Stop(server: DatabaseServer)
+class State {
+    <<Interface / Abstract>>
+    +Handle(context : Context)
 }
 
-class RunningState{
-    <<ConcreteState>>
-    +Start(server: DatabaseServer)
-    +Stop(server: DatabaseServer)
+class ConcreteStateA {
+    <<Concrete State>>
+    +Handle(context : Context)
 }
 
-class RecoveringState{
-    <<ConcreteState>>
-    +Recover(server: DatabaseServer)
+class ConcreteStateB {
+    <<Concrete State>>
+    +Handle(context : Context)
 }
 
-class FailedState{
-    <<ConcreteState>>
-    +Recover(server: DatabaseServer)
-    +Stop(server: DatabaseServer)
-}
-
-DatabaseServer o-- IServerState : current state
-IServerState <|.. StoppedState
-IServerState <|.. RunningState
-IServerState <|.. RecoveringState
-IServerState <|.. FailedState
+Client --> Context
+Context --> State : delegates
+State <|.. ConcreteStateA
+State <|.. ConcreteStateB
 ```
 
 #### Sequence Diagram
 
 ```mermaid
 sequenceDiagram
-    actor Admin
-    participant Server as DatabaseServer
-    participant Stopped as StoppedState
-    participant Running as RunningState
+    actor Client
+    participant Context as Context
+    participant StateA as ConcreteStateA
+    participant StateB as ConcreteStateB
 
-    Note over Server: Initially in StoppedState
-    Admin->>Server: Start()
-    Server->>Stopped: Start(this)
-    Stopped->>Server: Initialize Engine
-    Stopped->>Server: SetState(new RunningState())
-    Server-->>Admin: Success
-
-    Note over Server: Now in RunningState
-    Admin->>Server: Start()
-    Server->>Running: Start(this)
-    Running-->>Server: throw InvalidOperationException("Already running")
-    Server-->>Admin: Error
+    Client->>Context: Request()
+    activate Context
+    Context->>StateA: Handle(this)
+    activate StateA
+    StateA->>Context: SetState(StateB)
+    StateA-->>Context: done
+    deactivate StateA
+    Context-->>Client: updated
+    deactivate Context
 ```
 
 #### Simplified Code
@@ -4663,6 +5171,29 @@ public class RunningState : IServerState
         throw new InvalidOperationException("Cannot recover while running.");
     }
 }
+```
+
+#### Usage Code Example
+
+```csharp
+// 1. Initialize DatabaseServer (starts in StoppedState)
+var server = new DatabaseServer();
+
+// 2. Start the server (transitions from StoppedState to RunningState)
+server.Start();
+
+// 3. Attempting invalid state operation throws an exception
+try
+{
+    server.Start(); // Throws InvalidOperationException ("Server is already running.")
+}
+catch (InvalidOperationException ex)
+{
+    Console.WriteLine($"State Error: {ex.Message}");
+}
+
+// 4. Stop the server (transitions from RunningState back to StoppedState)
+server.Stop();
 ```
 
 **Benefits**
@@ -4822,8 +5353,13 @@ sequenceDiagram
 **Purpose:**  
 Ensures that only one database manager coordinates database lifecycle operations, catalog metadata, and database connections within the server process.
 
-**Example:**  
-A simple configuration manager that ensures only one instance loads and holds global application settings throughout the process lifetime — any component that requests it gets the exact same object.
+**Application:**  
+`DatabaseManager (Thread-safe Singleton)`
+
+**Recognition Signs:**
+- Exactly one instance of a class must exist in the entire application process, accessible globally via a single entry point.
+- Centralizes state management or access to shared global resources (such as catalog metadata, connection pools, configuration).
+- Prevents multiple concurrent instances from racing, corrupting shared data, or bypassing duplicate-name checks.
 
 #### Class Diagram
 
@@ -4877,30 +5413,60 @@ sequenceDiagram
 #### Simplified Code
 
 ```csharp
-public sealed class Singleton
+public sealed class DatabaseManager
 {
-    private static volatile Singleton? _instance;
+    private static DatabaseManager? _instance;
     private static readonly object _lock = new();
 
+    private readonly List<string> _databases = new();
+
     // Private constructor prevents external instantiation
-    private Singleton() { }
+    private DatabaseManager() { }
 
     // Double-checked locking — thread-safe lazy initialization
-    public static Singleton GetInstance()
+    public static DatabaseManager Instance
     {
-        if (_instance is null)
+        get
         {
-            lock (_lock)
+            if (_instance is null)
             {
-                if (_instance is null)
-                    _instance = new Singleton();
+                lock (_lock)
+                {
+                    if (_instance is null)
+                        _instance = new DatabaseManager();
+                }
             }
+            return _instance;
         }
-        return _instance;
     }
 
-    public void Operation() { /* ... */ }
+    public void CreateDatabase(string dbName)
+    {
+        lock (_lock)
+        {
+            if (!_databases.Contains(dbName))
+            {
+                _databases.Add(dbName);
+                Console.WriteLine($"DatabaseManager: Created database '{dbName}'.");
+            }
+        }
+    }
 }
+```
+
+#### Usage Code Example
+
+```csharp
+// 1. Access the single global DatabaseManager instance
+DatabaseManager manager1 = DatabaseManager.Instance;
+DatabaseManager manager2 = DatabaseManager.Instance;
+
+// 2. Perform operations via the singleton instance
+manager1.CreateDatabase("production_db");
+
+// 3. Confirm both references point to the exact same object in memory
+bool isSameInstance = ReferenceEquals(manager1, manager2);
+Console.WriteLine($"Shared identical instance: {isSameInstance}");
 ```
 
 **Benefits**
@@ -5062,8 +5628,13 @@ sequenceDiagram
 **Purpose:**  
 Encapsulate a request as an object, thereby allowing you to parameterize clients with different requests, queue or log requests, and support undoable operations.
 
-**Example:**  
-A simple text editor where user actions (type, delete, bold) are wrapped as command objects so the editor can undo/redo each step without knowing the implementation details of each action.
+**Application:**  
+`IDatabaseCommand → CreateDatabaseCommand, DropDatabaseCommand`
+
+**Recognition Signs:**
+- Need to parameterize objects with actions to perform, queue or schedule requests, or execute requests at different times.
+- Operations require support for Undo / Redo or transactional rollback by reversing executed actions.
+- Decouples the object that invokes the operation (`Invoker`) from the object that knows how to perform it (`Receiver`).
 
 #### Class Diagram
 
@@ -5071,105 +5642,99 @@ A simple text editor where user actions (type, delete, bold) are wrapped as comm
 classDiagram
 direction LR
 
-class ICommand {
-    <<Command>>
+class Client {
+}
+
+class Invoker {
+    -command : Command
+    +SetCommand(command : Command)
+    +ExecuteCommand()
+}
+
+class Command {
+    <<Interface / Abstract>>
     +Execute()
     +Undo()
 }
 
-class TypeTextCommand {
-    <<ConcreteCommand>>
-    -_editor : TextEditor
-    -_text : string
+class ConcreteCommand {
+    -receiver : Receiver
     +Execute()
     +Undo()
 }
 
-class DeleteTextCommand {
-    <<ConcreteCommand>>
-    -_editor : TextEditor
-    -_count : int
-    +Execute()
-    +Undo()
+class Receiver {
+    +Action()
 }
 
-class TextEditor {
-    <<Receiver>>
-    +Type(text : string)
-    +Delete(count : int)
-}
-
-class CommandInvoker {
-    <<Invoker>>
-    -_history : Stack~ICommand~
-    +Execute(command : ICommand)
-    +Undo()
-}
-
-ICommand <|.. TypeTextCommand
-ICommand <|.. DeleteTextCommand
-
-TypeTextCommand --> TextEditor : receiver
-DeleteTextCommand --> TextEditor : receiver
-
-CommandInvoker --> ICommand : executes
+Client --> Invoker
+Client --> Receiver
+Client ..> ConcreteCommand : creates
+Invoker --> Command
+Command <|.. ConcreteCommand
+ConcreteCommand --> Receiver : delegates
 ```
 
 #### Sequence Diagram
 
 ```mermaid
 sequenceDiagram
-    autonumber
+    actor Client
+    participant Invoker as Invoker
+    participant Cmd as ConcreteCommand
+    participant Receiver as Receiver
 
-    actor User
-    participant Invoker as CommandInvoker
-    participant Cmd as TypeTextCommand
-    participant Editor as TextEditor
-
-    User->>Invoker: Execute(new TypeTextCommand("Hello"))
+    Client->>Cmd: new ConcreteCommand(receiver)
+    Client->>Invoker: SetCommand(cmd)
+    Client->>Invoker: ExecuteCommand()
+    activate Invoker
     Invoker->>Cmd: Execute()
-    Cmd->>Editor: Type("Hello")
-    Editor-->>Cmd: done
-    Invoker->>Invoker: Push command to history stack
-    Invoker-->>User: Success
-
-    User->>Invoker: Undo()
-    Invoker->>Invoker: Pop command from history stack
-    Invoker->>Cmd: Undo()
-    Cmd->>Editor: Delete(5)
-    Editor-->>Cmd: done
-    Invoker-->>User: Undone
+    activate Cmd
+    Cmd->>Receiver: Action()
+    activate Receiver
+    Receiver-->>Cmd: result
+    deactivate Receiver
+    Cmd-->>Invoker: completed
+    deactivate Cmd
+    Invoker-->>Client: done
+    deactivate Invoker
 ```
 
 #### Simplified Code
 
 ```csharp
-public interface ICommand
+public interface IDatabaseCommand
 {
     void Execute();
     void Undo();
 }
 
-public class TypeTextCommand : ICommand
+public class DatabaseManagerReceiver
 {
-    private readonly TextEditor _editor;
-    private readonly string _text;
-
-    public TypeTextCommand(TextEditor editor, string text)
-    {
-        _editor = editor;
-        _text = text;
-    }
-
-    public void Execute() => _editor.Type(_text);
-    public void Undo() => _editor.Delete(_text.Length);
+    public void Create(string name) => Console.WriteLine($"Receiver: Created DB '{name}'.");
+    public void Drop(string name) => Console.WriteLine($"Receiver: Dropped DB '{name}'.");
 }
 
-public class CommandInvoker
+public class CreateDatabaseCommand : IDatabaseCommand
 {
-    private readonly Stack<ICommand> _history = new();
+    private readonly DatabaseManagerReceiver _receiver;
+    private readonly string _dbName;
 
-    public void Execute(ICommand command)
+    public CreateDatabaseCommand(DatabaseManagerReceiver receiver, string dbName)
+    {
+        _receiver = receiver;
+        _dbName = dbName;
+    }
+
+    public void Execute() => _receiver.Create(_dbName);
+    public void Undo() => _receiver.Drop(_dbName);
+}
+
+public class DatabaseCommandExecutor // Invoker
+{
+    private readonly Stack<IDatabaseCommand> _history = new();
+
+    public void ExecuteCommand(IDatabaseCommand command)
     {
         command.Execute();
         _history.Push(command);
@@ -5178,9 +5743,28 @@ public class CommandInvoker
     public void Undo()
     {
         if (_history.TryPop(out var command))
+        {
             command.Undo();
+        }
     }
 }
+```
+
+#### Usage Code Example
+
+```csharp
+// 1. Initialize receiver and invoker
+var receiver = new DatabaseManagerReceiver();
+var executor = new DatabaseCommandExecutor();
+
+// 2. Create command instance
+var createCmd = new CreateDatabaseCommand(receiver, "analytics_db");
+
+// 3. Execute command via invoker
+executor.ExecuteCommand(createCmd);
+
+// 4. Perform undo operation to rollback the command
+executor.Undo();
 ```
 
 **Benefits**
@@ -5412,6 +5996,122 @@ sequenceDiagram
 **Purpose:**  
 Define an interface for creating a `Database` object, but let subclasses (or concrete factory implementations) decide which class to instantiate. The Factory Method centralizes the complex initialization logic—allocating storage, registering the catalog entry, creating the default schema, and setting up permissions—so that `DatabaseManager` never has to know the construction details.
 
+**Application:**  
+`IDatabaseFactory → StandardDatabaseFactory, InMemoryDatabaseFactory`
+
+**Recognition Signs:**
+- A class cannot anticipate the exact concrete class of objects it must create.
+- Want to delegate object creation responsibility to specialized helper factory subclasses or implementations.
+- Centralizes complex multi-step object initialization (allocating storage, initializing default metadata, granting default permissions).
+
+#### Class Diagram
+
+```mermaid
+classDiagram
+direction LR
+
+class Client {
+}
+
+class Product {
+    <<Interface / Abstract>>
+}
+
+class ConcreteProductA {
+    <<Concrete Product>>
+}
+
+class ConcreteProductB {
+    <<Concrete Product>>
+}
+
+class Creator {
+    <<Interface / Abstract>>
+    +CreateProduct()* : Product
+}
+
+class ConcreteCreatorA {
+    <<Concrete Creator>>
+    +CreateProduct() : Product
+}
+
+class ConcreteCreatorB {
+    <<Concrete Creator>>
+    +CreateProduct() : Product
+}
+
+Client --> Creator
+Client --> Product
+Product <|.. ConcreteProductA
+Product <|.. ConcreteProductB
+Creator <|.. ConcreteCreatorA
+Creator <|.. ConcreteCreatorB
+ConcreteCreatorA ..> ConcreteProductA : creates
+ConcreteCreatorB ..> ConcreteProductB : creates
+```
+
+#### Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant Creator as ConcreteCreatorA
+    participant Product as ConcreteProductA
+
+    Client->>Creator: CreateProduct()
+    activate Creator
+    Creator->>Product: new ConcreteProductA()
+    activate Product
+    Product-->>Creator: product instance
+    deactivate Product
+    Creator-->>Client: product
+    deactivate Creator
+```
+
+#### Simplified Code
+
+```csharp
+public interface IDatabase
+{
+    string Name { get; }
+    void Initialize();
+}
+
+public class StandardDatabase : IDatabase
+{
+    public string Name { get; }
+    public StandardDatabase(string name) => Name = name;
+    public void Initialize() => Console.WriteLine($"StandardDatabase '{Name}' initialized on disk.");
+}
+
+public interface IDatabaseFactory
+{
+    IDatabase CreateDatabase(string name);
+}
+
+public class StandardDatabaseFactory : IDatabaseFactory
+{
+    public IDatabase CreateDatabase(string name)
+    {
+        var db = new StandardDatabase(name);
+        db.Initialize();
+        return db;
+    }
+}
+```
+
+#### Usage Code Example
+
+```csharp
+// 1. Client references factory interface
+IDatabaseFactory factory = new StandardDatabaseFactory();
+
+// 2. Factory Method encapsulates object instantiation and initialization
+IDatabase db = factory.CreateDatabase("sales_db");
+
+Console.WriteLine($"Created DB: {db.Name}");
+```
+
 **Benefits**
 
 - Decouples object creation from the client that uses the object.
@@ -5572,8 +6272,13 @@ sequenceDiagram
 **Purpose:**  
 Define a grammar for a language and provide an interpreter that uses the grammar to parse sentences in that language. Each grammar rule is mapped to a class, and the interpreter recursively evaluates an Abstract Syntax Tree (AST) built from those rules.
 
-**Example:**  
-A simple arithmetic expression evaluator that parses and evaluates expressions like `3 + 5 * 2` using a grammar of terminal and non-terminal expressions.
+**Application:**  
+`ISqlExpression → LiteralExpression, ColumnExpression, EqualExpression (AST Nodes)`
+
+**Recognition Signs:**
+- Need to parse, evaluate, or interpret sentences in a simple domain-specific language (DSL) or query expression syntax.
+- Grammar rules can be represented as an Abstract Syntax Tree (AST) composed of Terminal and Non-Terminal expression classes.
+- Operations on expressions are performed by recursively interpreting AST nodes against an evaluation context.
 
 #### Class Diagram
 
@@ -5581,51 +6286,34 @@ A simple arithmetic expression evaluator that parses and evaluates expressions l
 classDiagram
 direction LR
 
-class IExpression {
-    <<AbstractExpression>>
-    +Interpret(context : Context) int
-}
-
-class NumberExpression {
-    <<TerminalExpression>>
-    -value : int
-    +Interpret(context : Context) int
-}
-
-class AddExpression {
-    <<NonTerminalExpression>>
-    -left : IExpression
-    -right : IExpression
-    +Interpret(context : Context) int
-}
-
-class MultiplyExpression {
-    <<NonTerminalExpression>>
-    -left : IExpression
-    -right : IExpression
-    +Interpret(context : Context) int
+class Client {
 }
 
 class Context {
-    <<Context>>
-    +Variables : Dictionary~string, int~
 }
 
-class ExpressionParser {
-    <<Client>>
-    +Parse(expression : string) IExpression
+class AbstractExpression {
+    <<Interface / Abstract>>
+    +Interpret(context : Context)
 }
 
-IExpression <|.. NumberExpression
-IExpression <|.. AddExpression
-IExpression <|.. MultiplyExpression
+class TerminalExpression {
+    <<Terminal>>
+    +Interpret(context : Context)
+}
 
-AddExpression --> IExpression : left
-AddExpression --> IExpression : right
-MultiplyExpression --> IExpression : left
-MultiplyExpression --> IExpression : right
-ExpressionParser --> IExpression : builds
-IExpression --> Context : uses
+class NonTerminalExpression {
+    <<NonTerminal>>
+    -expression1 : AbstractExpression
+    -expression2 : AbstractExpression
+    +Interpret(context : Context)
+}
+
+Client --> Context
+Client --> AbstractExpression
+AbstractExpression <|.. TerminalExpression
+AbstractExpression <|.. NonTerminalExpression
+NonTerminalExpression "1" o-- "*" AbstractExpression
 ```
 
 #### Sequence Diagram
@@ -5633,96 +6321,93 @@ IExpression --> Context : uses
 ```mermaid
 sequenceDiagram
     actor Client
-    participant Parser as ExpressionParser
-    participant Add as AddExpression
-    participant Mul as MultiplyExpression
-    participant Num as NumberExpression
+    participant NonTerm as NonTerminalExpression
+    participant Term1 as TerminalExpression (Left)
+    participant Term2 as TerminalExpression (Right)
     participant Ctx as Context
 
-    Client->>Parser: Parse("3 + 5 * 2")
-    Parser->>Num: new NumberExpression(3)
-    Parser->>Num: new NumberExpression(5)
-    Parser->>Num: new NumberExpression(2)
-    Parser->>Mul: new MultiplyExpression(5, 2)
-    Parser->>Add: new AddExpression(3, Mul)
-    Parser-->>Client: IExpression (AST root)
-
-    Client->>Add: Interpret(context)
-    Add->>Num: Interpret(context) → 3
-    Add->>Mul: Interpret(context)
-    Mul->>Num: Interpret(context) → 5
-    Mul->>Num: Interpret(context) → 2
-    Mul-->>Add: 10
-    Add-->>Client: 13
+    Client->>NonTerm: Interpret(context)
+    activate NonTerm
+    NonTerm->>Term1: Interpret(context)
+    activate Term1
+    Term1-->>NonTerm: val1
+    deactivate Term1
+    NonTerm->>Term2: Interpret(context)
+    activate Term2
+    Term2-->>NonTerm: val2
+    deactivate Term2
+    NonTerm-->>Client: result
+    deactivate NonTerm
 ```
 
 #### Simplified Code
 
 ```csharp
-public interface IExpression
+public class QueryEvaluationContext
 {
-    // Evaluate this expression node and return its integer result
-    int Interpret(Context context);
+    public Dictionary<string, object> RowData { get; } = new();
 }
 
-public class NumberExpression : IExpression
+public interface ISqlExpression
 {
-    private readonly int _value;
+    object Interpret(QueryEvaluationContext context);
+}
 
-    public NumberExpression(int value) => _value = value;
+public class LiteralExpression : ISqlExpression
+{
+    private readonly object _value;
+    public LiteralExpression(object value) => _value = value;
 
-    public int Interpret(Context context)
+    public object Interpret(QueryEvaluationContext context) => _value;
+}
+
+public class ColumnExpression : ISqlExpression
+{
+    private readonly string _columnName;
+    public ColumnExpression(string columnName) => _columnName = columnName;
+
+    public object Interpret(QueryEvaluationContext context)
     {
-        // Terminal: return the literal number value
-        return _value;
+        return context.RowData.TryGetValue(_columnName, out var val) ? val : null!;
     }
 }
 
-public class AddExpression : IExpression
+public class EqualExpression : ISqlExpression
 {
-    private readonly IExpression _left;
-    private readonly IExpression _right;
+    private readonly ISqlExpression _left;
+    private readonly ISqlExpression _right;
 
-    public AddExpression(IExpression left, IExpression right)
+    public EqualExpression(ISqlExpression left, ISqlExpression right)
     {
         _left = left;
         _right = right;
     }
 
-    public int Interpret(Context context)
+    public object Interpret(QueryEvaluationContext context)
     {
-        // Non-terminal: recursively evaluate both operands and add them
-        return _left.Interpret(context) + _right.Interpret(context);
+        var leftVal = _left.Interpret(context);
+        var rightVal = _right.Interpret(context);
+        return Equals(leftVal, rightVal);
     }
 }
+```
 
-public class MultiplyExpression : IExpression
-{
-    private readonly IExpression _left;
-    private readonly IExpression _right;
+#### Usage Code Example
 
-    public MultiplyExpression(IExpression left, IExpression right)
-    {
-        _left = left;
-        _right = right;
-    }
+```csharp
+// 1. Build AST for WHERE predicate: "age = 25"
+ISqlExpression ast = new EqualExpression(
+    new ColumnExpression("age"),
+    new LiteralExpression(25)
+);
 
-    public int Interpret(Context context)
-    {
-        // Non-terminal: recursively evaluate both operands and multiply them
-        return _left.Interpret(context) * _right.Interpret(context);
-    }
-}
+// 2. Setup row evaluation context
+var context = new QueryEvaluationContext();
+context.RowData["age"] = 25;
 
-public class ExpressionParser
-{
-    public IExpression Parse(string expression)
-    {
-        // Tokenize the string and build the AST from grammar rules
-        // Returns the root IExpression node for caller to Interpret()
-        return new NumberExpression(0); // placeholder
-    }
-}
+// 3. Interpret expression node tree against row context
+bool matches = (bool)ast.Interpret(context);
+Console.WriteLine($"Row matches predicate: {matches}"); // true
 ```
 
 **Benefits**
@@ -6026,8 +6711,13 @@ sequenceDiagram
 **Purpose:**  
 Avoid coupling the sender of a request to its receiver by giving more than one object a chance to handle the request. Chain the receiving objects and pass the request along the chain until an object handles it. Each handler decides either to process the request or to forward it to the next handler in the chain.
 
-**Example:**  
-A customer support ticket routing system where tickets are passed through a chain of handlers — `L1SupportHandler` → `L2SupportHandler` → `ManagerHandler` — and each handler either resolves the ticket or escalates it to the next level.
+**Application:**  
+`OptimizationRulePipeline → IOptimizationRule (ConstantFoldingRule, PredicatePushdownRule)`
+
+**Recognition Signs:**
+- Multiple objects can handle or transform a request, and the specific handler isn't known statically or should be determined dynamically.
+- Want to issue a request to one of several objects without specifying the receiver explicitly (decoupling sender from receivers).
+- The set of handlers and their execution order should be customizable at runtime.
 
 #### Class Diagram
 
@@ -6035,46 +6725,30 @@ A customer support ticket routing system where tickets are passed through a chai
 classDiagram
 direction LR
 
-class ITicketHandler {
-    <<Handler>>
-    +SetNext(next : ITicketHandler) ITicketHandler
-    +Handle(ticket : SupportTicket) string
+class Client {
 }
 
-class BaseTicketHandler {
-    <<AbstractHandler>>
-    -next : ITicketHandler
-    +SetNext(next : ITicketHandler) ITicketHandler
-    +Handle(ticket : SupportTicket) string
+class Handler {
+    <<Interface / Abstract>>
+    #nextHandler : Handler
+    +SetNext(handler : Handler) Handler
+    +Handle(request : Request)
 }
 
-class L1SupportHandler {
-    <<ConcreteHandler>>
-    +Handle(ticket : SupportTicket) string
+class ConcreteHandlerA {
+    <<Concrete Handler>>
+    +Handle(request : Request)
 }
 
-class L2SupportHandler {
-    <<ConcreteHandler>>
-    +Handle(ticket : SupportTicket) string
+class ConcreteHandlerB {
+    <<Concrete Handler>>
+    +Handle(request : Request)
 }
 
-class ManagerHandler {
-    <<ConcreteHandler>>
-    +Handle(ticket : SupportTicket) string
-}
-
-class SupportTicket {
-    <<Request>>
-    +Priority : int
-    +Description : string
-}
-
-ITicketHandler <|.. BaseTicketHandler
-BaseTicketHandler <|-- L1SupportHandler
-BaseTicketHandler <|-- L2SupportHandler
-BaseTicketHandler <|-- ManagerHandler
-
-ITicketHandler --> ITicketHandler : next
+Client --> Handler
+Handler <|.. ConcreteHandlerA
+Handler <|.. ConcreteHandlerB
+Handler "1" o-- "1" Handler : nextHandler
 ```
 
 #### Sequence Diagram
@@ -6082,89 +6756,89 @@ ITicketHandler --> ITicketHandler : next
 ```mermaid
 sequenceDiagram
     actor Client
-    participant L1 as L1SupportHandler
-    participant L2 as L2SupportHandler
-    participant Mgr as ManagerHandler
+    participant H1 as ConcreteHandlerA
+    participant H2 as ConcreteHandlerB
 
-    Client->>L1: Handle(ticket priority=3)
-    Note over L1: priority > 1 — cannot handle
-    L1->>L2: Handle(ticket priority=3)
-    Note over L2: priority > 2 — cannot handle
-    L2->>Mgr: Handle(ticket priority=3)
-    Note over Mgr: handles all remaining tickets
-    Mgr-->>L2: "Escalated to Manager"
-    L2-->>L1: "Escalated to Manager"
-    L1-->>Client: "Escalated to Manager"
+    Client->>H1: Handle(request)
+    activate H1
+    Note over H1: Cannot process request
+    H1->>H2: Handle(request)
+    activate H2
+    Note over H2: Processes request
+    H2-->>H1: result
+    deactivate H2
+    H1-->>Client: result
+    deactivate H1
 ```
 
 #### Simplified Code
 
 ```csharp
-public interface ITicketHandler
+public class QueryPlan
 {
-    // Link this handler to the next one in the chain
-    ITicketHandler SetNext(ITicketHandler next);
-    // Process the ticket or forward it to the next handler
-    string Handle(SupportTicket ticket);
+    public string SqlPlan { get; set; } = string.Empty;
 }
 
-public abstract class BaseTicketHandler : ITicketHandler
+public interface IOptimizationRule
 {
-    private ITicketHandler? _next;
+    IOptimizationRule SetNext(IOptimizationRule next);
+    void Apply(QueryPlan plan);
+}
 
-    public ITicketHandler SetNext(ITicketHandler next)
+public abstract class BaseOptimizationRule : IOptimizationRule
+{
+    private IOptimizationRule? _next;
+
+    public IOptimizationRule SetNext(IOptimizationRule next)
     {
         _next = next;
-        return next; // allows fluent chaining: h1.SetNext(h2).SetNext(h3)
+        return next;
     }
 
-    public virtual string Handle(SupportTicket ticket)
+    public virtual void Apply(QueryPlan plan)
     {
-        // Default: forward to next handler if one exists
-        return _next?.Handle(ticket) ?? "No handler could process the ticket";
+        _next?.Apply(plan);
     }
 }
 
-public class L1SupportHandler : BaseTicketHandler
+public class ConstantFoldingRule : BaseOptimizationRule
 {
-    public override string Handle(SupportTicket ticket)
+    public override void Apply(QueryPlan plan)
     {
-        if (ticket.Priority == 1)
-            return $"L1 resolved: {ticket.Description}";
-
-        // Priority too high — pass to next handler
-        return base.Handle(ticket);
+        plan.SqlPlan = plan.SqlPlan.Replace("1 = 1", "TRUE");
+        Console.WriteLine("ConstantFoldingRule applied.");
+        base.Apply(plan);
     }
 }
 
-public class L2SupportHandler : BaseTicketHandler
+public class PredicatePushdownRule : BaseOptimizationRule
 {
-    public override string Handle(SupportTicket ticket)
+    public override void Apply(QueryPlan plan)
     {
-        if (ticket.Priority <= 2)
-            return $"L2 resolved: {ticket.Description}";
-
-        return base.Handle(ticket);
+        plan.SqlPlan = $"[Pushed Predicate] {plan.SqlPlan}";
+        Console.WriteLine("PredicatePushdownRule applied.");
+        base.Apply(plan);
     }
 }
+```
 
-public class ManagerHandler : BaseTicketHandler
-{
-    public override string Handle(SupportTicket ticket)
-    {
-        // Manager handles all tickets regardless of priority
-        return $"Manager resolved: {ticket.Description}";
-    }
-}
+#### Usage Code Example
 
-// Usage: build chain and send a ticket
-var l1 = new L1SupportHandler();
-var l2 = new L2SupportHandler();
-var mgr = new ManagerHandler();
-l1.SetNext(l2).SetNext(mgr);
+```csharp
+// 1. Instantiate optimization rules
+var folding = new ConstantFoldingRule();
+var pushdown = new PredicatePushdownRule();
 
-var ticket = new SupportTicket { Priority = 3, Description = "System outage" };
-string result = l1.Handle(ticket); // → "Manager resolved: System outage"
+// 2. Build Chain of Responsibility: ConstantFolding -> PredicatePushdown
+folding.SetNext(pushdown);
+
+// 3. Create sample QueryPlan request
+var plan = new QueryPlan { SqlPlan = "SELECT * FROM Users WHERE 1 = 1" };
+
+// 4. Pass request down the chain
+folding.Apply(plan);
+
+Console.WriteLine($"Optimized Plan: {plan.SqlPlan}");
 ```
 
 **Benefits**
@@ -6395,8 +7069,13 @@ sequenceDiagram
 **Purpose:**  
 Provide a surrogate or placeholder for another object to control access to it. The Proxy intercepts requests to the real object and can add behaviors such as lazy initialization, access control, caching, or logging before forwarding the call.
 
-**Example:**  
-A `CachedImage` proxy that holds a reference to an expensive `RealImage`. On the first `Display()` call the proxy loads the image from disk; on subsequent calls it serves the cached copy without touching the file system.
+**Application:**  
+`BufferPoolProxyPageStore (Proxy) → FileManagerPageStore (RealSubject) via IPageStore (Subject)`
+
+**Recognition Signs:**
+- Need a surrogate or placeholder for an expensive, remote, or resource-heavy object to control or optimize access to it.
+- Want to add lazy loading, caching, logging, or access control transparently behind the same interface.
+- Decouples client code from knowing whether data is fetched from local cache/RAM or expensive disk/network I/O.
 
 #### Class Diagram
 
@@ -6404,34 +7083,29 @@ A `CachedImage` proxy that holds a reference to an expensive `RealImage`. On the
 classDiagram
 direction LR
 
-class IImage {
-    <<Subject>>
-    +Display()
-}
-
-class RealImage {
-    <<RealSubject>>
-    -filename : string
-    +Load()
-    +Display()
-}
-
-class CachedImage {
-    <<Proxy>>
-    -realImage : RealImage
-    -filename : string
-    +Display()
-}
-
 class Client {
-    <<Client>>
-    +ShowImage()
 }
 
-IImage <|.. RealImage
-IImage <|.. CachedImage
-CachedImage --> RealImage : delegates to (lazy)
-Client --> IImage : uses
+class Subject {
+    <<Interface / Abstract>>
+    +Request()
+}
+
+class RealSubject {
+    <<Real Subject>>
+    +Request()
+}
+
+class Proxy {
+    <<Proxy>>
+    -realSubject : RealSubject
+    +Request()
+}
+
+Client --> Subject
+Subject <|.. RealSubject
+Subject <|.. Proxy
+Proxy --> RealSubject : controls access to
 ```
 
 #### Sequence Diagram
@@ -6439,79 +7113,73 @@ Client --> IImage : uses
 ```mermaid
 sequenceDiagram
     actor Client
-    participant Proxy as CachedImage
-    participant Real as RealImage
+    participant Proxy as Proxy
+    participant Real as RealSubject
 
-    Client->>Proxy: Display()
-    alt image not cached
-        Proxy->>Real: new RealImage(filename)
-        Real->>Real: Load() — read from disk
-        Real-->>Proxy: loaded
+    Client->>Proxy: Request()
+    activate Proxy
+    alt Cache miss / Lazy load required
+        Proxy->>Real: new RealSubject()
+        Proxy->>Real: Request()
+        activate Real
+        Real-->>Proxy: result
+        deactivate Real
+    else Cache hit
+        Note over Proxy: Return cached result
     end
-    Proxy->>Real: Display()
-    Real-->>Proxy: rendered
-    Proxy-->>Client: done
-
-    Client->>Proxy: Display()
-    Note over Proxy: image already cached
-    Proxy->>Real: Display()
-    Real-->>Proxy: rendered
-    Proxy-->>Client: done
+    Proxy-->>Client: result
+    deactivate Proxy
 ```
 
 #### Simplified Code
 
 ```csharp
-public interface IImage
+public interface IPageStore
 {
-    // Render the image to the screen
-    void Display();
+    string FetchPage(int pageId);
 }
 
-public class RealImage : IImage
+public class FileManagerPageStore : IPageStore // RealSubject
 {
-    private readonly string _filename;
-
-    public RealImage(string filename)
+    public string FetchPage(int pageId)
     {
-        _filename = filename;
-        // Expensive operation: load bytes from disk immediately on creation
-        Load();
-    }
-
-    private void Load()
-    {
-        // Read image file from disk into memory
-        Console.WriteLine($"Loading image from disk: {_filename}");
-    }
-
-    public void Display()
-    {
-        // Render the already-loaded image
-        Console.WriteLine($"Displaying image: {_filename}");
+        Console.WriteLine($"DiskIO: Reading Page {pageId} from physical disk.");
+        return $"[PageData-{pageId}]";
     }
 }
 
-public class CachedImage : IImage
+public class BufferPoolProxyPageStore : IPageStore // Proxy
 {
-    private readonly string _filename;
-    private RealImage? _realImage;   // null until first Display() call
+    private readonly FileManagerPageStore _diskStore = new();
+    private readonly Dictionary<int, string> _memoryCache = new();
 
-    public CachedImage(string filename)
+    public string FetchPage(int pageId)
     {
-        _filename = filename;
-        // Proxy is cheap to construct — no disk I/O yet
-    }
+        if (_memoryCache.TryGetValue(pageId, out var cachedData))
+        {
+            Console.WriteLine($"BufferPool: Cache Hit for Page {pageId}.");
+            return cachedData;
+        }
 
-    public void Display()
-    {
-        // On cache miss: create and load the real object
-        _realImage ??= new RealImage(_filename);
-
-        // Forward the call to the real object
-        _realImage.Display();
+        Console.WriteLine($"BufferPool: Cache Miss for Page {pageId}. Loading from Disk...");
+        var pageData = _diskStore.FetchPage(pageId);
+        _memoryCache[pageId] = pageData;
+        return pageData;
     }
 }
+```
+
+#### Usage Code Example
+
+```csharp
+// 1. Client references page store interface backed by BufferPool proxy
+IPageStore pageStore = new BufferPoolProxyPageStore();
+
+// 2. First fetch -> Cache Miss (fetches from physical disk)
+string page1 = pageStore.FetchPage(101);
+
+// 3. Second fetch -> Cache Hit (served instantly from RAM cache)
+string page1Cached = pageStore.FetchPage(101);
 ```
 
 **Benefits**
