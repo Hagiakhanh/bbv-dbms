@@ -10,3 +10,6 @@
 
 # Authentication and Authorization
 ![alt text](authen-author.png)
+
+# JWT
+![alt text](jwt.png)
