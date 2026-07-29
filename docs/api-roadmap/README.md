@@ -7,3 +7,6 @@
 
 # GraphQL
 ![alt text](graphql.png)
+
+# Authentication and Authorization
+![alt text](authen-author.png)
