@@ -1,3 +1,7 @@
+﻿using DBMS.Domain;
+using DBMS.Application;
+using DBMS.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
 
 namespace DBMS.API
 {
@@ -8,29 +12,27 @@ namespace DBMS.API
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
-
             builder.Services.AddControllers();
-
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
-            // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-            //builder.Services.AddOpenApi();
+            // Đăng ký Dependency Injection từ các tầng Clean Architecture
+            builder.Services
+               .AddDomainServices()             // DBMS.Domain
+               .AddApplicationServices()        // DBMS.Application
+               .AddInfrastructureServices();    // DBMS.Infrastructure
 
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
-                //app.MapOpenApi();
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
 
             app.UseHttpsRedirection();
-
             app.UseAuthorization();
-
 
             app.MapControllers();
             app.MapGet("/", () => Results.Redirect("/swagger"));

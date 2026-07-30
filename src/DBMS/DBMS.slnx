@@ -1,5 +1,7 @@
 <Solution>
   <Project Path="DBMS.API/DBMS.API.csproj" Id="73822f9c-4273-44d4-904e-ffda0468bf7b" />
+  <Project Path="DBMS.Application/DBMS.Application.csproj" Id="e9530a98-606f-4328-a06c-b81d7fa06686" />
   <Project Path="DBMS.Domain/DBMS.Domain.csproj" />
+  <Project Path="DBMS.Infrastructure/DBMS.Infrastructure.csproj" Id="99803eef-e28c-4e0a-95d0-8b706975b6b1" />
   <Project Path="DBMS.Tests/DBMS.Tests.csproj" />
 </Solution>
