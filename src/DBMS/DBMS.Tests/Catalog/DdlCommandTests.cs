@@ -1,7 +1,4 @@
 using System;
-using DBMS.Domain.Catalog.Builder;
-using DBMS.Domain.Catalog.Composite;
-using DBMS.Domain.Command;
 using DBMS.Domain.Services;
 using FluentAssertions;
 using Moq;

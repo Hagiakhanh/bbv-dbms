@@ -1,5 +1,4 @@
 using System;
-using DBMS.Domain.Catalog.Observer;
 using FluentAssertions;
 using Moq;
 using Xunit;

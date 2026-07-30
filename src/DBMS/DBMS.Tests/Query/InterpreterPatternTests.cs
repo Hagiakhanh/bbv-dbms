@@ -1,7 +1,6 @@
 using System;
 using DBMS.Domain.Catalog;
 using DBMS.Domain.Exceptions;
-using DBMS.Domain.Query;
 using FluentAssertions;
 using Moq;
 using Xunit;

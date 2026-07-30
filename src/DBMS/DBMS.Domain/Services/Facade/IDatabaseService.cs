@@ -1,4 +1,3 @@
-using DBMS.Domain.Catalog.Composite;
 
 namespace DBMS.Domain.Services.Facade;
 

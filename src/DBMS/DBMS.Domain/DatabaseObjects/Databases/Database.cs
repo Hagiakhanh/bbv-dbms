@@ -1,0 +1,69 @@
+using System;
+using System.Collections.Generic;
+using DBMS.Domain.Storage;
+
+namespace DBMS.Domain.DatabaseObjects.Databases;
+
+public class Database : ICatalogComposite, IIterableCatalog
+{
+    private readonly List<Schema> _schemas;
+
+    public int DatabaseId { get; private set; }
+    public string Name { get; private set; }
+    public string Owner { get; private set; }
+    public IReadOnlyList<Schema> Schemas => _schemas;
+    
+    public IReadOnlyCollection<ICatalogComponent> Children => _schemas;
+
+    public ICatalogIterator CreateIterator()
+    {
+        throw new NotImplementedException();
+    }
+
+    public Database(int id, string name, string owner)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Database name cannot be empty.", nameof(name));
+
+        DatabaseId = id;
+        Name = name;
+        Owner = owner;
+        _schemas = new List<Schema>();
+    }
+
+    public Database()
+    {
+        _schemas = new List<Schema>();
+    }
+
+    public void AddSchema(Schema schema)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void RemoveSchema(string name)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Schema GetSchema(string name)
+    {
+        throw new NotImplementedException();
+    }
+
+    public IReadOnlyList<Schema> GetSchemas()
+    {
+        throw new NotImplementedException();
+    }
+
+    public void Backup(string path, IFileManager fileManager)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void Restore(string path, IFileManager fileManager)
+    {
+        throw new NotImplementedException();
+    }
+}
+

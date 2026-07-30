@@ -1,5 +1,4 @@
 using System;
-using DBMS.Domain.Query;
 using FluentAssertions;
 using Xunit;
 

@@ -1,8 +1,5 @@
 using System;
 using DBMS.Domain.Catalog;
-using DBMS.Domain.Catalog.Builder;
-using DBMS.Domain.Catalog.Composite;
-using DBMS.Domain.Catalog.Factory;
 using DBMS.Domain.Exceptions;
 using DBMS.Domain.Security;
 using DBMS.Domain.Services;

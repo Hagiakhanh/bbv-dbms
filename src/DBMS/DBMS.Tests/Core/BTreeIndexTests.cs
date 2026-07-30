@@ -1,5 +1,4 @@
 using System;
-using DBMS.Domain.Catalog.Strategy;
 using DBMS.Domain.Core;
 using FluentAssertions;
 using Xunit;
