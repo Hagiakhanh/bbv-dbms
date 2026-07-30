@@ -1,6 +1,4 @@
 using System;
-using DBMS.Domain.Query;
-using DBMS.Domain.Query.ChainOfResponsibility;
 using FluentAssertions;
 using Xunit;
 

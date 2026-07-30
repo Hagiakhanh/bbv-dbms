@@ -1,5 +1,4 @@
 using System;
-using DBMS.Domain.Query;
 using DBMS.Domain.Transactions;
 using FluentAssertions;
 using Xunit;

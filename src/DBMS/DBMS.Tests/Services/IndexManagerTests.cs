@@ -1,11 +1,10 @@
 using System;
-using DBMS.Domain.Catalog.Strategy;
 using DBMS.Domain.Exceptions;
 using DBMS.Domain.Services;
 using FluentAssertions;
 using Moq;
 using Xunit;
-using QueryModel = DBMS.Domain.Query.Query;
+using QueryModel = DBMS.Domain.QueryProcessing.Models.Query;
 
 namespace DBMS.Tests.Services;
 

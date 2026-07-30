@@ -16,7 +16,7 @@ public class DatabaseTests
     {
         var db = new Database(1, "TestDB", "Admin");
         
-        var schema = new DBMS.Domain.Catalog.Composite.Schema("dbo"); db.AddSchema(schema);
+        var schema = new Schema("dbo"); db.AddSchema(schema);
 
         schema.Should().NotBeNull();
         schema.Name.Should().Be("dbo");
@@ -29,8 +29,8 @@ public class DatabaseTests
         var db = new Database(1, "TestDB", "Admin");
         
         Action act = () => {
-            db.AddSchema(new DBMS.Domain.Catalog.Composite.Schema("dbo"));
-            db.AddSchema(new DBMS.Domain.Catalog.Composite.Schema("dbo"));
+            db.AddSchema(new Schema("dbo"));
+            db.AddSchema(new Schema("dbo"));
         };
 
         act.Should().Throw<DuplicateSchemaException>();
@@ -43,7 +43,7 @@ public class DatabaseTests
         
         // Arrange (Assuming some SecurityContext or SecurityManager integration will be added)
         // For red phase, this will fail or throw NotImplementedException
-        Action act = () => db.AddSchema(new DBMS.Domain.Catalog.Composite.Schema("dbo"));
+        Action act = () => db.AddSchema(new Schema("dbo"));
 
         act.Should().Throw<PermissionDeniedException>();
     }
@@ -54,7 +54,7 @@ public class DatabaseTests
         var db = new Database(1, "TestDB", "Admin");
         
         // Arrange: mock catalog to fail
-        Action act = () => db.AddSchema(new DBMS.Domain.Catalog.Composite.Schema("dbo"));
+        Action act = () => db.AddSchema(new Schema("dbo"));
 
         act.Should().Throw<CatalogException>();
         db.Schemas.Should().BeEmpty(); // Verify rollback
@@ -66,7 +66,7 @@ public class DatabaseTests
         var db = new Database(1, "TestDB", "Admin");
 
         Action act = () => {
-            db.AddSchema(new DBMS.Domain.Catalog.Composite.Schema("temp"));
+            db.AddSchema(new Schema("temp"));
             db.RemoveSchema("temp");
         };
         

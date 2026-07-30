@@ -1,8 +1,5 @@
 using Xunit;
 using FluentAssertions;
-using DBMS.Domain.Catalog.Composite;
-using DBMS.Domain.Catalog.Template;
-using DBMS.Domain.Catalog.Strategy;
 
 namespace DBMS.Tests.Catalog;
 

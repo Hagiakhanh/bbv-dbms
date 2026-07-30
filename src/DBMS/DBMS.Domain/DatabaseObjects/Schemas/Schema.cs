@@ -1,0 +1,105 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace DBMS.Domain.DatabaseObjects.Schemas;
+
+public class Schema : ICatalogComposite, IIterableCatalog
+{
+    public int SchemaId { get; private set; }
+    public string Name { get; private set; }
+    public Database Parent { get; set; }
+    
+    private readonly List<Table> _tables = new();
+    public IReadOnlyCollection<Table> Tables => _tables.AsReadOnly();
+    
+    private readonly List<View> _views = new();
+    public IReadOnlyCollection<View> Views => _views.AsReadOnly();
+    
+    private readonly List<StoredProcedure> _procedures = new();
+    public IReadOnlyCollection<StoredProcedure> Procedures => _procedures.AsReadOnly();
+    
+    private readonly List<Sequence> _sequences = new();
+    public IReadOnlyCollection<Sequence> Sequences => _sequences.AsReadOnly();
+    
+    public IReadOnlyCollection<ICatalogComponent> Children 
+    {
+        get
+        {
+            var children = new List<ICatalogComponent>();
+            children.AddRange(_tables);
+            children.AddRange(_views);
+            children.AddRange(_procedures);
+            children.AddRange(_sequences);
+            return children.AsReadOnly();
+        }
+    }
+
+    public ICatalogIterator CreateIterator()
+    {
+        throw new NotImplementedException();
+    }
+
+    public Schema(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Schema name cannot be empty", nameof(name));
+        Name = name;
+    }
+
+    public void AddTable(Table table)
+    {
+        // if (table == null) throw new ArgumentNullException(nameof(table));
+        // if (_tables.Any(t => t.Name == table.Name))
+        //     throw new Exception($"Duplicate table name: {table.Name}");
+        // _tables.Add(table);
+        throw new NotImplementedException();
+    }
+
+    public void RemoveTable(string name)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Table GetTable(string name)
+    {
+        // return _tables.FirstOrDefault(t => t.Name == name);
+        throw new NotImplementedException();
+    }
+
+    public IReadOnlyCollection<Table> GetTables()
+    {
+        // return Tables;
+        throw new NotImplementedException();
+    }
+
+    public void AddView(View view)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void RemoveView(string name)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void AddProcedure(StoredProcedure proc)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void RemoveProcedure(string name)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void AddSequence(Sequence seq)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void RemoveSequence(string name)
+    {
+        throw new NotImplementedException();
+    }
+}
+

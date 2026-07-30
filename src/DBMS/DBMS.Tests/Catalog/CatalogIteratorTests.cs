@@ -1,6 +1,4 @@
 using System;
-using DBMS.Domain.Catalog.Composite;
-using DBMS.Domain.Catalog.Iterator;
 using FluentAssertions;
 using Xunit;
 

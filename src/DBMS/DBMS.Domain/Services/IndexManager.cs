@@ -7,9 +7,9 @@ namespace DBMS.Domain.Services;
 
 public class IndexManager
 {
-    private readonly Dictionary<string, DBMS.Domain.Catalog.Strategy.Index> _indexes = new();
+    private readonly Dictionary<string, Index> _indexes = new();
 
-    public void Register(DBMS.Domain.Catalog.Strategy.Index index)
+    public void Register(Index index)
     {
         throw new NotImplementedException();
     }
@@ -19,19 +19,18 @@ public class IndexManager
         throw new NotImplementedException();
     }
 
-    public DBMS.Domain.Catalog.Strategy.Index Find(string name)
+    public Index Find(string name)
     {
         throw new NotImplementedException();
     }
 
-    public DBMS.Domain.Catalog.Strategy.Index FindBestIndex(DBMS.Domain.Query.Query query)
+    public Index FindBestIndex(Query query)
     {
         throw new NotImplementedException();
     }
 
-    public void Rebuild(DBMS.Domain.Catalog.Strategy.Index index)
+    public void Rebuild(Index index)
     {
         throw new NotImplementedException();
     }
 }
-

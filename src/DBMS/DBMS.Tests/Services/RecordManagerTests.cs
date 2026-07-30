@@ -1,5 +1,4 @@
 using System;
-using DBMS.Domain.Catalog.Composite;
 using DBMS.Domain.Core;
 using DBMS.Domain.Exceptions;
 using DBMS.Domain.Services;
