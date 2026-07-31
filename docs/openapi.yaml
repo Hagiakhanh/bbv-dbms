@@ -1,0 +1,636 @@
+openapi: 3.0.1
+info:
+  title: DBMS System API Documentation
+  description: '## 🗄️ Database Management System (DBMS) API Documentation
+
+
+    Interactive API specification and testing documentation for the **DBMS Core Engine**.
+
+
+    ### 🌟 Key Functional Modules:
+
+    1. **Databases**: Create, query, update, rename, and remove databases in the catalog.
+
+    2. **Schemas**: Create, list, get, rename, and drop database schemas.
+
+    3. **Columns**: Add, list, get, update, and drop table columns.
+
+    4. **Tables**: Define data structures, tables, and constraints.
+
+    5. **Queries & Transactions**: Execute SQL queries, manage user sessions, and
+    handle ACID transactions.
+
+    6. **Auth & Security**: User authentication, role management, and access permission
+    control.
+
+
+    ---
+
+    *Note: Select any endpoint below and click **Try it out** to execute live API
+    calls.*'
+  version: v1.0.0
+  contact:
+    name: DBMS Engine Development Team
+    url: https://github.com/
+tags:
+- name: Databases
+  description: API endpoints for managing system database catalogs and metadata
+- name: Schemas
+  description: API endpoints for managing database schemas
+- name: Columns
+  description: API endpoints for managing table columns and data types
+paths:
+  /api/Databases:
+    get:
+      tags:
+      - Databases
+      summary: Retrieve all registered databases
+      description: Returns a list of all databases currently registered in the DBMS
+        catalog.
+      operationId: GetDatabases
+      responses:
+        '200':
+          description: Databases retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DatabaseDto'
+    post:
+      tags:
+      - Databases
+      summary: Create a new database
+      description: Initializes a new database in the catalog with the specified name
+        and owner.
+      operationId: CreateDatabase
+      requestBody:
+        description: Payload required to create a new database
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDatabaseRequest'
+      responses:
+        '201':
+          description: Database created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseDto'
+        '400':
+          description: Invalid or missing database name
+        '409':
+          description: Database with the given name already exists
+  /api/Databases/{name}:
+    get:
+      tags:
+      - Databases
+      summary: Get database details by name
+      description: Fetches metadata and details (ID, owner, schema count) for a database
+        by its unique name.
+      operationId: GetDatabaseByName
+      parameters:
+      - name: name
+        in: path
+        description: Unique name of the database to look up (e.g., master, SalesDb)
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Database found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseDto'
+        '404':
+          description: Database not found with the specified name
+    patch:
+      tags:
+      - Databases
+      summary: Rename or update a database
+      description: Updates the name or owner of an existing database.
+      operationId: UpdateDatabase
+      parameters:
+      - name: name
+        in: path
+        description: Current name of the database to update
+        required: true
+        schema:
+          type: string
+      requestBody:
+        description: Payload with new name or new owner
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDatabaseRequest'
+      responses:
+        '200':
+          description: Database updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseDto'
+        '404':
+          description: Database not found
+        '409':
+          description: New database name already exists
+    delete:
+      tags:
+      - Databases
+      summary: Remove a database
+      description: Deletes a database from the system catalog.
+      operationId: DropDatabase
+      parameters:
+      - name: name
+        in: path
+        description: Name of the database to delete
+        required: true
+        schema:
+          type: string
+      responses:
+        '204':
+          description: Database deleted successfully
+        '400':
+          description: System database cannot be deleted
+        '404':
+          description: Database not found
+  /api/Schemas:
+    get:
+      tags:
+      - Schemas
+      summary: List all schemas in a database
+      description: Retrieves the list of schemas (optionally filtered by databaseName).
+      operationId: GetSchemas
+      parameters:
+      - name: databaseName
+        in: query
+        description: Name of the target database (defaults to 'master')
+        required: false
+        schema:
+          type: string
+          default: master
+      responses:
+        '200':
+          description: Schemas retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SchemaDto'
+        '404':
+          description: Target database not found
+    post:
+      tags:
+      - Schemas
+      summary: Create a new schema
+      description: Creates a new schema inside the specified database.
+      operationId: CreateSchema
+      requestBody:
+        description: Payload required to create a new schema
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSchemaRequest'
+      responses:
+        '201':
+          description: Schema created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemaDto'
+        '400':
+          description: Invalid schema name
+        '404':
+          description: Target database not found
+        '409':
+          description: Schema name already exists in this database
+  /api/Schemas/{name}:
+    get:
+      tags:
+      - Schemas
+      summary: Get schema details by name
+      description: Retrieves detailed information about a schema by its name.
+      operationId: GetSchemaByName
+      parameters:
+      - name: name
+        in: path
+        description: Name of the schema (e.g., dbo, public)
+        required: true
+        schema:
+          type: string
+      - name: databaseName
+        in: query
+        description: Name of the parent database (optional)
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Schema found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemaDto'
+        '404':
+          description: Schema not found
+    patch:
+      tags:
+      - Schemas
+      summary: Rename an existing schema
+      description: Renames a specified schema to a new name.
+      operationId: RenameSchema
+      parameters:
+      - name: name
+        in: path
+        description: Current name of the schema to rename
+        required: true
+        schema:
+          type: string
+      requestBody:
+        description: Payload containing the new schema name
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RenameSchemaRequest'
+      responses:
+        '200':
+          description: Schema renamed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemaDto'
+        '400':
+          description: Invalid new schema name
+        '404':
+          description: Schema not found
+    delete:
+      tags:
+      - Schemas
+      summary: Remove a schema
+      description: Deletes a specified schema from the database.
+      operationId: DropSchema
+      parameters:
+      - name: name
+        in: path
+        description: Name of the schema to delete
+        required: true
+        schema:
+          type: string
+      responses:
+        '204':
+          description: Schema deleted successfully
+        '404':
+          description: Schema not found
+  /api/tables/{tableName}/columns:
+    get:
+      tags:
+      - Columns
+      summary: List all columns in a table
+      description: Retrieves all columns belonging to the specified table.
+      operationId: GetColumns
+      parameters:
+      - name: tableName
+        in: path
+        description: Name of the parent table (e.g., Users)
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Columns retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ColumnDto'
+    post:
+      tags:
+      - Columns
+      summary: Add a new column to a table
+      description: Creates and appends a new column to the specified table definition.
+      operationId: AddColumn
+      parameters:
+      - name: tableName
+        in: path
+        description: Name of the target table (e.g., Users)
+        required: true
+        schema:
+          type: string
+      requestBody:
+        description: Payload for creating a column
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateColumnRequest'
+      responses:
+        '201':
+          description: Column added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColumnDto'
+        '400':
+          description: Invalid column parameters
+        '409':
+          description: Column name already exists in this table
+  /api/tables/{tableName}/columns/{name}:
+    get:
+      tags:
+      - Columns
+      summary: Get column details by name
+      description: Retrieves details of a specific column in a table.
+      operationId: GetColumnByName
+      parameters:
+      - name: tableName
+        in: path
+        description: Name of the parent table
+        required: true
+        schema:
+          type: string
+      - name: name
+        in: path
+        description: Name of the column (e.g., Id, Email)
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Column found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColumnDto'
+        '404':
+          description: Column not found
+    patch:
+      tags:
+      - Columns
+      summary: Update a column definition
+      description: Updates the name, data type, or nullability of a column in a table.
+      operationId: UpdateColumn
+      parameters:
+      - name: tableName
+        in: path
+        description: Name of the parent table
+        required: true
+        schema:
+          type: string
+      - name: name
+        in: path
+        description: Current name of the column to update
+        required: true
+        schema:
+          type: string
+      requestBody:
+        description: Payload containing updated column attributes
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateColumnRequest'
+      responses:
+        '200':
+          description: Column updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColumnDto'
+        '404':
+          description: Column not found
+    delete:
+      tags:
+      - Columns
+      summary: Remove a column from a table
+      description: Deletes a column from the specified table.
+      operationId: DropColumn
+      parameters:
+      - name: tableName
+        in: path
+        description: Name of the parent table
+        required: true
+        schema:
+          type: string
+      - name: name
+        in: path
+        description: Name of the column to remove
+        required: true
+        schema:
+          type: string
+      responses:
+        '204':
+          description: Column deleted successfully
+        '404':
+          description: Column not found
+components:
+  schemas:
+    CreateDatabaseRequest:
+      type: object
+      description: Request payload for creating a new database
+      properties:
+        name:
+          type: string
+          description: Name of the database to create
+          nullable: false
+          example: SalesDb
+        owner:
+          type: string
+          description: Account name of the database owner (defaults to 'sa')
+          nullable: true
+          default: sa
+          example: sa
+      additionalProperties: false
+    UpdateDatabaseRequest:
+      type: object
+      description: Request payload for updating or renaming a database
+      properties:
+        newName:
+          type: string
+          description: New name for the database
+          nullable: true
+          example: SalesDb_V2
+        newOwner:
+          type: string
+          description: New owner for the database
+          nullable: true
+          example: admin
+      additionalProperties: false
+    DatabaseDto:
+      type: object
+      description: Database details DTO returned to the client
+      properties:
+        databaseId:
+          type: integer
+          format: int32
+          description: Unique database identifier
+          example: 1
+        name:
+          type: string
+          description: Name of the database
+          nullable: false
+          example: SalesDb
+        owner:
+          type: string
+          description: Account name of the database owner
+          nullable: false
+          example: sa
+        schemaCount:
+          type: integer
+          format: int32
+          description: Number of schemas contained in the database
+          example: 0
+      additionalProperties: false
+    CreateSchemaRequest:
+      type: object
+      description: Request payload for creating a new schema
+      properties:
+        databaseName:
+          type: string
+          description: Name of the target database
+          nullable: false
+          default: master
+          example: master
+        name:
+          type: string
+          description: Name of the schema to create
+          nullable: false
+          example: public
+        owner:
+          type: string
+          description: Owner of the schema
+          nullable: true
+          default: dbo
+          example: dbo
+      additionalProperties: false
+    RenameSchemaRequest:
+      type: object
+      description: Request payload for renaming a schema
+      properties:
+        newName:
+          type: string
+          description: New name for the schema
+          nullable: false
+          example: sales_public
+      additionalProperties: false
+    SchemaDto:
+      type: object
+      description: Schema details DTO returned to the client
+      properties:
+        schemaId:
+          type: integer
+          format: int32
+          description: Unique schema identifier
+          example: 1
+        name:
+          type: string
+          description: Name of the schema
+          nullable: false
+          example: public
+        owner:
+          type: string
+          description: Owner of the schema
+          nullable: false
+          example: dbo
+        databaseName:
+          type: string
+          description: Name of the parent database
+          nullable: false
+          example: master
+        tableCount:
+          type: integer
+          format: int32
+          description: Number of tables in the schema
+          example: 0
+      additionalProperties: false
+    CreateColumnRequest:
+      type: object
+      description: Request payload for adding a new column
+      properties:
+        name:
+          type: string
+          description: Name of the column
+          nullable: false
+          example: Email
+        dataType:
+          type: string
+          description: Data type (INT, BIGINT, VARCHAR, BOOLEAN, FLOAT, DATETIME)
+          nullable: false
+          default: VARCHAR
+          example: VARCHAR
+        isNullable:
+          type: boolean
+          description: Whether the column allows NULL values
+          default: true
+          example: true
+        defaultValue:
+          type: string
+          description: Default value for the column
+          nullable: true
+          example: ''
+      additionalProperties: false
+    UpdateColumnRequest:
+      type: object
+      description: Request payload for updating a column definition
+      properties:
+        newName:
+          type: string
+          description: New name for the column
+          nullable: true
+          example: UserEmail
+        dataType:
+          type: string
+          description: New data type for the column
+          nullable: true
+          example: VARCHAR
+        isNullable:
+          type: boolean
+          description: New nullability setting
+          nullable: true
+          example: true
+        defaultValue:
+          type: string
+          description: New default value
+          nullable: true
+          example: ''
+      additionalProperties: false
+    ColumnDto:
+      type: object
+      description: Column details DTO returned to the client
+      properties:
+        columnId:
+          type: integer
+          format: int32
+          description: Unique column identifier
+          example: 1
+        name:
+          type: string
+          description: Name of the column
+          nullable: false
+          example: Id
+        tableName:
+          type: string
+          description: Name of the parent table
+          nullable: false
+          example: Users
+        dataType:
+          type: string
+          description: Data type of the column
+          nullable: false
+          example: INT
+        isNullable:
+          type: boolean
+          description: Whether the column allows NULL values
+          example: false
+        defaultValue:
+          type: string
+          description: Default value of the column
+          nullable: true
+          example: '0'
+      additionalProperties: false
