@@ -1,8 +1,8 @@
-using DBMS.API.DTOs;
-using DBMS.API.Repositories;
+using DBMS.API.DTOs.Databases;
+using DBMS.API.Repositories.Databases;
 using DBMS.Domain.DatabaseObjects.Databases;
 
-namespace DBMS.API.Services
+namespace DBMS.API.Services.Databases
 {
     public class DatabaseService : IDatabaseService
     {
@@ -42,6 +42,17 @@ namespace DBMS.API.Services
         {
             var database = await _databaseRepository.GetByNameAsync(name, cancellationToken);
             return database == null ? null : MapToDto(database);
+        }
+
+        public async Task<DatabaseDto> UpdateDatabaseAsync(string name, UpdateDatabaseRequest request, CancellationToken cancellationToken = default)
+        {
+            var updatedDb = await _databaseRepository.UpdateAsync(name, request.NewName, request.NewOwner, cancellationToken);
+            return MapToDto(updatedDb);
+        }
+
+        public async Task<bool> DropDatabaseAsync(string name, CancellationToken cancellationToken = default)
+        {
+            return await _databaseRepository.DropAsync(name, cancellationToken);
         }
 
         private static DatabaseDto MapToDto(Database db)

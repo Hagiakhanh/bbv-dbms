@@ -1,5 +1,7 @@
-using DBMS.API.Repositories;
-using DBMS.API.Services;
+using DBMS.API.Repositories.Databases;
+using DBMS.API.Repositories.Schemas;
+using DBMS.API.Services.Databases;
+using DBMS.API.Services.Schemas;
 using DBMS.Domain;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,9 +21,13 @@ namespace DBMS.API
             // Đăng ký các Domain Services (lõi DBMS)
             builder.Services.AddDomainServices();
 
-            // Đăng ký Repositories và Services của 3-Layer API
+            // Đăng ký Database Repositories và Services
             builder.Services.AddSingleton<IDatabaseRepository, InMemoryDatabaseRepository>();
             builder.Services.AddScoped<IDatabaseService, DatabaseService>();
+
+            // Đăng ký Schema Repositories và Services
+            builder.Services.AddSingleton<ISchemaRepository, InMemorySchemaRepository>();
+            builder.Services.AddScoped<ISchemaService, SchemaService>();
 
             var app = builder.Build();
 
@@ -42,4 +48,3 @@ namespace DBMS.API
         }
     }
 }
-
