@@ -1,3 +1,9 @@
+# Clean Code
+![alt text](clean-code-1.png) ![alt text](clean-code-2.png) ![alt text](clean-code-3.png)
+
+# Solid
+![alt text](solid.png)
+
 # ASP.NET CORE
 ![alt text](asp.net-core.png)
 
