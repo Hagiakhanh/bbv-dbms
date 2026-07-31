@@ -2,7 +2,7 @@
   "openapi": "3.0.1",
   "info": {
     "title": "DBMS System API Documentation",
-    "description": "## 🗄️ Database Management System (DBMS) API Documentation\n\nInteractive API specification and testing documentation for the **DBMS Core Engine**.\n\n### 🌟 Key Functional Modules:\n1. **Databases**: Create, query, update, rename, and remove databases in the catalog.\n2. **Schemas**: Create, list, get, rename, and drop database schemas.\n3. **Tables & Columns**: Define data structures, tables, columns, and constraints.\n4. **Queries & Transactions**: Execute SQL queries, manage user sessions, and handle ACID transactions.\n5. **Auth & Security**: User authentication, role management, and access permission control.\n\n---\n*Note: Select any endpoint below and click **Try it out** to execute live API calls.*",
+    "description": "## 🗄️ Database Management System (DBMS) API Documentation\n\nInteractive API specification and testing documentation for the **DBMS Core Engine**.\n\n### 🌟 Key Functional Modules:\n1. **Databases**: Create, query, update, rename, and remove databases in the catalog.\n2. **Schemas**: Create, list, get, rename, and drop database schemas.\n3. **Columns**: Add, list, get, update, and drop table columns.\n4. **Tables**: Define data structures, tables, and constraints.\n5. **Queries & Transactions**: Execute SQL queries, manage user sessions, and handle ACID transactions.\n6. **Auth & Security**: User authentication, role management, and access permission control.\n\n---\n*Note: Select any endpoint below and click **Try it out** to execute live API calls.*",
     "version": "v1.0.0",
     "contact": {
       "name": "DBMS Engine Development Team",
@@ -17,6 +17,10 @@
     {
       "name": "Schemas",
       "description": "API endpoints for managing database schemas"
+    },
+    {
+      "name": "Columns",
+      "description": "API endpoints for managing table columns and data types"
     }
   ],
   "paths": {
@@ -395,6 +399,225 @@
           }
         }
       }
+    },
+    "/api/tables/{tableName}/columns": {
+      "get": {
+        "tags": [
+          "Columns"
+        ],
+        "summary": "List all columns in a table",
+        "description": "Retrieves all columns belonging to the specified table.",
+        "operationId": "GetColumns",
+        "parameters": [
+          {
+            "name": "tableName",
+            "in": "path",
+            "description": "Name of the parent table (e.g., Users)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Columns retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ColumnDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Columns"
+        ],
+        "summary": "Add a new column to a table",
+        "description": "Creates and appends a new column to the specified table definition.",
+        "operationId": "AddColumn",
+        "parameters": [
+          {
+            "name": "tableName",
+            "in": "path",
+            "description": "Name of the target table (e.g., Users)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Payload for creating a column",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateColumnRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Column added successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ColumnDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid column parameters"
+          },
+          "409": {
+            "description": "Column name already exists in this table"
+          }
+        }
+      }
+    },
+    "/api/tables/{tableName}/columns/{name}": {
+      "get": {
+        "tags": [
+          "Columns"
+        ],
+        "summary": "Get column details by name",
+        "description": "Retrieves details of a specific column in a table.",
+        "operationId": "GetColumnByName",
+        "parameters": [
+          {
+            "name": "tableName",
+            "in": "path",
+            "description": "Name of the parent table",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "Name of the column (e.g., Id, Email)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Column found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ColumnDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Column not found"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Columns"
+        ],
+        "summary": "Update a column definition",
+        "description": "Updates the name, data type, or nullability of a column in a table.",
+        "operationId": "UpdateColumn",
+        "parameters": [
+          {
+            "name": "tableName",
+            "in": "path",
+            "description": "Name of the parent table",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "Current name of the column to update",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Payload containing updated column attributes",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateColumnRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Column updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ColumnDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Column not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Columns"
+        ],
+        "summary": "Remove a column from a table",
+        "description": "Deletes a column from the specified table.",
+        "operationId": "DropColumn",
+        "parameters": [
+          {
+            "name": "tableName",
+            "in": "path",
+            "description": "Name of the parent table",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "Name of the column to remove",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Column deleted successfully"
+          },
+          "404": {
+            "description": "Column not found"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -542,6 +765,111 @@
             "format": "int32",
             "description": "Number of tables in the schema",
             "example": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreateColumnRequest": {
+        "type": "object",
+        "description": "Request payload for adding a new column",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the column",
+            "nullable": false,
+            "example": "Email"
+          },
+          "dataType": {
+            "type": "string",
+            "description": "Data type (INT, BIGINT, VARCHAR, BOOLEAN, FLOAT, DATETIME)",
+            "nullable": false,
+            "default": "VARCHAR",
+            "example": "VARCHAR"
+          },
+          "isNullable": {
+            "type": "boolean",
+            "description": "Whether the column allows NULL values",
+            "default": true,
+            "example": true
+          },
+          "defaultValue": {
+            "type": "string",
+            "description": "Default value for the column",
+            "nullable": true,
+            "example": ""
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateColumnRequest": {
+        "type": "object",
+        "description": "Request payload for updating a column definition",
+        "properties": {
+          "newName": {
+            "type": "string",
+            "description": "New name for the column",
+            "nullable": true,
+            "example": "UserEmail"
+          },
+          "dataType": {
+            "type": "string",
+            "description": "New data type for the column",
+            "nullable": true,
+            "example": "VARCHAR"
+          },
+          "isNullable": {
+            "type": "boolean",
+            "description": "New nullability setting",
+            "nullable": true,
+            "example": true
+          },
+          "defaultValue": {
+            "type": "string",
+            "description": "New default value",
+            "nullable": true,
+            "example": ""
+          }
+        },
+        "additionalProperties": false
+      },
+      "ColumnDto": {
+        "type": "object",
+        "description": "Column details DTO returned to the client",
+        "properties": {
+          "columnId": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Unique column identifier",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the column",
+            "nullable": false,
+            "example": "Id"
+          },
+          "tableName": {
+            "type": "string",
+            "description": "Name of the parent table",
+            "nullable": false,
+            "example": "Users"
+          },
+          "dataType": {
+            "type": "string",
+            "description": "Data type of the column",
+            "nullable": false,
+            "example": "INT"
+          },
+          "isNullable": {
+            "type": "boolean",
+            "description": "Whether the column allows NULL values",
+            "example": false
+          },
+          "defaultValue": {
+            "type": "string",
+            "description": "Default value of the column",
+            "nullable": true,
+            "example": "0"
           }
         },
         "additionalProperties": false

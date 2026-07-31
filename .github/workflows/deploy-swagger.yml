@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - master
+      - implement-design-pattern
 
 permissions:
   contents: read
