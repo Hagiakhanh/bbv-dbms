@@ -1,8 +1,8 @@
-using DBMS.Application.DTOs;
+using DBMS.API.DTOs;
+using DBMS.API.Repositories;
 using DBMS.Domain.DatabaseObjects.Databases;
-using DBMS.Domain.Interfaces;
 
-namespace DBMS.Application.Services
+namespace DBMS.API.Services
 {
     public class DatabaseService : IDatabaseService
     {

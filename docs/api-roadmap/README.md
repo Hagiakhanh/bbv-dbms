@@ -1,6 +1,4 @@
-# MVP should be implemented first.
-
-# DBMS API MVP Documentation
+# DBMS API MVP Documentation MVP should be implemented first.
 
 ## 1. Authentication and Authorization APIs
 

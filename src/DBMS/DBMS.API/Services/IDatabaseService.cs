@@ -1,6 +1,6 @@
-using DBMS.Application.DTOs;
+using DBMS.API.DTOs;
 
-namespace DBMS.Application.Services
+namespace DBMS.API.Services
 {
     public interface IDatabaseService
     {

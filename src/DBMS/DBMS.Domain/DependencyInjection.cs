@@ -1,7 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DBMS.Domain
 {
@@ -9,10 +6,10 @@ namespace DBMS.Domain
     {
         public static IServiceCollection AddDomainServices(
            this IServiceCollection services)
-
         {
-            
             return services;
         }
     }
 }
+
+

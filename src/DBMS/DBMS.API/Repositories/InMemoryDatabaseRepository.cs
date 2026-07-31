@@ -1,8 +1,7 @@
 using DBMS.Domain.DatabaseObjects.Databases;
-using DBMS.Domain.Interfaces;
 using System.Collections.Concurrent;
 
-namespace DBMS.Infrastructure.Persistence.Repositories
+namespace DBMS.API.Repositories
 {
     public class InMemoryDatabaseRepository : IDatabaseRepository
     {
