@@ -1,7 +1,9 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Text;
+
+using DBMS.Application.Services;
 
 namespace DBMS.Application
 {
@@ -9,7 +11,7 @@ namespace DBMS.Application
     {
         public static IServiceCollection AddApplicationServices(this IServiceCollection services)
         {
-
+            services.AddScoped<IDatabaseService, DatabaseService>();
             return services;
         }
 
