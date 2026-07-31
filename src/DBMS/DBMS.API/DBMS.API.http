@@ -85,3 +85,49 @@ Content-Type: application/json
 DELETE {{DBMS.API_HostAddress}}/api/Schemas/sales_public
 
 ###
+
+### ===================================================================
+### 3. COLUMN APIs (FULL CRUD - NESTED UNDER TABLE)
+### ===================================================================
+
+### 3.1 List all columns in table 'Users'
+GET {{DBMS.API_HostAddress}}/api/tables/Users/columns
+Accept: application/json
+
+###
+
+### 3.2 Add a new column 'Email' to table 'Users'
+POST {{DBMS.API_HostAddress}}/api/tables/Users/columns
+Content-Type: application/json
+
+{
+  "name": "Email",
+  "dataType": "VARCHAR",
+  "isNullable": true,
+  "defaultValue": ""
+}
+
+###
+
+### 3.3 Get details of column 'Email' in table 'Users'
+GET {{DBMS.API_HostAddress}}/api/tables/Users/columns/Email
+Accept: application/json
+
+###
+
+### 3.4 Update column 'Email' (rename to 'UserEmail') in table 'Users'
+PATCH {{DBMS.API_HostAddress}}/api/tables/Users/columns/Email
+Content-Type: application/json
+
+{
+  "newName": "UserEmail",
+  "dataType": "VARCHAR",
+  "isNullable": true
+}
+
+###
+
+### 3.5 Delete column 'UserEmail' from table 'Users'
+DELETE {{DBMS.API_HostAddress}}/api/tables/Users/columns/UserEmail
+
+###

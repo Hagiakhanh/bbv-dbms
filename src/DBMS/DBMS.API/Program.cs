@@ -1,5 +1,7 @@
+using DBMS.API.Repositories.Columns;
 using DBMS.API.Repositories.Databases;
 using DBMS.API.Repositories.Schemas;
+using DBMS.API.Services.Columns;
 using DBMS.API.Services.Databases;
 using DBMS.API.Services.Schemas;
 using DBMS.Domain;
@@ -28,6 +30,10 @@ namespace DBMS.API
             // Đăng ký Schema Repositories và Services
             builder.Services.AddSingleton<ISchemaRepository, InMemorySchemaRepository>();
             builder.Services.AddScoped<ISchemaService, SchemaService>();
+
+            // Đăng ký Column Repositories và Services
+            builder.Services.AddSingleton<IColumnRepository, InMemoryColumnRepository>();
+            builder.Services.AddScoped<IColumnService, ColumnService>();
 
             var app = builder.Build();
 
