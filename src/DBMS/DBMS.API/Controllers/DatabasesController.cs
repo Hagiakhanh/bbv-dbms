@@ -1,5 +1,5 @@
-using DBMS.Application.DTOs;
-using DBMS.Application.Services;
+using DBMS.API.DTOs;
+using DBMS.API.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DBMS.API.Controllers
@@ -15,9 +15,6 @@ namespace DBMS.API.Controllers
             _databaseService = databaseService;
         }
 
-        /// <summary>
-        /// Create a new database in the DBMS catalog.
-        /// </summary>
         [HttpPost]
         public async Task<ActionResult<DatabaseDto>> CreateDatabase([FromBody] CreateDatabaseRequest request, CancellationToken cancellationToken)
         {
@@ -36,9 +33,6 @@ namespace DBMS.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Get all registered databases.
-        /// </summary>
         [HttpGet]
         public async Task<ActionResult<IEnumerable<DatabaseDto>>> GetDatabases(CancellationToken cancellationToken)
         {
@@ -46,9 +40,6 @@ namespace DBMS.API.Controllers
             return Ok(databases);
         }
 
-        /// <summary>
-        /// Get details of a database by name.
-        /// </summary>
         [HttpGet("{name}")]
         public async Task<ActionResult<DatabaseDto>> GetDatabaseByName(string name, CancellationToken cancellationToken)
         {
@@ -61,3 +52,5 @@ namespace DBMS.API.Controllers
         }
     }
 }
+
+

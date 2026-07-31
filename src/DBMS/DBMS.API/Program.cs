@@ -1,6 +1,6 @@
-﻿using DBMS.Domain;
-using DBMS.Application;
-using DBMS.Infrastructure;
+using DBMS.API.Repositories;
+using DBMS.API.Services;
+using DBMS.Domain;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DBMS.API
@@ -16,11 +16,12 @@ namespace DBMS.API
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
-            // Đăng ký Dependency Injection từ các tầng Clean Architecture
-            builder.Services
-               .AddDomainServices()             // DBMS.Domain
-               .AddApplicationServices()        // DBMS.Application
-               .AddInfrastructureServices();    // DBMS.Infrastructure
+            // Đăng ký các Domain Services (lõi DBMS)
+            builder.Services.AddDomainServices();
+
+            // Đăng ký Repositories và Services của 3-Layer API
+            builder.Services.AddSingleton<IDatabaseRepository, InMemoryDatabaseRepository>();
+            builder.Services.AddScoped<IDatabaseService, DatabaseService>();
 
             var app = builder.Build();
 
@@ -35,9 +36,10 @@ namespace DBMS.API
             app.UseAuthorization();
 
             app.MapControllers();
-            app.MapGet("/", () => Results.Redirect("/swagger"));
+            app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
 
             app.Run();
         }
     }
 }
+

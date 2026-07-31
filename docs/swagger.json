@@ -1,0 +1,149 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "DBMS API Specification",
+    "description": "OpenAPI Documentation cho hệ thống DBMS (Database Management System)",
+    "version": "v1"
+  },
+  "paths": {
+    "/api/Databases": {
+      "get": {
+        "tags": [
+          "Databases"
+        ],
+        "summary": "Lấy danh sách tất cả cơ sở dữ liệu",
+        "operationId": "GetDatabases",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DatabaseDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Databases"
+        ],
+        "summary": "Tạo một cơ sở dữ liệu mới",
+        "operationId": "CreateDatabase",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDatabaseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatabaseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "409": {
+            "description": "Conflict"
+          }
+        }
+      }
+    },
+    "/api/Databases/{name}": {
+      "get": {
+        "tags": [
+          "Databases"
+        ],
+        "summary": "Lấy thông tin chi tiết một cơ sở dữ liệu theo tên",
+        "operationId": "GetDatabaseByName",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatabaseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateDatabaseRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true,
+            "example": "SalesDb"
+          },
+          "owner": {
+            "type": "string",
+            "nullable": true,
+            "default": "sa",
+            "example": "sa"
+          }
+        },
+        "additionalProperties": false
+      },
+      "DatabaseDto": {
+        "type": "object",
+        "properties": {
+          "databaseId": {
+            "type": "integer",
+            "format": "int32",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "nullable": true,
+            "example": "SalesDb"
+          },
+          "owner": {
+            "type": "string",
+            "nullable": true,
+            "example": "sa"
+          },
+          "schemaCount": {
+            "type": "integer",
+            "format": "int32",
+            "example": 0
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

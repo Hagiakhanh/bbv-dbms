@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using DBMS.Domain.DatabaseObjects.Databases;
 
-namespace DBMS.Domain.Interfaces
+namespace DBMS.API.Repositories
 {
     public interface IDatabaseRepository
     {
