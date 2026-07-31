@@ -1,6 +1,87 @@
 @DBMS.API_HostAddress = http://localhost:5272
 
-GET {{DBMS.API_HostAddress}}/weatherforecast/
+### ===================================================================
+### 1. DATABASE APIs (FULL CRUD)
+### ===================================================================
+
+### 1.1 Get all databases
+GET {{DBMS.API_HostAddress}}/api/Databases
 Accept: application/json
+
+###
+
+### 1.2 Create a new database
+POST {{DBMS.API_HostAddress}}/api/Databases
+Content-Type: application/json
+
+{
+  "name": "SalesDb",
+  "owner": "sa"
+}
+
+###
+
+### 1.3 Get database by name
+GET {{DBMS.API_HostAddress}}/api/Databases/SalesDb
+Accept: application/json
+
+###
+
+### 1.4 Rename or update database
+PATCH {{DBMS.API_HostAddress}}/api/Databases/SalesDb
+Content-Type: application/json
+
+{
+  "newName": "SalesDb_V2",
+  "newOwner": "admin"
+}
+
+###
+
+### 1.5 Delete database
+DELETE {{DBMS.API_HostAddress}}/api/Databases/SalesDb_V2
+
+###
+
+### ===================================================================
+### 2. SCHEMA APIs (FULL CRUD)
+### ===================================================================
+
+### 2.1 List all schemas (default: master database)
+GET {{DBMS.API_HostAddress}}/api/Schemas?databaseName=master
+Accept: application/json
+
+###
+
+### 2.2 Create a new schema 'public' in 'master' database
+POST {{DBMS.API_HostAddress}}/api/Schemas
+Content-Type: application/json
+
+{
+  "databaseName": "master",
+  "name": "public",
+  "owner": "dbo"
+}
+
+###
+
+### 2.3 Get schema details by name
+GET {{DBMS.API_HostAddress}}/api/Schemas/public
+Accept: application/json
+
+###
+
+### 2.4 Rename schema 'public' to 'sales_public'
+PATCH {{DBMS.API_HostAddress}}/api/Schemas/public
+Content-Type: application/json
+
+{
+  "newName": "sales_public"
+}
+
+###
+
+### 2.5 Delete schema 'sales_public'
+DELETE {{DBMS.API_HostAddress}}/api/Schemas/sales_public
 
 ###

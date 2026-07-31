@@ -1,7 +1,7 @@
 using DBMS.Domain.DatabaseObjects.Databases;
 using System.Collections.Concurrent;
 
-namespace DBMS.API.Repositories
+namespace DBMS.API.Repositories.Databases
 {
     public class InMemoryDatabaseRepository : IDatabaseRepository
     {
@@ -10,7 +10,6 @@ namespace DBMS.API.Repositories
 
         public InMemoryDatabaseRepository()
         {
-            // Seed a default system database
             var defaultDb = new Database(1, "master", "sa");
             _databases.TryAdd("master", defaultDb);
             _nextId = 2;
@@ -42,6 +41,38 @@ namespace DBMS.API.Repositories
         public Task<bool> ExistsAsync(string name, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(_databases.ContainsKey(name));
+        }
+
+        public Task<Database> UpdateAsync(string name, string? newName, string? newOwner, CancellationToken cancellationToken = default)
+        {
+            if (!_databases.TryGetValue(name, out var existingDb))
+            {
+                throw new KeyNotFoundException($"Database '{name}' not found.");
+            }
+
+            var targetName = string.IsNullOrWhiteSpace(newName) ? existingDb.Name : newName;
+            var targetOwner = string.IsNullOrWhiteSpace(newOwner) ? existingDb.Owner : newOwner;
+
+            if (!targetName.Equals(name, StringComparison.OrdinalIgnoreCase) && _databases.ContainsKey(targetName))
+            {
+                throw new InvalidOperationException($"Database '{targetName}' already exists.");
+            }
+
+            _databases.TryRemove(name, out _);
+            var updatedDb = new Database(existingDb.DatabaseId, targetName, targetOwner);
+            _databases.TryAdd(targetName, updatedDb);
+
+            return Task.FromResult(updatedDb);
+        }
+
+        public Task<bool> DropAsync(string name, CancellationToken cancellationToken = default)
+        {
+            if (name.Equals("master", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("System database 'master' cannot be dropped.");
+            }
+
+            return Task.FromResult(_databases.TryRemove(name, out _));
         }
     }
 }
