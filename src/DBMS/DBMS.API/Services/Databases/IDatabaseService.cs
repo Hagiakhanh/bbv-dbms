@@ -9,5 +9,9 @@ namespace DBMS.API.Services.Databases
         Task<DatabaseDto?> GetDatabaseByNameAsync(string name, CancellationToken cancellationToken = default);
         Task<DatabaseDto> UpdateDatabaseAsync(string name, UpdateDatabaseRequest request, CancellationToken cancellationToken = default);
         Task<bool> DropDatabaseAsync(string name, CancellationToken cancellationToken = default);
+        Task<DatabaseDto> SetStateAsync(string name, SetDatabaseStateRequest request, CancellationToken cancellationToken = default);
+        Task<DatabaseDto> AttachDatabaseAsync(AttachDatabaseRequest request, CancellationToken cancellationToken = default);
+        Task<bool> DetachDatabaseAsync(string name, CancellationToken cancellationToken = default);
     }
 }
+

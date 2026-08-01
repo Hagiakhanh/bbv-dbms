@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace DBMS.API.Controllers
 {
     [ApiController]
+    [Route("api/databases/{db}/schemas")]
     [Route("api/[controller]")]
     public class SchemasController : ControllerBase
     {
@@ -16,12 +17,13 @@ namespace DBMS.API.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<SchemaDto>> CreateSchema([FromBody] CreateSchemaRequest request, CancellationToken cancellationToken)
+        public async Task<ActionResult<SchemaDto>> CreateSchema([FromBody] CreateSchemaRequest request, CancellationToken cancellationToken = default, [FromRoute] string? db = null)
         {
             try
             {
-                var createdSchema = await _schemaService.CreateSchemaAsync(request.DatabaseName, request, cancellationToken);
-                return CreatedAtAction(nameof(GetSchemaByName), new { name = createdSchema.Name, databaseName = createdSchema.DatabaseName }, createdSchema);
+                var targetDb = !string.IsNullOrWhiteSpace(db) ? db : (!string.IsNullOrWhiteSpace(request.DatabaseName) ? request.DatabaseName : "master");
+                var createdSchema = await _schemaService.CreateSchemaAsync(targetDb, request, cancellationToken);
+                return CreatedAtAction(nameof(GetSchemaByName), new { db = createdSchema.DatabaseName, name = createdSchema.Name }, createdSchema);
             }
             catch (KeyNotFoundException ex)
             {
@@ -38,11 +40,11 @@ namespace DBMS.API.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<SchemaDto>>> GetSchemas([FromQuery] string? databaseName, CancellationToken cancellationToken)
+        public async Task<ActionResult<IEnumerable<SchemaDto>>> GetSchemas([FromQuery] string? databaseName = null, CancellationToken cancellationToken = default, [FromRoute] string? db = null)
         {
             try
             {
-                var targetDb = string.IsNullOrWhiteSpace(databaseName) ? "master" : databaseName;
+                var targetDb = !string.IsNullOrWhiteSpace(db) ? db : (!string.IsNullOrWhiteSpace(databaseName) ? databaseName : "master");
                 var schemas = await _schemaService.GetSchemasByDatabaseAsync(targetDb, cancellationToken);
                 return Ok(schemas);
             }
@@ -53,7 +55,7 @@ namespace DBMS.API.Controllers
         }
 
         [HttpGet("{name}")]
-        public async Task<ActionResult<SchemaDto>> GetSchemaByName(string name, [FromQuery] string? databaseName, CancellationToken cancellationToken)
+        public async Task<ActionResult<SchemaDto>> GetSchemaByName([FromRoute] string name, CancellationToken cancellationToken = default, [FromRoute] string? db = null, [FromQuery] string? databaseName = null)
         {
             var schema = await _schemaService.GetSchemaByNameAsync(name, cancellationToken);
             if (schema == null)
@@ -62,6 +64,8 @@ namespace DBMS.API.Controllers
             }
             return Ok(schema);
         }
+
+
 
         [HttpPatch("{name}")]
         public async Task<ActionResult<SchemaDto>> RenameSchema(string name, [FromBody] RenameSchemaRequest request, CancellationToken cancellationToken)
@@ -93,3 +97,4 @@ namespace DBMS.API.Controllers
         }
     }
 }
+
