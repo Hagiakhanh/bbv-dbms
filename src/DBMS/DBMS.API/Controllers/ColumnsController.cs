@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace DBMS.API.Controllers
 {
     [ApiController]
+    [Route("api/databases/{db}/schemas/{schema}/tables/{tableName}/columns")]
     [Route("api/tables/{tableName}/columns")]
     public class ColumnsController : ControllerBase
     {

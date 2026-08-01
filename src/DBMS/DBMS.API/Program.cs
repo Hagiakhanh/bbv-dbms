@@ -1,9 +1,15 @@
 using DBMS.API.Repositories.Columns;
+using DBMS.API.Repositories.Constraints;
 using DBMS.API.Repositories.Databases;
+using DBMS.API.Repositories.Indexes;
 using DBMS.API.Repositories.Schemas;
+using DBMS.API.Repositories.Tables;
 using DBMS.API.Services.Columns;
+using DBMS.API.Services.Constraints;
 using DBMS.API.Services.Databases;
+using DBMS.API.Services.Indexes;
 using DBMS.API.Services.Schemas;
+using DBMS.API.Services.Tables;
 using DBMS.Domain;
 using Microsoft.AspNetCore.Mvc;
 
@@ -31,9 +37,22 @@ namespace DBMS.API
             builder.Services.AddSingleton<ISchemaRepository, InMemorySchemaRepository>();
             builder.Services.AddScoped<ISchemaService, SchemaService>();
 
+            // Đăng ký Table Repositories và Services
+            builder.Services.AddSingleton<ITableRepository, InMemoryTableRepository>();
+            builder.Services.AddScoped<ITableService, TableService>();
+
             // Đăng ký Column Repositories và Services
             builder.Services.AddSingleton<IColumnRepository, InMemoryColumnRepository>();
             builder.Services.AddScoped<IColumnService, ColumnService>();
+
+            // Đăng ký Constraint Repositories và Services
+            builder.Services.AddSingleton<IConstraintRepository, InMemoryConstraintRepository>();
+            builder.Services.AddScoped<IConstraintService, ConstraintService>();
+
+            // Đăng ký Index Repositories và Services
+            builder.Services.AddSingleton<IIndexRepository, InMemoryIndexRepository>();
+            builder.Services.AddScoped<IIndexService, IndexService>();
+
 
             var app = builder.Build();
 

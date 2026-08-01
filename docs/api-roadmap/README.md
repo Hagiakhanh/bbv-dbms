@@ -14,60 +14,63 @@
 
 ## 2. Database APIs
 
-| No. | API Name        |  Method  | Endpoint          | Description                                     | Request                                   | Success Response                       |
-| --: | --------------- | :------: | ----------------- | ----------------------------------------------- | ----------------------------------------- | -------------------------------------- |
-|   1 | Create Database |  `POST`  | `/databases`      | Creates a new database                          | Database name, owner, and character set   | `201 Created` – Newly created database |
-|   2 | List Databases  |   `GET`  | `/databases`      | Retrieves the databases available in the system | Optional pagination and search parameters | `200 OK` – Database list               |
-|   3 | Get Database    |   `GET`  | `/databases/{db}` | Retrieves detailed information about a database | Database name or ID                       | `200 OK` – Database details            |
-|   4 | Rename Database |  `PATCH` | `/databases/{db}` | Renames an existing database                    | New database name                         | `200 OK` – Updated database            |
-|   5 | Drop Database   | `DELETE` | `/databases/{db}` | Removes a database from the system              | Database name or ID                       | `204 No Content`                       |
+| No. | API Name             |  Method  | Endpoint                    | Description                                     | Request                                       | Success Response                       |
+| --: | -------------------- | :------: | --------------------------- | ----------------------------------------------- | --------------------------------------------- | -------------------------------------- |
+|   1 | Create Database      |  `POST`  | `/databases`                | Creates a new database                          | Database name, owner, and character set       | `201 Created` – Newly created database |
+|   2 | List Databases       |   `GET`  | `/databases`                | Retrieves the databases available in the system | Optional pagination and search parameters     | `200 OK` – Database list               |
+|   3 | Get Database         |   `GET`  | `/databases/{db}`           | Retrieves detailed information about a database | Database name or ID                           | `200 OK` – Database details            |
+|   4 | Rename Database      |  `PATCH` | `/databases/{db}`           | Renames an existing database                    | New database name                             | `200 OK` – Updated database            |
+|   5 | Drop Database        | `DELETE` | `/databases/{db}`           | Removes a database from the system              | Database name or ID                           | `204 No Content`                       |
+|   6 | Set Database State   |  `PATCH` | `/databases/{db}/state`     | Sets the database state (ONLINE/OFFLINE/RESTRICTED) | Target state                              | `200 OK` – Updated state               |
+|   7 | Attach Database      |  `POST`  | `/databases/attach`         | Attaches an existing database file to the server | Database name and file path                  | `200 OK` – Attached database           |
+|   8 | Detach Database      |  `POST`  | `/databases/{db}/detach`    | Detaches a database from the server without deleting files | Database name                         | `204 No Content`                       |
 
 ---
 
 ## 3. Schema APIs
 
-| No. | API Name      |  Method  | Endpoint                  | Description                                   | Request               | Success Response                     |
-| --: | ------------- | :------: | ------------------------- | --------------------------------------------- | --------------------- | ------------------------------------ |
-|   1 | Create Schema |  `POST`  | `/databases/{db}/schemas` | Creates a new schema inside a database        | Schema name and owner | `201 Created` – Newly created schema |
-|   2 | List Schemas  |   `GET`  | `/databases/{db}/schemas` | Retrieves the schemas belonging to a database | Database name or ID   | `200 OK` – Schema list               |
-|   3 | Get Schema    |   `GET`  | `/schemas/{schema}`       | Retrieves detailed information about a schema | Schema name or ID     | `200 OK` – Schema details            |
-|   4 | Rename Schema |  `PATCH` | `/schemas/{schema}`       | Renames an existing schema                    | New schema name       | `200 OK` – Updated schema            |
-|   5 | Drop Schema   | `DELETE` | `/schemas/{schema}`       | Removes a schema                              | Schema name or ID     | `204 No Content`                     |
+| No. | API Name      |  Method  | Endpoint                                  | Description                                   | Request               | Success Response                     |
+| --: | ------------- | :------: | ----------------------------------------- | --------------------------------------------- | --------------------- | ------------------------------------ |
+|   1 | Create Schema |  `POST`  | `/databases/{db}/schemas`                 | Creates a new schema inside a database        | Schema name and owner | `201 Created` – Newly created schema |
+|   2 | List Schemas  |   `GET`  | `/databases/{db}/schemas`                 | Retrieves the schemas belonging to a database | Database name or ID   | `200 OK` – Schema list               |
+|   3 | Get Schema    |   `GET`  | `/databases/{db}/schemas/{schema}`        | Retrieves detailed information about a schema | Schema name or ID     | `200 OK` – Schema details            |
+|   4 | Rename Schema |  `PATCH` | `/databases/{db}/schemas/{schema}`        | Renames an existing schema                    | New schema name       | `200 OK` – Updated schema            |
+|   5 | Drop Schema   | `DELETE` | `/databases/{db}/schemas/{schema}`        | Removes a schema                              | Schema name or ID     | `204 No Content`                     |
 
 ---
 
 ## 4. Table APIs
 
-| No. | API Name     |  Method  | Endpoint                   | Description                                     | Request                                       | Success Response                    |
-| --: | ------------ | :------: | -------------------------- | ----------------------------------------------- | --------------------------------------------- | ----------------------------------- |
-|   1 | Create Table |  `POST`  | `/schemas/{schema}/tables` | Creates a new table inside a schema             | Table name, columns, constraints, and indexes | `201 Created` – Newly created table |
-|   2 | List Tables  |   `GET`  | `/schemas/{schema}/tables` | Retrieves the tables belonging to a schema      | Schema name or ID                             | `200 OK` – Table list               |
-|   3 | Get Table    |   `GET`  | `/tables/{table}`          | Retrieves the structure and metadata of a table | Table name or ID                              | `200 OK` – Table details            |
-|   4 | Rename Table |  `PATCH` | `/tables/{table}`          | Renames an existing table                       | New table name                                | `200 OK` – Updated table            |
-|   5 | Drop Table   | `DELETE` | `/tables/{table}`          | Removes a table                                 | Table name or ID                              | `204 No Content`                    |
+| No. | API Name     |  Method  | Endpoint                                                    | Description                                     | Request                                       | Success Response                    |
+| --: | ------------ | :------: | ----------------------------------------------------------- | ----------------------------------------------- | --------------------------------------------- | ----------------------------------- |
+|   1 | Create Table |  `POST`  | `/databases/{db}/schemas/{schema}/tables`                   | Creates a new table inside a schema             | Table name, columns, constraints, and indexes | `201 Created` – Newly created table |
+|   2 | List Tables  |   `GET`  | `/databases/{db}/schemas/{schema}/tables`                   | Retrieves the tables belonging to a schema      | Schema name or ID                             | `200 OK` – Table list               |
+|   3 | Get Table    |   `GET`  | `/databases/{db}/schemas/{schema}/tables/{table}`           | Retrieves the structure and metadata of a table | Table name or ID                              | `200 OK` – Table details            |
+|   4 | Rename Table |  `PATCH` | `/databases/{db}/schemas/{schema}/tables/{table}`           | Renames an existing table                       | New table name                                | `200 OK` – Updated table            |
+|   5 | Drop Table   | `DELETE` | `/databases/{db}/schemas/{schema}/tables/{table}`           | Removes a table                                 | Table name or ID                              | `204 No Content`                    |
 
 ---
 
 ## 5. Column APIs
 
-| No. | API Name     |  Method  | Endpoint                           | Description                                            | Request                                                      | Success Response                     |
-| --: | ------------ | :------: | ---------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------ |
-|   1 | Add Column   |  `POST`  | `/tables/{table}/columns`          | Adds a new column to a table                           | Name, data type, length, nullable setting, and default value | `201 Created` – Newly created column |
-|   2 | List Columns |   `GET`  | `/tables/{table}/columns`          | Retrieves all columns belonging to a table             | Table name or ID                                             | `200 OK` – Column list               |
-|   3 | Get Column   |   `GET`  | `/tables/{table}/columns/{column}` | Retrieves detailed information about a column          | Table and column name or ID                                  | `200 OK` – Column details            |
-|   4 | Alter Column |  `PATCH` | `/tables/{table}/columns/{column}` | Changes the name, data type, or properties of a column | Properties to update                                         | `200 OK` – Updated column            |
-|   5 | Drop Column  | `DELETE` | `/tables/{table}/columns/{column}` | Removes a column from a table                          | Column name or ID                                            | `204 No Content`                     |
+| No. | API Name     |  Method  | Endpoint                                                                        | Description                                            | Request                                                      | Success Response                     |
+| --: | ------------ | :------: | ------------------------------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------ |
+|   1 | Add Column   |  `POST`  | `/databases/{db}/schemas/{schema}/tables/{table}/columns`                       | Adds a new column to a table                           | Name, data type, length, nullable setting, and default value | `201 Created` – Newly created column |
+|   2 | List Columns |   `GET`  | `/databases/{db}/schemas/{schema}/tables/{table}/columns`                       | Retrieves all columns belonging to a table             | Table name or ID                                             | `200 OK` – Column list               |
+|   3 | Get Column   |   `GET`  | `/databases/{db}/schemas/{schema}/tables/{table}/columns/{column}`              | Retrieves detailed information about a column          | Table and column name or ID                                  | `200 OK` – Column details            |
+|   4 | Alter Column |  `PATCH` | `/databases/{db}/schemas/{schema}/tables/{table}/columns/{column}`              | Changes the name, data type, or properties of a column | Properties to update                                         | `200 OK` – Updated column            |
+|   5 | Drop Column  | `DELETE` | `/databases/{db}/schemas/{schema}/tables/{table}/columns/{column}`              | Removes a column from a table                          | Column name or ID                                            | `204 No Content`                     |
 
 ---
 
 ## 6. Constraint APIs
 
-| No. | API Name         |  Method  | Endpoint                                   | Description                                       | Request                                    | Success Response                         |
-| --: | ---------------- | :------: | ------------------------------------------ | ------------------------------------------------- | ------------------------------------------ | ---------------------------------------- |
-|   1 | Add Constraint   |  `POST`  | `/tables/{table}/constraints`              | Adds a constraint to a table                      | Constraint name, type, and related columns | `201 Created` – Newly created constraint |
-|   2 | List Constraints |   `GET`  | `/tables/{table}/constraints`              | Retrieves all constraints belonging to a table    | Table name or ID                           | `200 OK` – Constraint list               |
-|   3 | Get Constraint   |   `GET`  | `/tables/{table}/constraints/{constraint}` | Retrieves detailed information about a constraint | Constraint name or ID                      | `200 OK` – Constraint details            |
-|   4 | Drop Constraint  | `DELETE` | `/tables/{table}/constraints/{constraint}` | Removes a constraint from a table                 | Constraint name or ID                      | `204 No Content`                         |
+| No. | API Name         |  Method  | Endpoint                                                                                | Description                                       | Request                                    | Success Response                         |
+| --: | ---------------- | :------: | --------------------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------ | ---------------------------------------- |
+|   1 | Add Constraint   |  `POST`  | `/databases/{db}/schemas/{schema}/tables/{table}/constraints`                           | Adds a constraint to a table                      | Constraint name, type, and related columns | `201 Created` – Newly created constraint |
+|   2 | List Constraints |   `GET`  | `/databases/{db}/schemas/{schema}/tables/{table}/constraints`                           | Retrieves all constraints belonging to a table    | Table name or ID                           | `200 OK` – Constraint list               |
+|   3 | Get Constraint   |   `GET`  | `/databases/{db}/schemas/{schema}/tables/{table}/constraints/{constraint}`              | Retrieves detailed information about a constraint | Constraint name or ID                      | `200 OK` – Constraint details            |
+|   4 | Drop Constraint  | `DELETE` | `/databases/{db}/schemas/{schema}/tables/{table}/constraints/{constraint}`              | Removes a constraint from a table                 | Constraint name or ID                      | `204 No Content`                         |
 
 ### Constraint Types
 
@@ -78,16 +81,29 @@
 | `UNIQUE`        | Ensures that values are unique                |
 | `CHECK`         | Validates data using a conditional expression |
 
+### Foreign Key Referential Actions
+
+| Action       | `ON DELETE` | `ON UPDATE` | Description                                              |
+| ------------ | :---------: | :---------: | -------------------------------------------------------- |
+| `NO_ACTION`  |      ✅     |      ✅     | Rejects the operation if a referenced row exists         |
+| `CASCADE`    |      ✅     |      ✅     | Automatically deletes or updates the referencing rows    |
+| `SET_NULL`   |      ✅     |      ✅     | Sets the referencing column(s) to NULL                   |
+
+> The `Add Constraint` request body for `FOREIGN_KEY` type must include: `referenceTable`, `referenceColumns`, `onDelete`, and `onUpdate` fields.
+
 ---
 
 ## 7. Index APIs
 
-| No. | API Name     |  Method  | Endpoint                          | Description                                   | Request                                             | Success Response                    |
-| --: | ------------ | :------: | --------------------------------- | --------------------------------------------- | --------------------------------------------------- | ----------------------------------- |
-|   1 | Create Index |  `POST`  | `/tables/{table}/indexes`         | Creates an index for one or more columns      | Index name, index type, columns, and unique setting | `201 Created` – Newly created index |
-|   2 | List Indexes |   `GET`  | `/tables/{table}/indexes`         | Retrieves all indexes belonging to a table    | Table name or ID                                    | `200 OK` – Index list               |
-|   3 | Get Index    |   `GET`  | `/tables/{table}/indexes/{index}` | Retrieves detailed information about an index | Index name or ID                                    | `200 OK` – Index details            |
-|   4 | Drop Index   | `DELETE` | `/tables/{table}/indexes/{index}` | Removes an index from a table                 | Index name or ID                                    | `204 No Content`                    |
+| No. | API Name      |  Method  | Endpoint                                                                                | Description                                   | Request                                             | Success Response                    |
+| --: | ------------- | :------: | --------------------------------------------------------------------------------------- | --------------------------------------------- | --------------------------------------------------- | ----------------------------------- |
+|   1 | Create Index  |  `POST`  | `/databases/{db}/schemas/{schema}/tables/{table}/indexes`                               | Creates an index for one or more columns      | Index name, index type, columns, and unique setting | `201 Created` – Newly created index |
+|   2 | List Indexes  |   `GET`  | `/databases/{db}/schemas/{schema}/tables/{table}/indexes`                               | Retrieves all indexes belonging to a table    | Table name or ID                                    | `200 OK` – Index list               |
+|   3 | Get Index     |   `GET`  | `/databases/{db}/schemas/{schema}/tables/{table}/indexes/{index}`                       | Retrieves detailed information about an index | Index name or ID                                    | `200 OK` – Index details            |
+|   4 | Rebuild Index |  `POST`  | `/databases/{db}/schemas/{schema}/tables/{table}/indexes/{index}/rebuild`               | Rebuilds an existing index                    | Optional rebuild options                            | `202 Accepted` – Rebuild started    |
+|   5 | Enable Index  |  `POST`  | `/databases/{db}/schemas/{schema}/tables/{table}/indexes/{index}/enable`                | Enables a previously disabled index           | Index name or ID                                    | `200 OK` – Index enabled            |
+|   6 | Disable Index |  `POST`  | `/databases/{db}/schemas/{schema}/tables/{table}/indexes/{index}/disable`               | Disables an index (e.g., before bulk insert)  | Index name or ID                                    | `200 OK` – Index disabled           |
+|   7 | Drop Index    | `DELETE` | `/databases/{db}/schemas/{schema}/tables/{table}/indexes/{index}`                       | Removes an index from a table                 | Index name or ID                                    | `204 No Content`                    |
 
 ### Index Types
 
@@ -95,6 +111,7 @@
 | ---------- | -------------------------------------------------------------- |
 | `BTREE`    | Supports equality searches, range searches, and sorting        |
 | `HASH`     | Optimized for exact-match searches using the equality operator |
+| `BITMAP`   | Optimized for low-cardinality columns (e.g., boolean, enum)   |
 
 ---
 
@@ -357,71 +374,94 @@ The DBMS REST API provides administrative, security, session, database object, q
 
 # 8. Database APIs
 
-| No. | API Name        |  Method  | Endpoint          | Description                                         | Request                                            | Success Response                       |
-| --: | --------------- | :------: | ----------------- | --------------------------------------------------- | -------------------------------------------------- | -------------------------------------- |
-|   1 | Create Database |  `POST`  | `/databases`      | Creates a new database                              | Database name, owner, character set, and collation | `201 Created` – Newly created database |
-|   2 | List Databases  |   `GET`  | `/databases`      | Retrieves databases available to the user           | Optional pagination and search parameters          | `200 OK` – Database list               |
-|   3 | Get Database    |   `GET`  | `/databases/{db}` | Retrieves database details                          | Database name or ID                                | `200 OK` – Database details            |
-|   4 | Update Database |  `PATCH` | `/databases/{db}` | Updates database properties or renames the database | Properties to update                               | `200 OK` – Updated database            |
-|   5 | Drop Database   | `DELETE` | `/databases/{db}` | Deletes a database                                  | Database name or ID                                | `204 No Content`                       |
+| No. | API Name             |  Method  | Endpoint                    | Description                                             | Request                                            | Success Response                       |
+| --: | -------------------- | :------: | --------------------------- | ------------------------------------------------------- | -------------------------------------------------- | -------------------------------------- |
+|   1 | Create Database      |  `POST`  | `/databases`                | Creates a new database                                  | Database name, owner, character set, and collation | `201 Created` – Newly created database |
+|   2 | List Databases       |   `GET`  | `/databases`                | Retrieves databases available to the user               | Optional pagination and search parameters          | `200 OK` – Database list               |
+|   3 | Get Database         |   `GET`  | `/databases/{db}`           | Retrieves database details                              | Database name or ID                                | `200 OK` – Database details            |
+|   4 | Update Database      |  `PATCH` | `/databases/{db}`           | Updates database properties or renames the database     | Properties to update                               | `200 OK` – Updated database            |
+|   5 | Drop Database        | `DELETE` | `/databases/{db}`           | Deletes a database                                      | Database name or ID                                | `204 No Content`                       |
+|   6 | Set Database State   |  `PATCH` | `/databases/{db}/state`     | Sets database state: `ONLINE`, `OFFLINE`, `RESTRICTED`  | Target state                                       | `200 OK` – Updated state               |
+|   7 | Attach Database      |  `POST`  | `/databases/attach`         | Attaches an existing database file to the server        | Database name and file path                        | `200 OK` – Attached database           |
+|   8 | Detach Database      |  `POST`  | `/databases/{db}/detach`    | Detaches a database without deleting its files          | Database name                                      | `204 No Content`                       |
 
 ---
 
 # 9. Schema APIs
 
-| No. | API Name      |  Method  | Endpoint                  | Description                               | Request               | Success Response                     |
-| --: | ------------- | :------: | ------------------------- | ----------------------------------------- | --------------------- | ------------------------------------ |
-|   1 | Create Schema |  `POST`  | `/databases/{db}/schemas` | Creates a schema inside a database        | Schema name and owner | `201 Created` – Newly created schema |
-|   2 | List Schemas  |   `GET`  | `/databases/{db}/schemas` | Retrieves schemas belonging to a database | Database name or ID   | `200 OK` – Schema list               |
-|   3 | Get Schema    |   `GET`  | `/schemas/{schema}`       | Retrieves schema details                  | Schema name or ID     | `200 OK` – Schema details            |
-|   4 | Update Schema |  `PATCH` | `/schemas/{schema}`       | Updates schema properties or renames it   | Properties to update  | `200 OK` – Updated schema            |
-|   5 | Drop Schema   | `DELETE` | `/schemas/{schema}`       | Deletes a schema                          | Schema name or ID     | `204 No Content`                     |
+| No. | API Name      |  Method  | Endpoint                                   | Description                               | Request               | Success Response                     |
+| --: | ------------- | :------: | ------------------------------------------ | ----------------------------------------- | --------------------- | ------------------------------------ |
+|   1 | Create Schema |  `POST`  | `/databases/{db}/schemas`                  | Creates a schema inside a database        | Schema name and owner | `201 Created` – Newly created schema |
+|   2 | List Schemas  |   `GET`  | `/databases/{db}/schemas`                  | Retrieves schemas belonging to a database | Database name or ID   | `200 OK` – Schema list               |
+|   3 | Get Schema    |   `GET`  | `/databases/{db}/schemas/{schema}`         | Retrieves schema details                  | Schema name or ID     | `200 OK` – Schema details            |
+|   4 | Update Schema |  `PATCH` | `/databases/{db}/schemas/{schema}`         | Updates schema properties or renames it   | Properties to update  | `200 OK` – Updated schema            |
+|   5 | Drop Schema   | `DELETE` | `/databases/{db}/schemas/{schema}`         | Deletes a schema                          | Schema name or ID     | `204 No Content`                     |
 
 ---
 
 # 10. Table APIs
 
-| No. | API Name     |  Method  | Endpoint                   | Description                                 | Request              | Success Response                    |
-| --: | ------------ | :------: | -------------------------- | ------------------------------------------- | -------------------- | ----------------------------------- |
-|   1 | Create Table |  `POST`  | `/schemas/{schema}/tables` | Creates a table inside a schema             | Table definition     | `201 Created` – Newly created table |
-|   2 | List Tables  |   `GET`  | `/schemas/{schema}/tables` | Retrieves tables belonging to a schema      | Schema name or ID    | `200 OK` – Table list               |
-|   3 | Get Table    |   `GET`  | `/tables/{table}`          | Retrieves table structure and metadata      | Table name or ID     | `200 OK` – Table details            |
-|   4 | Update Table |  `PATCH` | `/tables/{table}`          | Renames a table or updates table properties | Properties to update | `200 OK` – Updated table            |
-|   5 | Drop Table   | `DELETE` | `/tables/{table}`          | Deletes a table                             | Table name or ID     | `204 No Content`                    |
+| No. | API Name     |  Method  | Endpoint                                                    | Description                                 | Request              | Success Response                    |
+| --: | ------------ | :------: | ----------------------------------------------------------- | ------------------------------------------- | -------------------- | ----------------------------------- |
+|   1 | Create Table |  `POST`  | `/databases/{db}/schemas/{schema}/tables`                   | Creates a table inside a schema             | Table definition     | `201 Created` – Newly created table |
+|   2 | List Tables  |   `GET`  | `/databases/{db}/schemas/{schema}/tables`                   | Retrieves tables belonging to a schema      | Schema name or ID    | `200 OK` – Table list               |
+|   3 | Get Table    |   `GET`  | `/databases/{db}/schemas/{schema}/tables/{table}`           | Retrieves table structure and metadata      | Table name or ID     | `200 OK` – Table details            |
+|   4 | Update Table |  `PATCH` | `/databases/{db}/schemas/{schema}/tables/{table}`           | Renames a table or updates table properties | Properties to update | `200 OK` – Updated table            |
+|   5 | Drop Table   | `DELETE` | `/databases/{db}/schemas/{schema}/tables/{table}`           | Deletes a table                             | Table name or ID     | `204 No Content`                    |
 
 ---
 
 # 11. Column APIs
 
-| No. | API Name      |  Method  | Endpoint                           | Description                                                     | Request              | Success Response                     |
-| --: | ------------- | :------: | ---------------------------------- | --------------------------------------------------------------- | -------------------- | ------------------------------------ |
-|   1 | Add Column    |  `POST`  | `/tables/{table}/columns`          | Adds a column to a table                                        | Column definition    | `201 Created` – Newly created column |
-|   2 | List Columns  |   `GET`  | `/tables/{table}/columns`          | Retrieves columns belonging to a table                          | Table name or ID     | `200 OK` – Column list               |
-|   3 | Update Column |  `PATCH` | `/tables/{table}/columns/{column}` | Changes a column name, data type, default value, or nullability | Properties to update | `200 OK` – Updated column            |
-|   4 | Drop Column   | `DELETE` | `/tables/{table}/columns/{column}` | Removes a column from a table                                   | Column name or ID    | `204 No Content`                     |
+| No. | API Name      |  Method  | Endpoint                                                                        | Description                                                     | Request              | Success Response                     |
+| --: | ------------- | :------: | ------------------------------------------------------------------------------- | --------------------------------------------------------------- | -------------------- | ------------------------------------ |
+|   1 | Add Column    |  `POST`  | `/databases/{db}/schemas/{schema}/tables/{table}/columns`                       | Adds a column to a table                                        | Column definition    | `201 Created` – Newly created column |
+|   2 | List Columns  |   `GET`  | `/databases/{db}/schemas/{schema}/tables/{table}/columns`                       | Retrieves columns belonging to a table                          | Table name or ID     | `200 OK` – Column list               |
+|   3 | Update Column |  `PATCH` | `/databases/{db}/schemas/{schema}/tables/{table}/columns/{column}`              | Changes a column name, data type, default value, or nullability | Properties to update | `200 OK` – Updated column            |
+|   4 | Drop Column   | `DELETE` | `/databases/{db}/schemas/{schema}/tables/{table}/columns/{column}`              | Removes a column from a table                                   | Column name or ID    | `204 No Content`                     |
 
 ---
 
 # 12. Constraint APIs
 
-| No. | API Name         |  Method  | Endpoint                                   | Description                                | Request               | Success Response                         |
-| --: | ---------------- | :------: | ------------------------------------------ | ------------------------------------------ | --------------------- | ---------------------------------------- |
-|   1 | Add Constraint   |  `POST`  | `/tables/{table}/constraints`              | Adds a constraint to a table               | Constraint definition | `201 Created` – Newly created constraint |
-|   2 | List Constraints |   `GET`  | `/tables/{table}/constraints`              | Retrieves constraints belonging to a table | Table name or ID      | `200 OK` – Constraint list               |
-|   3 | Get Constraint   |   `GET`  | `/tables/{table}/constraints/{constraint}` | Retrieves constraint details               | Constraint name or ID | `200 OK` – Constraint details            |
-|   4 | Drop Constraint  | `DELETE` | `/tables/{table}/constraints/{constraint}` | Removes a constraint from a table          | Constraint name or ID | `204 No Content`                         |
+| No. | API Name         |  Method  | Endpoint                                                                                | Description                                | Request               | Success Response                         |
+| --: | ---------------- | :------: | --------------------------------------------------------------------------------------- | ------------------------------------------ | --------------------- | ---------------------------------------- |
+|   1 | Add Constraint   |  `POST`  | `/databases/{db}/schemas/{schema}/tables/{table}/constraints`                           | Adds a constraint to a table               | Constraint definition | `201 Created` – Newly created constraint |
+|   2 | List Constraints |   `GET`  | `/databases/{db}/schemas/{schema}/tables/{table}/constraints`                           | Retrieves constraints belonging to a table | Table name or ID      | `200 OK` – Constraint list               |
+|   3 | Get Constraint   |   `GET`  | `/databases/{db}/schemas/{schema}/tables/{table}/constraints/{constraint}`              | Retrieves constraint details               | Constraint name or ID | `200 OK` – Constraint details            |
+|   4 | Drop Constraint  | `DELETE` | `/databases/{db}/schemas/{schema}/tables/{table}/constraints/{constraint}`              | Removes a constraint from a table          | Constraint name or ID | `204 No Content`                         |
+
+### Constraint Types and Foreign Key Referential Actions
+
+| Constraint Type | Description                                   |
+| --------------- | --------------------------------------------- |
+| `PRIMARY_KEY`   | Defines the primary key of a table            |
+| `FOREIGN_KEY`   | Defines a reference to another table          |
+| `UNIQUE`        | Ensures that values are unique                |
+| `CHECK`         | Validates data using a conditional expression |
+
+For `FOREIGN_KEY` constraints, the request body must include the following additional fields:
+
+| Field              | Type     | Required | Description                                     |
+| ------------------ | -------- | :------: | ----------------------------------------------- |
+| `referenceTable`   | `string` | ✅       | Name of the referenced table                    |
+| `referenceColumns` | `array`  | ✅       | List of column names in the referenced table    |
+| `onDelete`         | `enum`   | ✅       | Action on delete: `NO_ACTION`, `CASCADE`, `SET_NULL` |
+| `onUpdate`         | `enum`   | ✅       | Action on update: `NO_ACTION`, `CASCADE`, `SET_NULL` |
 
 ---
 
 # 13. Index APIs
 
-| No. | API Name      |  Method  | Endpoint                                  | Description                                    | Request                  | Success Response                    |
-| --: | ------------- | :------: | ----------------------------------------- | ---------------------------------------------- | ------------------------ | ----------------------------------- |
-|   1 | Create Index  |  `POST`  | `/tables/{table}/indexes`                 | Creates an index for one or more table columns | Index definition         | `201 Created` – Newly created index |
-|   2 | List Indexes  |   `GET`  | `/tables/{table}/indexes`                 | Retrieves indexes belonging to a table         | Table name or ID         | `200 OK` – Index list               |
-|   3 | Get Index     |   `GET`  | `/tables/{table}/indexes/{index}`         | Retrieves index details                        | Index name or ID         | `200 OK` – Index details            |
-|   4 | Rebuild Index |  `POST`  | `/tables/{table}/indexes/{index}/rebuild` | Rebuilds an existing index                     | Optional rebuild options | `202 Accepted` – Rebuild started    |
-|   5 | Drop Index    | `DELETE` | `/tables/{table}/indexes/{index}`         | Removes an index                               | Index name or ID         | `204 No Content`                    |
+| No. | API Name      |  Method  | Endpoint                                                                                | Description                                    | Request                  | Success Response                    |
+| --: | ------------- | :------: | --------------------------------------------------------------------------------------- | ---------------------------------------------- | ------------------------ | ----------------------------------- |
+|   1 | Create Index  |  `POST`  | `/databases/{db}/schemas/{schema}/tables/{table}/indexes`                               | Creates an index for one or more table columns | Index definition         | `201 Created` – Newly created index |
+|   2 | List Indexes  |   `GET`  | `/databases/{db}/schemas/{schema}/tables/{table}/indexes`                               | Retrieves indexes belonging to a table         | Table name or ID         | `200 OK` – Index list               |
+|   3 | Get Index     |   `GET`  | `/databases/{db}/schemas/{schema}/tables/{table}/indexes/{index}`                       | Retrieves index details                        | Index name or ID         | `200 OK` – Index details            |
+|   4 | Rebuild Index |  `POST`  | `/databases/{db}/schemas/{schema}/tables/{table}/indexes/{index}/rebuild`               | Rebuilds an existing index                     | Optional rebuild options | `202 Accepted` – Rebuild started    |
+|   5 | Enable Index  |  `POST`  | `/databases/{db}/schemas/{schema}/tables/{table}/indexes/{index}/enable`                | Enables a previously disabled index           | Index name or ID         | `200 OK` – Index enabled            |
+|   6 | Disable Index |  `POST`  | `/databases/{db}/schemas/{schema}/tables/{table}/indexes/{index}/disable`               | Disables an index (e.g., before bulk insert)  | Index name or ID         | `200 OK` – Index disabled           |
+|   7 | Drop Index    | `DELETE` | `/databases/{db}/schemas/{schema}/tables/{table}/indexes/{index}`                       | Removes an index                               | Index name or ID         | `204 No Content`                    |
 
 ---
 

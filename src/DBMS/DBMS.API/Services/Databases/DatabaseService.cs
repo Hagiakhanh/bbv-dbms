@@ -29,25 +29,30 @@ namespace DBMS.API.Services.Databases
             var database = new Database(0, request.Name, string.IsNullOrWhiteSpace(request.Owner) ? "sa" : request.Owner);
             var createdDb = await _databaseRepository.CreateAsync(database, cancellationToken);
 
-            return MapToDto(createdDb);
+            return await MapToDtoAsync(createdDb, cancellationToken);
         }
 
         public async Task<IEnumerable<DatabaseDto>> GetAllDatabasesAsync(CancellationToken cancellationToken = default)
         {
             var databases = await _databaseRepository.GetAllAsync(cancellationToken);
-            return databases.Select(MapToDto);
+            var dtos = new List<DatabaseDto>();
+            foreach (var db in databases)
+            {
+                dtos.Add(await MapToDtoAsync(db, cancellationToken));
+            }
+            return dtos;
         }
 
         public async Task<DatabaseDto?> GetDatabaseByNameAsync(string name, CancellationToken cancellationToken = default)
         {
             var database = await _databaseRepository.GetByNameAsync(name, cancellationToken);
-            return database == null ? null : MapToDto(database);
+            return database == null ? null : await MapToDtoAsync(database, cancellationToken);
         }
 
         public async Task<DatabaseDto> UpdateDatabaseAsync(string name, UpdateDatabaseRequest request, CancellationToken cancellationToken = default)
         {
             var updatedDb = await _databaseRepository.UpdateAsync(name, request.NewName, request.NewOwner, cancellationToken);
-            return MapToDto(updatedDb);
+            return await MapToDtoAsync(updatedDb, cancellationToken);
         }
 
         public async Task<bool> DropDatabaseAsync(string name, CancellationToken cancellationToken = default)
@@ -55,15 +60,46 @@ namespace DBMS.API.Services.Databases
             return await _databaseRepository.DropAsync(name, cancellationToken);
         }
 
-        private static DatabaseDto MapToDto(Database db)
+        public async Task<DatabaseDto> SetStateAsync(string name, SetDatabaseStateRequest request, CancellationToken cancellationToken = default)
         {
+            await _databaseRepository.SetStateAsync(name, request.State, cancellationToken);
+            var db = await _databaseRepository.GetByNameAsync(name, cancellationToken);
+            if (db == null)
+            {
+                throw new KeyNotFoundException($"Database '{name}' not found.");
+            }
+            return await MapToDtoAsync(db, cancellationToken);
+        }
+
+        public async Task<DatabaseDto> AttachDatabaseAsync(AttachDatabaseRequest request, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(request.Name))
+            {
+                throw new ArgumentException("Database name is required.", nameof(request.Name));
+            }
+
+            await _databaseRepository.AttachAsync(request.Name, request.FilePath, cancellationToken);
+            var db = await _databaseRepository.GetByNameAsync(request.Name, cancellationToken);
+            return await MapToDtoAsync(db!, cancellationToken);
+        }
+
+        public async Task<bool> DetachDatabaseAsync(string name, CancellationToken cancellationToken = default)
+        {
+            return await _databaseRepository.DetachAsync(name, cancellationToken);
+        }
+
+        private async Task<DatabaseDto> MapToDtoAsync(Database db, CancellationToken cancellationToken)
+        {
+            var state = await _databaseRepository.GetStateAsync(db.Name, cancellationToken);
             return new DatabaseDto
             {
                 DatabaseId = db.DatabaseId,
                 Name = db.Name,
                 Owner = db.Owner,
+                State = state,
                 SchemaCount = db.Schemas?.Count ?? 0
             };
         }
     }
 }
+
