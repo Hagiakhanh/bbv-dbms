@@ -1,0 +1,26 @@
+[
+  {
+    "DatabaseId": 5,
+    "Name": "SalesDb",
+    "Owner": "sa",
+    "State": "ONLINE"
+  },
+  {
+    "DatabaseId": 3,
+    "Name": "TempDb_V2",
+    "Owner": "admin",
+    "State": "ONLINE"
+  },
+  {
+    "DatabaseId": 1,
+    "Name": "master",
+    "Owner": "sa",
+    "State": "ONLINE"
+  },
+  {
+    "DatabaseId": 7,
+    "Name": "TempDb",
+    "Owner": "sa",
+    "State": "ONLINE"
+  }
+]

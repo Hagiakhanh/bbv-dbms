@@ -1,28 +1,71 @@
+using DBMS.API.Storage;
 using DBMS.Domain.Core;
 using DBMS.Domain.DatabaseObjects.Columns;
 using System.Collections.Concurrent;
 
 namespace DBMS.API.Repositories.Columns
 {
+    public class ColumnRecord
+    {
+        public int ColumnId { get; set; }
+        public string TableName { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public DataTypeEnum DataType { get; set; }
+        public bool Nullable { get; set; }
+        public string DefaultValue { get; set; } = string.Empty;
+    }
+
     public class InMemoryColumnRepository : IColumnRepository
     {
-        // Key: "TableName.ColumnName", Value: (TableName, Column)
+        private const string FileName = "mock-columns.json";
         private readonly ConcurrentDictionary<string, (string TableName, Column Column)> _columns = new(StringComparer.OrdinalIgnoreCase);
         private int _nextId = 1;
 
         public InMemoryColumnRepository()
         {
-            // Seed sample column 'Id' for table 'Users'
-            var defaultCol = new Column
+            var defaultRecords = new List<ColumnRecord>
             {
-                ColumnId = 1,
-                Name = "Id",
-                DataType = DataTypeEnum.INT,
-                Nullable = false,
-                DefaultValue = "0"
+                new ColumnRecord
+                {
+                    ColumnId = 1,
+                    TableName = "Users",
+                    Name = "Id",
+                    DataType = DataTypeEnum.INT,
+                    Nullable = false,
+                    DefaultValue = "0"
+                }
             };
-            _columns.TryAdd("Users.Id", ("Users", defaultCol));
-            _nextId = 2;
+
+            var records = JsonFileStorage.LoadAsync(FileName, defaultRecords).GetAwaiter().GetResult();
+            foreach (var r in records)
+            {
+                var col = new Column
+                {
+                    ColumnId = r.ColumnId,
+                    Name = r.Name,
+                    DataType = r.DataType,
+                    Nullable = r.Nullable,
+                    DefaultValue = r.DefaultValue
+                };
+
+                _columns[$"{r.TableName}.{r.Name}"] = (r.TableName, col);
+                if (r.ColumnId >= _nextId) _nextId = r.ColumnId + 1;
+            }
+        }
+
+        private void Save()
+        {
+            var records = _columns.Values.Select(x => new ColumnRecord
+            {
+                ColumnId = x.Column.ColumnId,
+                TableName = x.TableName,
+                Name = x.Column.Name,
+                DataType = x.Column.DataType,
+                Nullable = x.Column.Nullable,
+                DefaultValue = x.Column.DefaultValue?.ToString() ?? string.Empty
+            }).ToList();
+
+            _ = JsonFileStorage.SaveAsync(FileName, records);
         }
 
         public Task<Column> CreateAsync(string tableName, Column column, CancellationToken cancellationToken = default)
@@ -35,6 +78,7 @@ namespace DBMS.API.Repositories.Columns
 
             column.ColumnId = Interlocked.Increment(ref _nextId);
             _columns.TryAdd(key, (tableName, column));
+            Save();
             return Task.FromResult(column);
         }
 
@@ -55,7 +99,6 @@ namespace DBMS.API.Repositories.Columns
                 return Task.FromResult<Column?>(entry.Column);
             }
 
-            // Fallback: search by column name if table not specified
             var fallback = _columns.Values.FirstOrDefault(x => x.Column.Name.Equals(columnName, StringComparison.OrdinalIgnoreCase));
             return Task.FromResult<Column?>(fallback.Column);
         }
@@ -72,6 +115,7 @@ namespace DBMS.API.Repositories.Columns
 
             var newKey = $"{tableName}.{updatedColumn.Name}";
             _columns.TryAdd(newKey, (tableName, updatedColumn));
+            Save();
 
             return Task.FromResult(updatedColumn);
         }
@@ -86,7 +130,10 @@ namespace DBMS.API.Repositories.Columns
                 key = matchKey;
             }
 
-            return Task.FromResult(_columns.TryRemove(key, out _));
+            var removed = _columns.TryRemove(key, out _);
+            if (removed) Save();
+            return Task.FromResult(removed);
         }
     }
 }
+

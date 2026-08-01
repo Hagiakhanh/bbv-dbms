@@ -1,12 +1,46 @@
 using DBMS.API.DTOs.Indexes;
+using DBMS.API.Storage;
 using System.Collections.Concurrent;
 
 namespace DBMS.API.Repositories.Indexes
 {
     public class InMemoryIndexRepository : IIndexRepository
     {
+        private const string FileName = "mock-indexes.json";
         private readonly ConcurrentDictionary<string, IndexDto> _indexes = new(StringComparer.OrdinalIgnoreCase);
         private int _nextId = 1;
+
+        public InMemoryIndexRepository()
+        {
+            var defaultRecords = new List<IndexDto>
+            {
+                new IndexDto
+                {
+                    IndexId = 1,
+                    Name = "IX_Users_Id",
+                    Type = "BTREE",
+                    TableName = "Users",
+                    SchemaName = "dbo",
+                    DatabaseName = "master",
+                    Columns = new List<string> { "Id" },
+                    IsUnique = true,
+                    IsEnabled = true
+                }
+            };
+            var records = JsonFileStorage.LoadAsync(FileName, defaultRecords).GetAwaiter().GetResult();
+
+            foreach (var dto in records)
+            {
+                var key = GetKey(dto.DatabaseName, dto.SchemaName, dto.TableName, dto.Name);
+                _indexes[key] = dto;
+                if (dto.IndexId >= _nextId) _nextId = dto.IndexId + 1;
+            }
+        }
+
+        private void Save()
+        {
+            _ = JsonFileStorage.SaveAsync(FileName, _indexes.Values.ToList());
+        }
 
         public Task<IndexDto> CreateAsync(string databaseName, string schemaName, string tableName, CreateIndexRequest request, CancellationToken cancellationToken = default)
         {
@@ -30,6 +64,7 @@ namespace DBMS.API.Repositories.Indexes
             };
 
             _indexes.TryAdd(key, dto);
+            Save();
             return Task.FromResult(dto);
         }
 
@@ -60,6 +95,7 @@ namespace DBMS.API.Repositories.Indexes
             if (key == null || !_indexes.TryGetValue(key, out var dto)) return Task.FromResult(false);
 
             dto.IsEnabled = enabled;
+            Save();
             return Task.FromResult(true);
         }
 
@@ -69,6 +105,7 @@ namespace DBMS.API.Repositories.Indexes
             if (key == null || !_indexes.TryGetValue(key, out var dto)) return Task.FromResult(false);
 
             dto.IsEnabled = true;
+            Save();
             return Task.FromResult(true);
         }
 
@@ -77,7 +114,9 @@ namespace DBMS.API.Repositories.Indexes
             var key = FindKey(databaseName, schemaName, tableName, name);
             if (key == null) return Task.FromResult(false);
 
-            return Task.FromResult(_indexes.TryRemove(key, out _));
+            var removed = _indexes.TryRemove(key, out _);
+            if (removed) Save();
+            return Task.FromResult(removed);
         }
 
         private string? FindKey(string db, string schema, string table, string index)
@@ -93,3 +132,4 @@ namespace DBMS.API.Repositories.Indexes
         private static string GetKey(string db, string schema, string table, string index) => $"{db}.{schema}.{table}.{index}";
     }
 }
+

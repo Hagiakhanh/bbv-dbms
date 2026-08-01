@@ -1,0 +1,15 @@
+[
+  {
+    "IndexId": 1,
+    "Name": "IX_Users_Id",
+    "Type": "BTREE",
+    "TableName": "Users",
+    "SchemaName": "dbo",
+    "DatabaseName": "master",
+    "Columns": [
+      "Id"
+    ],
+    "IsUnique": true,
+    "IsEnabled": true
+  }
+]

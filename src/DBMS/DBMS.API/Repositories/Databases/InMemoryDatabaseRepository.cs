@@ -1,21 +1,51 @@
+using DBMS.API.Storage;
 using DBMS.Domain.DatabaseObjects.Databases;
 using System.Collections.Concurrent;
 
 namespace DBMS.API.Repositories.Databases
 {
+    public class DatabaseRecord
+    {
+        public int DatabaseId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Owner { get; set; } = "sa";
+        public string State { get; set; } = "ONLINE";
+    }
+
     public class InMemoryDatabaseRepository : IDatabaseRepository
     {
+        private const string FileName = "mock-databases.json";
         private readonly ConcurrentDictionary<string, Database> _databases = new(StringComparer.OrdinalIgnoreCase);
-        private int _nextId = 1;
-
         private readonly ConcurrentDictionary<string, string> _states = new(StringComparer.OrdinalIgnoreCase);
+        private int _nextId = 1;
 
         public InMemoryDatabaseRepository()
         {
-            var defaultDb = new Database(1, "master", "sa");
-            _databases.TryAdd("master", defaultDb);
-            _states.TryAdd("master", "ONLINE");
-            _nextId = 2;
+            var defaultRecords = new List<DatabaseRecord>
+            {
+                new DatabaseRecord { DatabaseId = 1, Name = "master", Owner = "sa", State = "ONLINE" }
+            };
+
+            var records = JsonFileStorage.LoadAsync(FileName, defaultRecords).GetAwaiter().GetResult();
+            foreach (var r in records)
+            {
+                _databases[r.Name] = new Database(r.DatabaseId, r.Name, r.Owner);
+                _states[r.Name] = r.State;
+                if (r.DatabaseId >= _nextId) _nextId = r.DatabaseId + 1;
+            }
+        }
+
+        private void Save()
+        {
+            var records = _databases.Values.Select(db => new DatabaseRecord
+            {
+                DatabaseId = db.DatabaseId,
+                Name = db.Name,
+                Owner = db.Owner,
+                State = _states.TryGetValue(db.Name, out var st) ? st : "ONLINE"
+            }).ToList();
+
+            _ = JsonFileStorage.SaveAsync(FileName, records);
         }
 
         public Task<Database> CreateAsync(Database database, CancellationToken cancellationToken = default)
@@ -28,6 +58,7 @@ namespace DBMS.API.Repositories.Databases
             var newDb = new Database(Interlocked.Increment(ref _nextId), database.Name, database.Owner);
             _databases.TryAdd(newDb.Name, newDb);
             _states.TryAdd(newDb.Name, "ONLINE");
+            Save();
             return Task.FromResult(newDb);
         }
 
@@ -69,6 +100,7 @@ namespace DBMS.API.Repositories.Databases
             _databases.TryAdd(targetName, updatedDb);
             _states.TryAdd(targetName, currentState ?? "ONLINE");
 
+            Save();
             return Task.FromResult(updatedDb);
         }
 
@@ -80,7 +112,9 @@ namespace DBMS.API.Repositories.Databases
             }
 
             _states.TryRemove(name, out _);
-            return Task.FromResult(_databases.TryRemove(name, out _));
+            var removed = _databases.TryRemove(name, out _);
+            if (removed) Save();
+            return Task.FromResult(removed);
         }
 
         public Task SetStateAsync(string name, string state, CancellationToken cancellationToken = default)
@@ -91,6 +125,7 @@ namespace DBMS.API.Repositories.Databases
             }
 
             _states[name] = state.ToUpperInvariant();
+            Save();
             return Task.CompletedTask;
         }
 
@@ -104,6 +139,7 @@ namespace DBMS.API.Repositories.Databases
             var attachedDb = new Database(Interlocked.Increment(ref _nextId), name, "sa");
             _databases.TryAdd(name, attachedDb);
             _states.TryAdd(name, "ONLINE");
+            Save();
             return Task.CompletedTask;
         }
 
@@ -115,7 +151,9 @@ namespace DBMS.API.Repositories.Databases
             }
 
             _states.TryRemove(name, out _);
-            return Task.FromResult(_databases.TryRemove(name, out _));
+            var detached = _databases.TryRemove(name, out _);
+            if (detached) Save();
+            return Task.FromResult(detached);
         }
 
         public Task<string> GetStateAsync(string name, CancellationToken cancellationToken = default)
@@ -129,4 +167,5 @@ namespace DBMS.API.Repositories.Databases
         }
     }
 }
+
 

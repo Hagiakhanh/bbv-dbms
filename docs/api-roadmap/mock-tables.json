@@ -1,0 +1,8 @@
+[
+  {
+    "TableId": 1,
+    "DatabaseName": "master",
+    "SchemaName": "dbo",
+    "TableName": "Users"
+  }
+]

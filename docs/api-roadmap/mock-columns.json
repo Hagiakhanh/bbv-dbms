@@ -1,0 +1,34 @@
+[
+  {
+    "ColumnId": 3,
+    "TableName": "Users",
+    "Name": "Age",
+    "DataType": "INT",
+    "Nullable": false,
+    "DefaultValue": ""
+  },
+  {
+    "ColumnId": 1,
+    "TableName": "Users",
+    "Name": "Id",
+    "DataType": "INT",
+    "Nullable": false,
+    "DefaultValue": "0"
+  },
+  {
+    "ColumnId": 5,
+    "TableName": "Users",
+    "Name": "Email",
+    "DataType": "VARCHAR",
+    "Nullable": true,
+    "DefaultValue": ""
+  },
+  {
+    "ColumnId": 10,
+    "TableName": "Users",
+    "Name": "UserEmail",
+    "DataType": "VARCHAR",
+    "Nullable": true,
+    "DefaultValue": ""
+  }
+]

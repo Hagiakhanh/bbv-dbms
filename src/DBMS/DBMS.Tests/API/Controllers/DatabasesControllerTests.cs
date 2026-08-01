@@ -97,5 +97,43 @@ namespace DBMS.Tests.API.Controllers
             // Assert
             result.Should().BeOfType<NoContentResult>();
         }
+
+        [Fact]
+        public async Task SetDatabaseState_ShouldReturn200OK()
+        {
+            var req = new SetDatabaseStateRequest { State = "OFFLINE" };
+            var dto = new DatabaseDto { Name = "master", State = "OFFLINE" };
+            _mockService.Setup(s => s.SetStateAsync("master", req, It.IsAny<CancellationToken>())).ReturnsAsync(dto);
+
+            var result = await _controller.SetDatabaseState("master", req, CancellationToken.None);
+
+            var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+            var val = okResult.Value.Should().BeOfType<DatabaseDto>().Subject;
+            val.State.Should().Be("OFFLINE");
+        }
+
+        [Fact]
+        public async Task AttachDatabase_ShouldReturn201Created()
+        {
+            var req = new AttachDatabaseRequest { Name = "AttachedDb", FilePath = "/db.bin" };
+            var dto = new DatabaseDto { Name = "AttachedDb" };
+            _mockService.Setup(s => s.AttachDatabaseAsync(req, It.IsAny<CancellationToken>())).ReturnsAsync(dto);
+
+            var result = await _controller.AttachDatabase(req, CancellationToken.None);
+
+            var createdResult = result.Result.Should().BeOfType<CreatedAtActionResult>().Subject;
+            createdResult.StatusCode.Should().Be(201);
+        }
+
+        [Fact]
+        public async Task DetachDatabase_ShouldReturn204NoContent()
+        {
+            _mockService.Setup(s => s.DetachDatabaseAsync("DetachDb", It.IsAny<CancellationToken>())).ReturnsAsync(true);
+
+            var result = await _controller.DetachDatabase("DetachDb", CancellationToken.None);
+
+            result.Should().BeOfType<NoContentResult>();
+        }
     }
 }
+

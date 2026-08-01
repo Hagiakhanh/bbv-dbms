@@ -1,0 +1,13 @@
+[
+  {
+    "ConstraintId": 1,
+    "Name": "PK_Users",
+    "Type": "PRIMARY_KEY",
+    "TableName": "Users",
+    "SchemaName": "dbo",
+    "DatabaseName": "master",
+    "Columns": [
+      "Id"
+    ]
+  }
+]
