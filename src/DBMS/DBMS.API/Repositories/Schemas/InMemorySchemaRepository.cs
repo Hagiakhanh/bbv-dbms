@@ -1,16 +1,44 @@
+using DBMS.API.Storage;
 using DBMS.Domain.DatabaseObjects.Schemas;
 using System.Collections.Concurrent;
 
 namespace DBMS.API.Repositories.Schemas
 {
+    public class SchemaRecord
+    {
+        public string DatabaseName { get; set; } = "master";
+        public string SchemaName { get; set; } = "dbo";
+    }
+
     public class InMemorySchemaRepository : ISchemaRepository
     {
+        private const string FileName = "mock-schemas.json";
         private readonly ConcurrentDictionary<string, (string DatabaseName, Schema Schema)> _schemas = new(StringComparer.OrdinalIgnoreCase);
 
         public InMemorySchemaRepository()
         {
-            var defaultSchema = new Schema("dbo");
-            _schemas.TryAdd("master.dbo", ("master", defaultSchema));
+            var defaultRecords = new List<SchemaRecord>
+            {
+                new SchemaRecord { DatabaseName = "master", SchemaName = "dbo" }
+            };
+
+            var records = JsonFileStorage.LoadAsync(FileName, defaultRecords).GetAwaiter().GetResult();
+            foreach (var r in records)
+            {
+                var key = $"{r.DatabaseName}.{r.SchemaName}";
+                _schemas[key] = (r.DatabaseName, new Schema(r.SchemaName));
+            }
+        }
+
+        private void Save()
+        {
+            var records = _schemas.Values.Select(s => new SchemaRecord
+            {
+                DatabaseName = s.DatabaseName,
+                SchemaName = s.Schema.Name
+            }).ToList();
+
+            _ = JsonFileStorage.SaveAsync(FileName, records);
         }
 
         public Task<Schema> CreateAsync(string databaseName, Schema schema, CancellationToken cancellationToken = default)
@@ -23,6 +51,7 @@ namespace DBMS.API.Repositories.Schemas
             }
 
             _schemas.TryAdd(key, (databaseName, schema));
+            Save();
             return Task.FromResult(schema);
         }
 
@@ -58,6 +87,7 @@ namespace DBMS.API.Repositories.Schemas
             var newSchema = new Schema(newName);
             var newKey = $"{entry.DatabaseName}.{newName}";
             _schemas.TryAdd(newKey, (entry.DatabaseName, newSchema));
+            Save();
 
             return Task.FromResult(newSchema);
         }
@@ -67,7 +97,9 @@ namespace DBMS.API.Repositories.Schemas
             var key = _schemas.Keys.FirstOrDefault(k => _schemas[k].Schema.Name.Equals(schemaName, StringComparison.OrdinalIgnoreCase));
             if (key == null) return Task.FromResult(false);
 
-            return Task.FromResult(_schemas.TryRemove(key, out _));
+            var removed = _schemas.TryRemove(key, out _);
+            if (removed) Save();
+            return Task.FromResult(removed);
         }
 
         public Task<bool> ExistsAsync(string databaseName, string schemaName, CancellationToken cancellationToken = default)
@@ -77,3 +109,4 @@ namespace DBMS.API.Repositories.Schemas
         }
     }
 }
+

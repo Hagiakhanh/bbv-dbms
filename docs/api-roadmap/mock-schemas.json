@@ -1,0 +1,18 @@
+[
+  {
+    "DatabaseName": "master",
+    "SchemaName": "dbo"
+  },
+  {
+    "DatabaseName": "master",
+    "SchemaName": "public"
+  },
+  {
+    "DatabaseName": "master",
+    "SchemaName": "new_name"
+  },
+  {
+    "DatabaseName": "master",
+    "SchemaName": "sales"
+  }
+]

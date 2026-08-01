@@ -1,12 +1,44 @@
 using DBMS.API.DTOs.Constraints;
+using DBMS.API.Storage;
 using System.Collections.Concurrent;
 
 namespace DBMS.API.Repositories.Constraints
 {
     public class InMemoryConstraintRepository : IConstraintRepository
     {
+        private const string FileName = "mock-constraints.json";
         private readonly ConcurrentDictionary<string, ConstraintDto> _constraints = new(StringComparer.OrdinalIgnoreCase);
         private int _nextId = 1;
+
+        public InMemoryConstraintRepository()
+        {
+            var defaultRecords = new List<ConstraintDto>
+            {
+                new ConstraintDto
+                {
+                    ConstraintId = 1,
+                    Name = "PK_Users",
+                    Type = "PRIMARY_KEY",
+                    TableName = "Users",
+                    SchemaName = "dbo",
+                    DatabaseName = "master",
+                    Columns = new List<string> { "Id" }
+                }
+            };
+            var records = JsonFileStorage.LoadAsync(FileName, defaultRecords).GetAwaiter().GetResult();
+
+            foreach (var dto in records)
+            {
+                var key = GetKey(dto.DatabaseName, dto.SchemaName, dto.TableName, dto.Name);
+                _constraints[key] = dto;
+                if (dto.ConstraintId >= _nextId) _nextId = dto.ConstraintId + 1;
+            }
+        }
+
+        private void Save()
+        {
+            _ = JsonFileStorage.SaveAsync(FileName, _constraints.Values.ToList());
+        }
 
         public Task<ConstraintDto> CreateAsync(string databaseName, string schemaName, string tableName, CreateConstraintRequest request, CancellationToken cancellationToken = default)
         {
@@ -33,6 +65,7 @@ namespace DBMS.API.Repositories.Constraints
             };
 
             _constraints.TryAdd(key, dto);
+            Save();
             return Task.FromResult(dto);
         }
 
@@ -74,9 +107,12 @@ namespace DBMS.API.Repositories.Constraints
 
             if (key == null) return Task.FromResult(false);
 
-            return Task.FromResult(_constraints.TryRemove(key, out _));
+            var removed = _constraints.TryRemove(key, out _);
+            if (removed) Save();
+            return Task.FromResult(removed);
         }
 
         private static string GetKey(string db, string schema, string table, string constraint) => $"{db}.{schema}.{table}.{constraint}";
     }
 }
+

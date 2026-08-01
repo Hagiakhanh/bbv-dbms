@@ -1,11 +1,50 @@
+using DBMS.API.Storage;
 using DBMS.Domain.DatabaseObjects.Tables;
 using System.Collections.Concurrent;
 
 namespace DBMS.API.Repositories.Tables
 {
+    public class TableRecord
+    {
+        public int TableId { get; set; }
+        public string DatabaseName { get; set; } = "master";
+        public string SchemaName { get; set; } = "dbo";
+        public string TableName { get; set; } = string.Empty;
+    }
+
     public class InMemoryTableRepository : ITableRepository
     {
+        private const string FileName = "mock-tables.json";
         private readonly ConcurrentDictionary<string, (string DatabaseName, string SchemaName, Table Table)> _tables = new(StringComparer.OrdinalIgnoreCase);
+
+        public InMemoryTableRepository()
+        {
+            var defaultRecords = new List<TableRecord>
+            {
+                new TableRecord { TableId = 1, DatabaseName = "master", SchemaName = "dbo", TableName = "Users" }
+            };
+            var records = JsonFileStorage.LoadAsync(FileName, defaultRecords).GetAwaiter().GetResult();
+
+            foreach (var r in records)
+            {
+                var key = GetKey(r.DatabaseName, r.SchemaName, r.TableName);
+                var table = new Table(r.TableName);
+                _tables[key] = (r.DatabaseName, r.SchemaName, table);
+            }
+        }
+
+        private void Save()
+        {
+            var records = _tables.Values.Select(t => new TableRecord
+            {
+                TableId = t.Table.TableId,
+                DatabaseName = t.DatabaseName,
+                SchemaName = t.SchemaName,
+                TableName = t.Table.Name
+            }).ToList();
+
+            _ = JsonFileStorage.SaveAsync(FileName, records);
+        }
 
         public Task<Table> CreateAsync(string databaseName, string schemaName, Table table, CancellationToken cancellationToken = default)
         {
@@ -16,6 +55,7 @@ namespace DBMS.API.Repositories.Tables
             }
 
             _tables.TryAdd(key, (databaseName, schemaName, table));
+            Save();
             return Task.FromResult(table);
         }
 
@@ -71,6 +111,7 @@ namespace DBMS.API.Repositories.Tables
             var updatedTable = new Table(targetName);
             var newKey = GetKey(existing.DatabaseName, existing.SchemaName, targetName);
             _tables.TryAdd(newKey, (existing.DatabaseName, existing.SchemaName, updatedTable));
+            Save();
 
             return Task.FromResult(updatedTable);
         }
@@ -87,9 +128,12 @@ namespace DBMS.API.Repositories.Tables
 
             if (key == null) return Task.FromResult(false);
 
-            return Task.FromResult(_tables.TryRemove(key, out _));
+            var removed = _tables.TryRemove(key, out _);
+            if (removed) Save();
+            return Task.FromResult(removed);
         }
 
         private static string GetKey(string db, string schema, string table) => $"{db}.{schema}.{table}";
     }
 }
+
