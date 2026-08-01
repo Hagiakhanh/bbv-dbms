@@ -1,0 +1,23 @@
+[
+  {
+    "Id": "notif-001",
+    "Title": "New System Feature",
+    "Message": "Bulk export functionality has been updated.",
+    "IsRead": false,
+    "CreatedAt": "2026-08-01T10:00:00Z"
+  },
+  {
+    "Id": "notif-002",
+    "Title": "Security Update",
+    "Message": "Please check your account permissions.",
+    "IsRead": false,
+    "CreatedAt": "2026-08-01T11:30:00Z"
+  },
+  {
+    "Id": "notif-003",
+    "Title": "Order Maintenance",
+    "Message": "Scheduled maintenance tonight at 02:00 AM.",
+    "IsRead": true,
+    "CreatedAt": "2026-07-31T15:00:00Z"
+  }
+]
