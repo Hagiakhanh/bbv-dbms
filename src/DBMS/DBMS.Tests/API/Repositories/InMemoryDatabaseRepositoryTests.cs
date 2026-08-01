@@ -95,14 +95,38 @@ namespace DBMS.Tests.API.Repositories
         }
 
         [Fact]
-        public async Task DropAsync_ShouldThrowException_WhenMasterDatabase()
+        public async Task SetStateAsync_And_GetStateAsync_ShouldWork()
         {
-            // Act
-            Func<Task> act = async () => await _repository.DropAsync("master");
+            await _repository.SetStateAsync("master", "OFFLINE");
+            var state = await _repository.GetStateAsync("master");
+            state.Should().Be("OFFLINE");
+        }
 
-            // Assert
-            await act.Should().ThrowAsync<InvalidOperationException>()
-                     .WithMessage("*master*cannot be dropped*");
+        [Fact]
+        public async Task SetStateAsync_ShouldThrowKeyNotFound_WhenDbNotExists()
+        {
+            Func<Task> act = async () => await _repository.SetStateAsync("GhostDb", "OFFLINE");
+            await act.Should().ThrowAsync<KeyNotFoundException>();
+        }
+
+        [Fact]
+        public async Task AttachAsync_ShouldCreateDatabase()
+        {
+            await _repository.AttachAsync("AttachedDb", "/path/to/db");
+            var db = await _repository.GetByNameAsync("AttachedDb");
+            db.Should().NotBeNull();
+            db!.Name.Should().Be("AttachedDb");
+        }
+
+        [Fact]
+        public async Task DetachAsync_ShouldRemoveDatabase()
+        {
+            await _repository.AttachAsync("DetachDb", "/path/to/db");
+            var result = await _repository.DetachAsync("DetachDb");
+            result.Should().BeTrue();
+            var db = await _repository.GetByNameAsync("DetachDb");
+            db.Should().BeNull();
         }
     }
 }
+
