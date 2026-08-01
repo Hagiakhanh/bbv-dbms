@@ -1,0 +1,24 @@
+[
+  {
+    "Id": "usr-001",
+    "Username": "admin",
+    "Email": "admin@onlinestore.com",
+    "PasswordHash": "Admin@123",
+    "Role": "Admin",
+    "AvatarUrl": "https://api.dicebear.com/7.x/avataaars/svg?seed=Admin",
+    "StoreId": "store-001",
+    "RefreshToken": null,
+    "RefreshTokenExpiryTime": null
+  },
+  {
+    "Id": "usr-002",
+    "Username": "staff",
+    "Email": "staff@onlinestore.com",
+    "PasswordHash": "Staff@123",
+    "Role": "User",
+    "AvatarUrl": "https://api.dicebear.com/7.x/avataaars/svg?seed=Staff",
+    "StoreId": "store-001",
+    "RefreshToken": null,
+    "RefreshTokenExpiryTime": null
+  }
+]

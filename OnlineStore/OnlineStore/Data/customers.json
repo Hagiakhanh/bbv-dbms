@@ -1,0 +1,67 @@
+[
+  {
+    "Id": "cust-001",
+    "Name": "Nguyen Van A",
+    "Email": "nguyenvana@gmail.com",
+    "Phone": "0901234567",
+    "Status": "Member",
+    "IsActiveNow": true,
+    "TotalSpent": 1250.50,
+    "OrdersCount": 12,
+    "Location": "Ha Noi, Vietnam",
+    "AvatarUrl": "https://api.dicebear.com/7.x/avataaars/svg?seed=NguyenVanA",
+    "CreatedAt": "2026-01-15T08:30:00Z"
+  },
+  {
+    "Id": "cust-002",
+    "Name": "Tran Thi B",
+    "Email": "tranthib@yahoo.com",
+    "Phone": "0912345678",
+    "Status": "Customer",
+    "IsActiveNow": false,
+    "TotalSpent": 340.00,
+    "OrdersCount": 3,
+    "Location": "Ho Chi Minh, Vietnam",
+    "AvatarUrl": "https://api.dicebear.com/7.x/avataaars/svg?seed=TranThiB",
+    "CreatedAt": "2026-02-10T14:20:00Z"
+  },
+  {
+    "Id": "cust-003",
+    "Name": "Le Van C",
+    "Email": "levanc@outlook.com",
+    "Phone": "0923456789",
+    "Status": "Member",
+    "IsActiveNow": true,
+    "TotalSpent": 2800.75,
+    "OrdersCount": 25,
+    "Location": "Da Nang, Vietnam",
+    "AvatarUrl": "https://api.dicebear.com/7.x/avataaars/svg?seed=LeVanC",
+    "CreatedAt": "2025-11-05T09:15:00Z"
+  },
+  {
+    "Id": "cust-004",
+    "Name": "Pham Minh D",
+    "Email": "phamminhd@gmail.com",
+    "Phone": "0934567890",
+    "Status": "Churned",
+    "IsActiveNow": false,
+    "TotalSpent": 50.00,
+    "OrdersCount": 1,
+    "Location": "Can Tho, Vietnam",
+    "AvatarUrl": "https://api.dicebear.com/7.x/avataaars/svg?seed=PhamMinhD",
+    "CreatedAt": "2025-08-20T11:00:00Z"
+  },
+  {
+    "Id": "cust-005",
+    "Name": "Hoang Anh E",
+    "Email": "hoanganhe@domain.com",
+    "Phone": "0945678901",
+    "Status": "Member",
+    "IsActiveNow": true,
+    "TotalSpent": 1950.00,
+    "OrdersCount": 18,
+    "Location": "Hai Phong, Vietnam",
+    "AvatarUrl": "https://api.dicebear.com/7.x/avataaars/svg?seed=HoangAnhE",
+    "CreatedAt": "2026-03-01T16:45:00Z"
+  }
+]

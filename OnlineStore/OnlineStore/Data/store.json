@@ -1,0 +1,7 @@
+{
+  "Id": "store-001",
+  "Name": "My Fashion Store",
+  "Plan": "Pro Plan",
+  "LiveStatus": true,
+  "StorefrontUrl": "https://myfashionstore.com"
+}
