@@ -1,6 +1,6 @@
 using OnlineStore.Entities;
 
-namespace OnlineStore.Repositories
+namespace OnlineStore.Repositories.Users
 {
     public interface IUserRepository
     {

@@ -1,4 +1,6 @@
-namespace OnlineStore.DTOs
+using OnlineStore.DTOs.Store;
+
+namespace OnlineStore.DTOs.Auth
 {
     public class CurrentUserResponse
     {

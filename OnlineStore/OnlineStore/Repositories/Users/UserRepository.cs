@@ -1,6 +1,7 @@
 using OnlineStore.Entities;
+using OnlineStore.Repositories.Context;
 
-namespace OnlineStore.Repositories
+namespace OnlineStore.Repositories.Users
 {
     public class UserRepository : IUserRepository
     {

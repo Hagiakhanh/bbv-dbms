@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace OnlineStore.DTOs
+namespace OnlineStore.DTOs.Customers
 {
-    public class CreateCustomerRequest
+    public class UpdateCustomerRequest
     {
         [Required]
         public string Name { get; set; } = string.Empty;
@@ -12,7 +12,7 @@ namespace OnlineStore.DTOs
         public string Email { get; set; } = string.Empty;
 
         public string Phone { get; set; } = string.Empty;
-        public string Status { get; set; } = "Customer"; // Customer, Member, Churned
+        public string Status { get; set; } = "Customer";
         public string Location { get; set; } = string.Empty;
         public string AvatarUrl { get; set; } = string.Empty;
     }

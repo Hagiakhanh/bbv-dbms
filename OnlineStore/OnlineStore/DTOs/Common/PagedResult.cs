@@ -1,4 +1,4 @@
-namespace OnlineStore.DTOs
+namespace OnlineStore.DTOs.Common
 {
     public class PagedResult<T>
     {

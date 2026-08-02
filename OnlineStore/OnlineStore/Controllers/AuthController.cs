@@ -1,8 +1,9 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using OnlineStore.DTOs;
-using OnlineStore.Services;
+using OnlineStore.DTOs.Auth;
+using OnlineStore.DTOs.Common;
+using OnlineStore.Services.Auth;
 
 namespace OnlineStore.Controllers
 {
@@ -56,7 +57,10 @@ namespace OnlineStore.Controllers
         [Authorize]
         public async Task<ActionResult<MessageResponse>> Logout([FromQuery] bool allDevices = false)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                      ?? User.FindFirstValue("sub")
+                      ?? User.FindFirstValue(ClaimTypes.Name);
+
             if (string.IsNullOrEmpty(userId))
             {
                 return Unauthorized();

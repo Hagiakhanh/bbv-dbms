@@ -1,4 +1,4 @@
-namespace OnlineStore.DTOs
+namespace OnlineStore.DTOs.Store
 {
     public class UnreadCountResponse
     {

@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace OnlineStore.Repositories
+namespace OnlineStore.Repositories.Context
 {
     public class JsonFileContext
     {
@@ -13,7 +13,6 @@ namespace OnlineStore.Repositories
 
         public JsonFileContext(IWebHostEnvironment env)
         {
-            // Base directory for Data folder
             _dataDirectory = Path.Combine(env.ContentRootPath, "Data");
             if (!Directory.Exists(_dataDirectory))
             {

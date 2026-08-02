@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace OnlineStore.DTOs
+namespace OnlineStore.DTOs.Customers
 {
-    public class UpdateCustomerRequest
+    public class CreateCustomerRequest
     {
         [Required]
         public string Name { get; set; } = string.Empty;

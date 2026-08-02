@@ -1,8 +1,8 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using OnlineStore.DTOs;
-using OnlineStore.Services;
+using OnlineStore.DTOs.Auth;
+using OnlineStore.Services.Users;
 
 namespace OnlineStore.Controllers
 {
@@ -10,11 +10,11 @@ namespace OnlineStore.Controllers
     [Route("users")]
     public class UsersController : ControllerBase
     {
-        private readonly IAuthService _authService;
+        private readonly ICurrentUserService _currentUserService;
 
-        public UsersController(IAuthService authService)
+        public UsersController(ICurrentUserService currentUserService)
         {
-            _authService = authService;
+            _currentUserService = currentUserService;
         }
 
         /// <summary>
@@ -26,13 +26,16 @@ namespace OnlineStore.Controllers
             [FromQuery] bool includeRole = true,
             [FromQuery] bool includeStore = true)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) 
+                      ?? User.FindFirstValue("sub")
+                      ?? User.FindFirstValue(ClaimTypes.Name);
+
             if (string.IsNullOrEmpty(userId))
             {
                 return Unauthorized();
             }
 
-            var result = await _authService.GetCurrentUserAsync(userId, includeRole, includeStore);
+            var result = await _currentUserService.GetCurrentUserAsync(userId, includeRole, includeStore);
             if (result == null)
             {
                 return NotFound(new { message = "User not found." });

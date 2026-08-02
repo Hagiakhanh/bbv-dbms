@@ -1,6 +1,6 @@
-namespace OnlineStore.DTOs
+namespace OnlineStore.DTOs.Customers
 {
-    public class CustomerDetailResponse
+    public class CustomerListItemResponse
     {
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;

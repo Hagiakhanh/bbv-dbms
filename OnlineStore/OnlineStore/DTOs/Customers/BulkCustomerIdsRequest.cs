@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace OnlineStore.DTOs
+namespace OnlineStore.DTOs.Customers
 {
     public class BulkCustomerIdsRequest
     {

@@ -1,6 +1,7 @@
 using OnlineStore.Entities;
+using OnlineStore.Repositories.Context;
 
-namespace OnlineStore.Repositories
+namespace OnlineStore.Repositories.Store
 {
     public class StoreRepository : IStoreRepository
     {
@@ -13,9 +14,9 @@ namespace OnlineStore.Repositories
             _jsonContext = jsonContext;
         }
 
-        public Task<Store?> GetStoreAsync()
+        public Task<Entities.Store?> GetStoreAsync()
         {
-            var store = _jsonContext.ReadObject<Store>(StoreFileName);
+            var store = _jsonContext.ReadObject<Entities.Store>(StoreFileName);
             return Task.FromResult(store);
         }
 

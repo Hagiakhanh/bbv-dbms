@@ -2,8 +2,12 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
-using OnlineStore.Repositories;
-using OnlineStore.Services;
+using OnlineStore.Repositories.Context;
+using OnlineStore.Repositories.Store;
+using OnlineStore.Repositories.Users;
+using OnlineStore.Services.Auth;
+using OnlineStore.Services.Tokens;
+using OnlineStore.Services.Users;
 
 namespace OnlineStore
 {
@@ -34,13 +38,13 @@ namespace OnlineStore
                     Scheme = "Bearer",
                     BearerFormat = "JWT",
                     In = ParameterLocation.Header,
-                    Description = "Enter JWT Bearer token (e.g. 'Bearer eyJhbGci...')"
+                    Description = "Paste ONLY your JWT Access Token here (Do NOT include 'Bearer ' prefix, Swagger will add it automatically)."
                 });
 
                 options.AddSecurityRequirement((doc) => new OpenApiSecurityRequirement
                 {
                     {
-                        new OpenApiSecuritySchemeReference("Bearer"),
+                        new OpenApiSecuritySchemeReference("Bearer", doc),
                         new List<string>()
                     }
                 });
@@ -76,6 +80,8 @@ namespace OnlineStore
             builder.Services.AddSingleton<JsonFileContext>();
             builder.Services.AddScoped<IUserRepository, UserRepository>();
             builder.Services.AddScoped<IStoreRepository, StoreRepository>();
+            builder.Services.AddScoped<ITokenService, TokenService>();
+            builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
             builder.Services.AddScoped<IAuthService, AuthService>();
 
             var app = builder.Build();

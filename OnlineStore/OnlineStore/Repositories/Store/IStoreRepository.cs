@@ -1,10 +1,10 @@
 using OnlineStore.Entities;
 
-namespace OnlineStore.Repositories
+namespace OnlineStore.Repositories.Store
 {
     public interface IStoreRepository
     {
-        Task<Store?> GetStoreAsync();
+        Task<Entities.Store?> GetStoreAsync();
         Task<int> GetUnreadNotificationCountAsync();
     }
 }
