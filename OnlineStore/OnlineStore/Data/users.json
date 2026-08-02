@@ -7,8 +7,8 @@
     "Role": "Admin",
     "AvatarUrl": "https://api.dicebear.com/7.x/avataaars/svg?seed=Admin",
     "StoreId": "store-001",
-    "RefreshToken": null,
-    "RefreshTokenExpiryTime": null
+    "RefreshToken": "cV6LpZ09R6jMOgz2PeooFeQfP3oFSV\u002Bzr8YtWdSFaRc=",
+    "RefreshTokenExpiryTime": "2026-08-08T17:00:16.498563Z"
   },
   {
     "Id": "usr-002",
