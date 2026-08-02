@@ -3,9 +3,12 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using OnlineStore.Repositories.Context;
+using OnlineStore.Repositories.Customers;
 using OnlineStore.Repositories.Store;
 using OnlineStore.Repositories.Users;
 using OnlineStore.Services.Auth;
+using OnlineStore.Services.Customers;
+using OnlineStore.Services.Store;
 using OnlineStore.Services.Tokens;
 using OnlineStore.Services.Users;
 
@@ -78,11 +81,18 @@ namespace OnlineStore
 
             // Register Dependency Injection Services
             builder.Services.AddSingleton<JsonFileContext>();
+
+            // Repositories
             builder.Services.AddScoped<IUserRepository, UserRepository>();
             builder.Services.AddScoped<IStoreRepository, StoreRepository>();
+            builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
+
+            // Services
             builder.Services.AddScoped<ITokenService, TokenService>();
             builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
             builder.Services.AddScoped<IAuthService, AuthService>();
+            builder.Services.AddScoped<IStoreService, StoreService>();
+            builder.Services.AddScoped<ICustomerService, CustomerService>();
 
             var app = builder.Build();
 

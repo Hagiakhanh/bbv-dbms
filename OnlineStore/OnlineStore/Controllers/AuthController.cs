@@ -18,9 +18,6 @@ namespace OnlineStore.Controllers
             _authService = authService;
         }
 
-        /// <summary>
-        /// Sign in to the administration dashboard
-        /// </summary>
         [HttpPost("login")]
         [AllowAnonymous]
         public async Task<ActionResult<AuthResponse>> Login([FromBody] LoginRequest request)
@@ -34,9 +31,6 @@ namespace OnlineStore.Controllers
             return Ok(result);
         }
 
-        /// <summary>
-        /// Issue a new access token
-        /// </summary>
         [HttpPost("refresh-token")]
         [AllowAnonymous]
         public async Task<ActionResult<AuthResponse>> RefreshToken([FromBody] RefreshTokenRequest request)
@@ -50,9 +44,6 @@ namespace OnlineStore.Controllers
             return Ok(result);
         }
 
-        /// <summary>
-        /// Log out action in the account menu
-        /// </summary>
         [HttpPost("logout")]
         [Authorize]
         public async Task<ActionResult<MessageResponse>> Logout([FromQuery] bool allDevices = false)
