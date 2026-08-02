@@ -1,0 +1,813 @@
+openapi: 3.0.4
+info:
+  title: Online Store API
+  description: API for Customer Management & Administration Dashboard
+  version: v1
+paths:
+  /auth/login:
+    post:
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+  /auth/refresh-token:
+    post:
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+  /auth/logout:
+    post:
+      tags:
+      - Auth
+      parameters:
+      - name: allDevices
+        in: query
+        schema:
+          type: boolean
+          default: false
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+  /customers/summary:
+    get:
+      tags:
+      - Customers
+      parameters:
+      - name: from
+        in: query
+        schema:
+          type: string
+          format: date-time
+      - name: to
+        in: query
+        schema:
+          type: string
+          format: date-time
+      - name: timezone
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/CustomerSummaryResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerSummaryResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/CustomerSummaryResponse'
+  /customers:
+    get:
+      tags:
+      - Customers
+      parameters:
+      - name: search
+        in: query
+        schema:
+          type: string
+      - name: status
+        in: query
+        schema:
+          type: string
+      - name: sort
+        in: query
+        schema:
+          type: string
+      - name: page
+        in: query
+        schema:
+          type: integer
+          format: int32
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          format: int32
+          default: 10
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/CustomerListItemResponsePagedResult'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerListItemResponsePagedResult'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/CustomerListItemResponsePagedResult'
+    post:
+      tags:
+      - Customers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCustomerRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CreateCustomerRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CreateCustomerRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/CustomerDetailResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerDetailResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/CustomerDetailResponse'
+  /customers/{customerId}:
+    get:
+      tags:
+      - Customers
+      parameters:
+      - name: customerId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/CustomerDetailResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerDetailResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/CustomerDetailResponse'
+    put:
+      tags:
+      - Customers
+      parameters:
+      - name: customerId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCustomerRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCustomerRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/UpdateCustomerRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/CustomerDetailResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerDetailResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/CustomerDetailResponse'
+    delete:
+      tags:
+      - Customers
+      parameters:
+      - name: customerId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+  /customers/{customerId}/status:
+    patch:
+      tags:
+      - Customers
+      parameters:
+      - name: customerId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCustomerStatusRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCustomerStatusRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/UpdateCustomerStatusRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/CustomerDetailResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerDetailResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/CustomerDetailResponse'
+  /customers/export:
+    get:
+      tags:
+      - Customers
+      parameters:
+      - name: scope
+        in: query
+        schema:
+          type: string
+      - name: format
+        in: query
+        schema:
+          type: string
+          default: csv
+      - name: search
+        in: query
+        schema:
+          type: string
+      - name: status
+        in: query
+        schema:
+          type: string
+      - name: sort
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+  /customers/bulk-status:
+    patch:
+      tags:
+      - Customers
+      parameters:
+      - name: notifyCustomers
+        in: query
+        schema:
+          type: boolean
+          default: false
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkUpdateCustomerStatusRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/BulkUpdateCustomerStatusRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/BulkUpdateCustomerStatusRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/BulkOperationResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkOperationResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/BulkOperationResponse'
+  /customers/bulk-delete:
+    post:
+      tags:
+      - Customers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkDeleteCustomersRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/BulkDeleteCustomersRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/BulkDeleteCustomersRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/BulkOperationResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkOperationResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/BulkOperationResponse'
+  /customers/bulk-export:
+    post:
+      tags:
+      - Customers
+      parameters:
+      - name: format
+        in: query
+        schema:
+          type: string
+          default: csv
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkCustomerIdsRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/BulkCustomerIdsRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/BulkCustomerIdsRequest'
+      responses:
+        '200':
+          description: OK
+  /store:
+    get:
+      tags:
+      - Store
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/StoreResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoreResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/StoreResponse'
+  /updates/unread-count:
+    get:
+      tags:
+      - Store
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/UnreadCountResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnreadCountResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/UnreadCountResponse'
+  /users/me:
+    get:
+      tags:
+      - Users
+      parameters:
+      - name: includeRole
+        in: query
+        schema:
+          type: boolean
+          default: true
+      - name: includeStore
+        in: query
+        schema:
+          type: boolean
+          default: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/CurrentUserResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUserResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUserResponse'
+components:
+  schemas:
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          nullable: true
+        refreshToken:
+          type: string
+          nullable: true
+        expiresAt:
+          type: string
+          format: date-time
+        user:
+          $ref: '#/components/schemas/CurrentUserResponse'
+      additionalProperties: false
+    BulkCustomerIdsRequest:
+      required:
+      - customerIds
+      type: object
+      properties:
+        customerIds:
+          type: array
+          items:
+            type: string
+      additionalProperties: false
+    BulkDeleteCustomersRequest:
+      required:
+      - customerIds
+      type: object
+      properties:
+        customerIds:
+          type: array
+          items:
+            type: string
+      additionalProperties: false
+    BulkOperationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        affectedCount:
+          type: integer
+          format: int32
+        message:
+          type: string
+          nullable: true
+      additionalProperties: false
+    BulkUpdateCustomerStatusRequest:
+      required:
+      - customerIds
+      - status
+      type: object
+      properties:
+        customerIds:
+          type: array
+          items:
+            type: string
+        status:
+          minLength: 1
+          type: string
+      additionalProperties: false
+    CreateCustomerRequest:
+      required:
+      - email
+      - name
+      type: object
+      properties:
+        name:
+          minLength: 1
+          type: string
+        email:
+          minLength: 1
+          type: string
+          format: email
+        phone:
+          type: string
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+      additionalProperties: false
+    CurrentUserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          nullable: true
+        username:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        role:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+        storeId:
+          type: string
+          nullable: true
+        store:
+          $ref: '#/components/schemas/StoreResponse'
+      additionalProperties: false
+    CustomerDetailResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        isActiveNow:
+          type: boolean
+        totalSpent:
+          type: number
+          format: double
+        ordersCount:
+          type: integer
+          format: int32
+        location:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      additionalProperties: false
+    CustomerListItemResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        isActiveNow:
+          type: boolean
+        totalSpent:
+          type: number
+          format: double
+        ordersCount:
+          type: integer
+          format: int32
+        location:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      additionalProperties: false
+    CustomerListItemResponsePagedResult:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerListItemResponse'
+          nullable: true
+        totalItems:
+          type: integer
+          format: int32
+        page:
+          type: integer
+          format: int32
+        pageSize:
+          type: integer
+          format: int32
+        totalPages:
+          type: integer
+          format: int32
+          readOnly: true
+      additionalProperties: false
+    CustomerSummaryResponse:
+      type: object
+      properties:
+        totalCustomers:
+          type: integer
+          format: int32
+        totalCustomersGrowthPercentage:
+          type: number
+          format: double
+        membersCount:
+          type: integer
+          format: int32
+        membersGrowthPercentage:
+          type: number
+          format: double
+        activeNowCount:
+          type: integer
+          format: int32
+        activeNowGrowthPercentage:
+          type: number
+          format: double
+      additionalProperties: false
+    LoginRequest:
+      required:
+      - emailOrUsername
+      - password
+      type: object
+      properties:
+        emailOrUsername:
+          minLength: 1
+          type: string
+        password:
+          minLength: 1
+          type: string
+      additionalProperties: false
+    MessageResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+          nullable: true
+      additionalProperties: false
+    RefreshTokenRequest:
+      required:
+      - accessToken
+      - refreshToken
+      type: object
+      properties:
+        accessToken:
+          minLength: 1
+          type: string
+        refreshToken:
+          minLength: 1
+          type: string
+      additionalProperties: false
+    StoreResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        plan:
+          type: string
+          nullable: true
+        liveStatus:
+          type: boolean
+        storefrontUrl:
+          type: string
+          nullable: true
+      additionalProperties: false
+    UnreadCountResponse:
+      type: object
+      properties:
+        unreadCount:
+          type: integer
+          format: int32
+      additionalProperties: false
+    UpdateCustomerRequest:
+      required:
+      - email
+      - name
+      type: object
+      properties:
+        name:
+          minLength: 1
+          type: string
+        email:
+          minLength: 1
+          type: string
+          format: email
+        phone:
+          type: string
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+      additionalProperties: false
+    UpdateCustomerStatusRequest:
+      required:
+      - status
+      type: object
+      properties:
+        status:
+          minLength: 1
+          type: string
+      additionalProperties: false
+  securitySchemes:
+    Bearer:
+      type: http
+      description: Paste ONLY your JWT Access Token here (Do NOT include 'Bearer '
+        prefix, Swagger will add it automatically).
+      scheme: Bearer
+      bearerFormat: JWT
+security:
+- Bearer: []
+tags:
+- name: Auth
+- name: Customers
+- name: Store
+- name: Users
