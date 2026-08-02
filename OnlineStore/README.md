@@ -1,6 +1,8 @@
 ![alt text](image.png)
 # Customer Management API
 
+🔗 **Live Interactive Swagger Documentation**: [https://hagiakhanh.github.io/bbv-dbms/online-store/](https://hagiakhanh.github.io/bbv-dbms/online-store/)
+
 This API list is inferred only from the visible elements of the Customer Management screen. It does not include APIs for pages whose content is not shown, such as Products, Orders, Subscriptions, Discounts, Reports, Design, or Settings.
 
 ## 1. Authentication
