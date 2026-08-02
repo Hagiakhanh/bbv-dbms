@@ -1,5 +1,7 @@
 # API Important in DBMS
 
+🔗 **Live Interactive Swagger Documentation**: [https://hagiakhanh.github.io/bbv-dbms/](https://hagiakhanh.github.io/bbv-dbms/)
+
 ## 1. API Overview
 
 The DBMS REST API provides administrative, security, session, database object, query processing, transaction, recovery, monitoring, and audit operations for the database management system.
