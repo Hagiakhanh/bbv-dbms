@@ -1,10 +1,12 @@
 using DBMS.API.DTOs.Constraints;
 using DBMS.API.Services.Constraints;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DBMS.API.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/databases/{db}/schemas/{schema}/tables/{tableName}/constraints")]
     [Route("api/tables/{tableName}/constraints")]
     public class ConstraintsController : ControllerBase
