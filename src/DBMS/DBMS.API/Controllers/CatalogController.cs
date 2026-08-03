@@ -16,9 +16,6 @@ namespace DBMS.API.Controllers
             _catalogService = catalogService;
         }
 
-        /// <summary>
-        /// Retrieves the hierarchical catalog structure (Databases -> Schemas -> Tables -> Columns/Constraints/Indexes)
-        /// </summary>
         [HttpGet("tree")]
         public async Task<ActionResult<IEnumerable<CatalogTreeNodeDto>>> GetCatalogTree([FromQuery] string? database = null, [FromQuery] int? depth = null, CancellationToken cancellationToken = default)
         {
@@ -26,9 +23,6 @@ namespace DBMS.API.Controllers
             return Ok(tree);
         }
 
-        /// <summary>
-        /// Retrieves metadata for a specific database
-        /// </summary>
         [HttpGet("databases/{db}")]
         public async Task<ActionResult<DatabaseMetadataDto>> GetDatabaseMetadata([FromRoute] string db, CancellationToken cancellationToken = default)
         {
@@ -40,9 +34,6 @@ namespace DBMS.API.Controllers
             return Ok(metadata);
         }
 
-        /// <summary>
-        /// Retrieves metadata for a specific schema
-        /// </summary>
         [HttpGet("schemas/{schema}")]
         public async Task<ActionResult<SchemaMetadataDto>> GetSchemaMetadata([FromRoute] string schema, [FromQuery] string? db = null, CancellationToken cancellationToken = default)
         {
@@ -54,9 +45,6 @@ namespace DBMS.API.Controllers
             return Ok(metadata);
         }
 
-        /// <summary>
-        /// Retrieves complete metadata for a specific table
-        /// </summary>
         [HttpGet("tables/{table}")]
         public async Task<ActionResult<TableMetadataDto>> GetTableMetadata([FromRoute] string table, [FromQuery] string? schema = null, [FromQuery] string? db = null, CancellationToken cancellationToken = default)
         {
