@@ -4,6 +4,7 @@ using DBMS.API.Repositories.Databases;
 using DBMS.API.Repositories.Indexes;
 using DBMS.API.Repositories.Schemas;
 using DBMS.API.Repositories.Tables;
+using DBMS.API.Services.Catalog;
 using DBMS.API.Services.Columns;
 using DBMS.API.Services.Constraints;
 using DBMS.API.Services.Databases;
@@ -45,6 +46,9 @@ namespace DBMS.API
             // Đăng ký Index Repositories và Services
             services.AddSingleton<IIndexRepository, InMemoryIndexRepository>();
             services.AddScoped<IIndexService, IndexService>();
+
+            // Đăng ký Catalog Services
+            services.AddScoped<ICatalogService, CatalogService>();
 
             return services;
         }
