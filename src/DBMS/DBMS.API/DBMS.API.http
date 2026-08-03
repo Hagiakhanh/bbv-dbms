@@ -131,3 +131,32 @@ Content-Type: application/json
 DELETE {{DBMS.API_HostAddress}}/api/tables/Users/columns/UserEmail
 
 ###
+
+### ===================================================================
+### 4. CATALOG & METADATA APIs
+### ===================================================================
+
+### 4.1 Get Catalog Tree
+GET {{DBMS.API_HostAddress}}/api/catalog/tree?database=master&depth=4
+Accept: application/json
+
+###
+
+### 4.2 Get Database Metadata
+GET {{DBMS.API_HostAddress}}/api/catalog/databases/master
+Accept: application/json
+
+###
+
+### 4.3 Get Schema Metadata
+GET {{DBMS.API_HostAddress}}/api/catalog/schemas/dbo?db=master
+Accept: application/json
+
+###
+
+### 4.4 Get Table Metadata
+GET {{DBMS.API_HostAddress}}/api/catalog/tables/Users?schema=dbo&db=master
+Accept: application/json
+
+###
+
