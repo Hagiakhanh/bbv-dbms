@@ -1,13 +1,16 @@
 using DBMS.API.DTOs.Tables;
 using DBMS.API.Services.Tables;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DBMS.API.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/databases/{db}/schemas/{schema}/tables")]
     [Route("api/schemas/{schema}/tables")]
     [Route("api/[controller]")]
+    [Route("api/v1/[controller]")]
     public class TablesController : ControllerBase
     {
         private readonly ITableService _tableService;

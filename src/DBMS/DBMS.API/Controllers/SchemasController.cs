@@ -1,12 +1,15 @@
 using DBMS.API.DTOs.Schemas;
 using DBMS.API.Services.Schemas;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DBMS.API.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/databases/{db}/schemas")]
     [Route("api/[controller]")]
+    [Route("api/v1/[controller]")]
     public class SchemasController : ControllerBase
     {
         private readonly ISchemaService _schemaService;

@@ -1,10 +1,12 @@
 using DBMS.API.DTOs.Indexes;
 using DBMS.API.Services.Indexes;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DBMS.API.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/databases/{db}/schemas/{schema}/tables/{tableName}/indexes")]
     [Route("api/tables/{tableName}/indexes")]
     public class IndexesController : ControllerBase

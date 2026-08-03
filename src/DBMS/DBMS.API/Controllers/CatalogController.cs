@@ -1,10 +1,12 @@
 using DBMS.API.DTOs.Catalog;
 using DBMS.API.Services.Catalog;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DBMS.API.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/[controller]")]
     [Route("api/v1/[controller]")]
     public class CatalogController : ControllerBase

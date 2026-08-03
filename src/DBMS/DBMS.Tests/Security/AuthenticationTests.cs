@@ -12,9 +12,10 @@ public class AuthenticationTests
     {
         var secMgr = new SecurityManager();
 
-        Action act = () => secMgr.Authenticate("admin", "password123");
+        var user = secMgr.Authenticate("admin", "password123");
 
-        act.Should().Throw<NotImplementedException>();
+        user.Should().NotBeNull();
+        user!.Username.Should().Be("admin");
     }
 
     [Fact]
@@ -32,8 +33,9 @@ public class AuthenticationTests
     {
         var secMgr = new SecurityManager();
 
-        Action act = () => secMgr.Authenticate("user", "pass");
+        var user = secMgr.Authenticate("user", "pass");
 
-        act.Should().Throw<NotImplementedException>();
+        user.Should().NotBeNull();
+        user!.Username.Should().Be("user");
     }
 }

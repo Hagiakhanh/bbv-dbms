@@ -50,6 +50,14 @@ namespace DBMS.API
             // Đăng ký Catalog Services
             services.AddScoped<ICatalogService, CatalogService>();
 
+            // Đăng ký Security & User Repositories và Services
+            services.AddSingleton<DBMS.API.Repositories.Users.IUserRepository, DBMS.API.Repositories.Users.InMemoryUserRepository>();
+            services.AddSingleton<DBMS.API.Repositories.Roles.IRoleRepository, DBMS.API.Repositories.Roles.InMemoryRoleRepository>();
+            services.AddScoped<DBMS.API.Services.Auth.IJwtTokenService, DBMS.API.Services.Auth.JwtTokenService>();
+            services.AddScoped<DBMS.API.Services.Auth.IAuthService, DBMS.API.Services.Auth.AuthService>();
+            services.AddScoped<DBMS.API.Services.Users.IUserService, DBMS.API.Services.Users.UserService>();
+            services.AddScoped<DBMS.API.Services.Roles.IRoleService, DBMS.API.Services.Roles.RoleService>();
+
             return services;
         }
     }

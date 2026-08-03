@@ -1,10 +1,12 @@
 using DBMS.API.DTOs.Columns;
 using DBMS.API.Services.Columns;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DBMS.API.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/databases/{db}/schemas/{schema}/tables/{tableName}/columns")]
     [Route("api/tables/{tableName}/columns")]
     public class ColumnsController : ControllerBase

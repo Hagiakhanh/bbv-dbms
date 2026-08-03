@@ -1,11 +1,14 @@
 using DBMS.API.DTOs.Databases;
 using DBMS.API.Services.Databases;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DBMS.API.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/[controller]")]
+    [Route("api/v1/[controller]")]
     public class DatabasesController : ControllerBase
     {
         private readonly IDatabaseService _databaseService;
